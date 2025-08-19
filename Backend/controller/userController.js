@@ -1,6 +1,7 @@
-
+require("dotenv").config();
 const db = require("../config/db");
-const bcrypt = require("bcrypt");  
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");  
 const saltRounds = 10;
 
 
@@ -12,10 +13,8 @@ exports.addUser = async (req, res) => {
   }
 
   try {
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Insert into DB
     const query = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
     const [result] = await db.query(query, [username, hashedPassword, role]);
 
@@ -29,6 +28,51 @@ exports.addUser = async (req, res) => {
     });
   } catch (err) {
     console.error("Error inserting user:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.login = async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ error: "username, password required" });
+  }
+
+  try {
+   
+    const query = "SELECT * FROM users WHERE username = ?";
+    const [result] = await db.query(query, [username]);
+
+    if (result.length === 0) {
+      return res.status(401).json({ error: "Invalid username or password" });
+    }
+    const user = result[0];
+
+    const match = await bcrypt.compare(password, user.password);
+
+    if (!match) {
+      return res.status(401).json({ error: "Invalid username or password" });
+    }
+
+    // Generate JWT
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN }
+    );
+
+    res.status(200).json({
+      message: "User Logged in successfully",
+      token,  
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    console.error("Error logging in:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 };

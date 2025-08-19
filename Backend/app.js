@@ -14,9 +14,9 @@ app.use(cors());
 app.get("/", (req, res) => {
   res.send("Teberio API is running");
 });
-
-// user routes
+// user
 app.use("/api/users", userRoutes);
+
 
 // 404 handler
 app.use((req, res, next) => {
