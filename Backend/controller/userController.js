@@ -6,17 +6,17 @@ const saltRounds = 10;
 
 
 exports.addUser = async (req, res) => {
-  const { username, password, role } = req.body;
+  const { username, password, first_name, last_name, role } = req.body;
 
-  if (!username || !password || !role) {
-    return res.status(400).json({ error: "username, password, and role are required" });
+  if (!username || !password || !first_name || !last_name || !role) {
+    return res.status(400).json({ error: "All fields are required" });
   }
 
   try {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    const query = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
-    const [result] = await db.query(query, [username, hashedPassword, role]);
+    const query = "INSERT INTO users (username, password, first_name, last_name, role) VALUES (?, ?, ?, ?, ?)";
+    const [result] = await db.query(query, [username, hashedPassword, first_name, last_name, role]);
 
     res.status(201).json({
       message: "User created successfully",
