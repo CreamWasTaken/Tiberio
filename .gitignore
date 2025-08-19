@@ -1,0 +1,6 @@
+# Ignore node_modules in Backend and Frontend
+Backend/node_modules/
+Frontend/node_modules/
+
+# (Optional) Ignore global node_modules just in case
+node_modules/
