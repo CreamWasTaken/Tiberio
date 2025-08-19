@@ -62,6 +62,9 @@ exports.login = async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES_IN }
     );
 
+    //query for login logs
+    await db.query("INSERT INTO login_logs (user_id) VALUES (?)", [user.id]);
+
     res.status(200).json({
       message: "User Logged in successfully",
       token,  
