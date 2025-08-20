@@ -1,10 +1,15 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { login } from '../services/auth'
 
 function Login() {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: ''
   })
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -14,10 +19,31 @@ function Login() {
     }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Handle login logic here
-    console.log('Login attempt:', formData)
+    setError('')
+    setLoading(true)
+
+    try {
+      const response = await login(formData.username, formData.password)
+      
+      if (response.user && response.user.role) {
+        // Redirect based on user role
+        if (response.user.role === 'admin') {
+          navigate('/admin')
+        } else if (response.user.role === 'employee') {
+          navigate('/employee')
+        } else {
+          setError('Invalid user role')
+        }
+      } else {
+        setError('Login response missing user information')
+      }
+    } catch (err) {
+      setError(err.message || 'Login failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -38,18 +64,25 @@ function Login() {
             </p>
           </div>
           
+          {/* Error Display */}
+          {error && (
+            <div className="bg-red-600/20 border border-red-600/50 rounded-lg p-4 mb-6">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-gray-200 text-sm font-medium mb-2">
-                Email
+              <label htmlFor="username" className="block text-gray-200 text-sm font-medium mb-2">
+                Username
               </label>
               <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
+                type="text"
+                id="username"
+                name="username"
+                value={formData.username}
                 onChange={handleInputChange}
-                placeholder="Enter your email"
+                placeholder="Enter your username"
                 required
                 className="w-full px-5 py-4 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300"
               />
@@ -83,9 +116,10 @@ function Login() {
             
             <button 
               type="submit" 
-              className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-800 transform hover:scale-105 transition-all duration-200 shadow-lg"
+              disabled={loading}
+              className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-800 transform hover:scale-105 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Sign In
+              {loading ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
           
