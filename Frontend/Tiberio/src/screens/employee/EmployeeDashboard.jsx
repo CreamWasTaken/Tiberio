@@ -1,13 +1,19 @@
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
 
 function EmployeeDashboard() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Set user role when component mounts
+  useEffect(() => {
+    localStorage.setItem('userRole', 'employee');
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('authToken');
+    localStorage.removeItem('userRole');
     navigate('/');
   };
 
@@ -57,7 +63,10 @@ function EmployeeDashboard() {
                 <h3 className="text-xl font-semibold text-white">Patient Records</h3>
               </div>
               <p className="text-gray-300 mb-4">Access and manage patient information</p>
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-200">
+              <button 
+                onClick={() => navigate('/patients')}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-200"
+              >
                 View Records
               </button>
             </div>

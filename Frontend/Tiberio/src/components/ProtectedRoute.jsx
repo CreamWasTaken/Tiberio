@@ -7,8 +7,24 @@ function ProtectedRoute({ children, requiredRole }) {
     return <Navigate to="/" replace />;
   }
 
-  // If a specific role is required, you could decode the JWT here to check the role
-  // For now, we'll just check if the token exists
+  // Get user role from localStorage (you can decode JWT here later)
+  const userRole = localStorage.getItem('userRole') || 'employee';
+  
+  // Check if user has required role
+  if (requiredRole) {
+    if (Array.isArray(requiredRole)) {
+      // Multiple roles allowed
+      if (!requiredRole.includes(userRole)) {
+        return <Navigate to="/" replace />;
+      }
+    } else {
+      // Single role required
+      if (userRole !== requiredRole) {
+        return <Navigate to="/" replace />;
+      }
+    }
+  }
+
   return children;
 }
 

@@ -30,4 +30,21 @@ export const login = async (username, password) => {
     }
   };
 
+  export const getUserLogs = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/users/get-user-logs`);
+      return response.data;
+      
+    } catch (error) {
+      if (error.response) {
+        throw new Error(error.response.data.error);
+      } else if (error.request) {
+        throw new Error("No response from server");
+      } else {
+        throw new Error(error.message);
+      }
+    }
+  };
+
+
 

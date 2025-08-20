@@ -1,7 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Login } from './screens/auth'
-import { AdminDashboard } from './screens/admin'
+import { AdminDashboard, AccountManagement } from './screens/admin'
 import { EmployeeDashboard } from './screens/employee'
+import { Patients } from './screens/shared'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -14,9 +15,19 @@ function App() {
             <AdminDashboard />
           </ProtectedRoute>
         } />
+        <Route path="/account" element={
+          <ProtectedRoute requiredRole="admin">
+            <AccountManagement />
+          </ProtectedRoute>
+        } />
         <Route path="/employee" element={
           <ProtectedRoute requiredRole="employee">
             <EmployeeDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/patients" element={
+          <ProtectedRoute requiredRole={['admin', 'employee']}>
+            <Patients />
           </ProtectedRoute>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -80,3 +80,28 @@ exports.login = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+exports.getUserLogs = async (req, res) => {
+  try {
+
+    const query = `SELECT 
+    logs.id AS log_id,
+    logs.data,
+    logs.created_at,
+    CONCAT(users.first_name, ' ', users.last_name) AS user_name,
+    users.type AS user_type
+FROM logs
+LEFT JOIN users ON logs.user_id = users.id
+ORDER BY logs.created_at DESC;
+`;
+    const [result] = await db.query(query);
+    res.status(200).json({
+      message: "User logs fetched successfully",
+      logs: result
+    });
+    
+  } catch (error) {
+    console.error("Error fetching user logs:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};

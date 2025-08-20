@@ -28,6 +28,9 @@ function Login() {
       const response = await login(formData.username, formData.password)
       
       if (response.user && response.user.role) {
+        // Store user role in localStorage
+        localStorage.setItem('userRole', response.user.role);
+        
         // Redirect based on user role
         if (response.user.role === 'admin') {
           navigate('/admin')

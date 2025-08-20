@@ -1,13 +1,19 @@
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
 
 function AdminDashboard() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Set user role when component mounts
+  useEffect(() => {
+    localStorage.setItem('userRole', 'admin');
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('authToken');
+    localStorage.removeItem('userRole');
     navigate('/');
   };
 
@@ -62,6 +68,8 @@ function AdminDashboard() {
               </button>
             </div>
 
+
+
             {/* Reports Card */}
             <div className="bg-gray-800/80 backdrop-blur-xl border border-gray-700 rounded-xl p-6 hover:shadow-lg transition-all duration-300">
               <div className="flex items-center mb-4">
@@ -103,6 +111,8 @@ function AdminDashboard() {
               You have full access to manage the Tiberio Eye Clinic system. Use the dashboard above to navigate through different administrative functions.
             </p>
           </div>
+
+
         </main>
       </div>
     </div>
