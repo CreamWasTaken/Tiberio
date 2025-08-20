@@ -200,16 +200,16 @@ function AccountManagement() {
             ) : currentLogs.length > 0 ? (
               <>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-700">
+                  <table className="min-w-full divide-y divide-gray-700 text-sm">
                     <thead className="bg-gray-700/50">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                           User
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                           Type
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                           Login Time
                         </th>
                       </tr>
@@ -217,41 +217,31 @@ function AccountManagement() {
                     <tbody className="bg-gray-800/50 divide-y divide-gray-700">
                       {currentLogs.map((log, index) => (
                         <tr key={index} className="hover:bg-gray-700/30 transition-colors duration-200">
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td className="px-3 py-2 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
-                                <span className="text-xs font-bold text-white">
+                              <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-2">
+                                <span className="text-[10px] font-bold text-white">
                                   {(log.user_name || 'U').charAt(0).toUpperCase()}
                                 </span>
                               </div>
-                              <div className="text-sm font-medium text-white">
+                              <div className="text-xs font-medium text-white">
                                 {log.user_name || 'Unknown User'}
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
                               log.user_type === 'admin' 
-                                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
+                                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow' 
                                 : log.user_type === 'employee'
-                                ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
+                                ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow' 
                                 : 'bg-gray-500 text-gray-100'
                             }`}>
-                              {log.user_type === 'admin' && (
-                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-                                </svg>
-                              )}
-                              {log.user_type === 'employee' && (
-                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                              )}
                               {log.user_type || 'User'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
-                            <div className="flex flex-col">
+                          <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-300">
+                            <div className="flex flex-col leading-tight">
                               <span className="text-white font-medium">
                                 {log.created_at ? new Date(log.created_at).toLocaleDateString('en-US', {
                                   month: 'short',
@@ -259,7 +249,7 @@ function AccountManagement() {
                                   year: 'numeric'
                                 }) : 'N/A'}
                               </span>
-                              <span className="text-xs text-gray-400">
+                              <span className="text-[10px] text-gray-400">
                                 {log.created_at ? new Date(log.created_at).toLocaleTimeString('en-US', {
                                   hour: '2-digit',
                                   minute: '2-digit',

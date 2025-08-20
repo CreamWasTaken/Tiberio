@@ -105,3 +105,32 @@ ORDER BY logs.created_at DESC;
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+
+exports.getAllUser = async (req, res) => {
+  try {
+    
+    const query = `SELECT id, first_name,last_name, type FROM users`;
+    const [result] = await db.query(query);
+
+    res.status(200).json({
+      message: "User fetched successfully",
+      users: result
+    });
+
+  } catch (error) {
+    console.error("Error fetching user logs:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+
+// exports.changeUserStatus = async (req, res) => {
+  
+// };
+
+// exports.changePassword = async (req, res) => {
+  
+// };
+
+
