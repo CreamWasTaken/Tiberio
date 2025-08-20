@@ -39,7 +39,7 @@ const PORT = process.env.PORT || 3000;
     conn.release();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Teberio API is running on http://localhost:${PORT}`);
+      console.log(`🚀 Tiberio API is running on http://localhost:${PORT}`);
     });
   } catch (err) {
     console.error("❌ Failed to connect to MySQL:", err.message);
