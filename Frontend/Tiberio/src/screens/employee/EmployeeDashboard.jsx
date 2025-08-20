@@ -17,7 +17,8 @@ function EmployeeDashboard() {
       <Sidebar 
         isOpen={sidebarOpen} 
         onToggle={() => setSidebarOpen(!sidebarOpen)} 
-        userType="employee" 
+        userType="employee"
+        onLogout={handleLogout}
       />
 
       {/* Main content area */}
@@ -38,12 +39,6 @@ function EmployeeDashboard() {
                 </button>
                 <h1 className="text-2xl font-bold text-white">Employee Dashboard</h1>
               </div>
-              <button
-                onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-              >
-                Logout
-              </button>
             </div>
           </div>
         </header>

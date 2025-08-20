@@ -17,7 +17,8 @@ function AdminDashboard() {
       <Sidebar 
         isOpen={sidebarOpen} 
         onToggle={() => setSidebarOpen(!sidebarOpen)} 
-        userType="admin" 
+        userType="admin"
+        onLogout={handleLogout}
       />
 
       {/* Main content area */}
@@ -38,12 +39,6 @@ function AdminDashboard() {
                 </button>
                 <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
               </div>
-              <button
-                onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-              >
-                Logout
-              </button>
             </div>
           </div>
         </header>
@@ -78,7 +73,7 @@ function AdminDashboard() {
                 <h3 className="text-xl font-semibold text-white">Reports</h3>
               </div>
               <p className="text-gray-300 mb-4">View analytics and generate reports</p>
-              <button className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors duration-200">
+              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-200">
                 View Reports
               </button>
             </div>
@@ -95,7 +90,7 @@ function AdminDashboard() {
                 <h3 className="text-xl font-semibold text-white">System Settings</h3>
               </div>
               <p className="text-gray-300 mb-4">Configure system preferences</p>
-              <button className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition-colors duration-200">
+              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-200">
                 Settings
               </button>
             </div>
