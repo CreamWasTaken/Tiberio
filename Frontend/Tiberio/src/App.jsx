@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import Login from './screens/Login'
-import AdminDashboard from './screens/AdminDashboard'
-import EmployeeDashboard from './screens/EmployeeDashboard'
+import { Login } from './screens/auth'
+import { AdminDashboard } from './screens/admin'
+import { EmployeeDashboard } from './screens/employee'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
