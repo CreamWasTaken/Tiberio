@@ -21,12 +21,17 @@ function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
+        <div className="bg-gray-800/80 backdrop-blur-xl border border-gray-700 rounded-3xl p-8 shadow-2xl">
           <div className="text-center mb-8">
+            <img 
+              src="/TiberioLogo.jpg" 
+              alt="Tiberio Eye Clinic Logo" 
+              className="w-24 h-24 mx-auto mb-4 rounded-full shadow-lg"
+            />
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-3">
-              Tiberio
+              Tiberio Eye Clinic
             </h1>
             <p className="text-gray-300 text-sm leading-relaxed">
               Welcome back! Please sign in to your account.
@@ -46,7 +51,7 @@ function Login() {
                 onChange={handleInputChange}
                 placeholder="Enter your email"
                 required
-                className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300"
+                className="w-full px-5 py-4 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300"
               />
             </div>
             
@@ -62,7 +67,7 @@ function Login() {
                 onChange={handleInputChange}
                 placeholder="Enter your password"
                 required
-                className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300"
+                className="w-full px-5 py-4 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300"
               />
             </div>
             
@@ -70,31 +75,28 @@ function Login() {
               <label className="flex items-center text-gray-300 cursor-pointer">
                 <input 
                   type="checkbox" 
-                  className="w-4 h-4 text-blue-400 bg-white/10 border-white/20 rounded focus:ring-blue-400 focus:ring-2"
+                  className="w-4 h-4 text-blue-400 bg-gray-700 border-gray-600 rounded focus:ring-blue-400 focus:ring-2"
                 />
                 <span className="ml-2">Remember me</span>
               </label>
-              <a href="#" className="text-blue-400 hover:text-blue-300 transition-colors duration-200">
-                Forgot password?
-              </a>
             </div>
             
             <button 
               type="submit" 
-              className="w-full py-4 px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900 transform hover:scale-105 transition-all duration-200 shadow-lg"
+              className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-800 transform hover:scale-105 transition-all duration-200 shadow-lg"
             >
               Sign In
             </button>
           </form>
           
-          <div className="text-center mt-8 pt-6 border-t border-white/10">
+          {/* <div className="text-center mt-8 pt-6 border-t border-gray-700">
             <p className="text-gray-400 text-sm">
               Don't have an account?{' '}
               <a href="#" className="text-blue-400 hover:text-blue-300 font-medium transition-colors duration-200">
                 Sign up
               </a>
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
