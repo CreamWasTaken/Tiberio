@@ -14,9 +14,11 @@ export const login = async (username, password) => {
       if (response.data.token) {
         localStorage.setItem('authToken', response.data.token);
       }
+      if(response.data.name){
+        localStorage.setItem('name', response.data.name);
+      }
   
       return response.data;
-      
     } catch (error) {
       if (error.response) {
         throw new Error(error.response.data.error || 'Login failed');
