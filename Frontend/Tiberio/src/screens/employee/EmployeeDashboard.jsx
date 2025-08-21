@@ -18,7 +18,7 @@ function EmployeeDashboard() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
+    <div className="flex h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 overflow-hidden">
       {/* Sidebar */}
       <Sidebar 
         isOpen={sidebarOpen} 
@@ -28,9 +28,9 @@ function EmployeeDashboard() {
       />
 
       {/* Main content area */}
-      <div className="flex-1 lg:ml-0">
+      <div className="flex-1 lg:ml-0 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-gray-800/80 backdrop-blur-xl border-b border-gray-700">
+        <header className="bg-gray-800/80 backdrop-blur-xl border-b border-gray-700 flex-shrink-0">
           <div className="px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-6">
               <div className="flex items-center">
@@ -49,8 +49,8 @@ function EmployeeDashboard() {
           </div>
         </header>
 
-        {/* Main Content */}
-        <main className="px-4 sm:px-6 lg:px-8 py-8">
+        {/* Main Content - Scrollable */}
+        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-8 custom-scrollbar scroll-smooth">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Patient Records Card */}
             <div className="bg-gray-800/80 backdrop-blur-xl border border-gray-700 rounded-xl p-6 hover:shadow-lg transition-all duration-300">

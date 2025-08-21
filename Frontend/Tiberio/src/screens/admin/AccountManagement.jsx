@@ -208,7 +208,7 @@ function AccountManagement() {
   }, [searchTerm]);
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
+    <div className="flex h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 overflow-hidden">
       
       {/* Sidebar */}
       <Sidebar 
@@ -219,9 +219,9 @@ function AccountManagement() {
       />
 
       {/* Main content area */}
-      <div className="flex-1 lg:ml-0">
+      <div className="flex-1 lg:ml-0 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-gray-800/80 backdrop-blur-xl border-b border-gray-700">
+        <header className="bg-gray-800/80 backdrop-blur-xl border-b border-gray-700 flex-shrink-0">
           <div className="px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-6">
               <div className="flex items-center">
@@ -236,22 +236,12 @@ function AccountManagement() {
                 </button>
                 <h1 className="text-2xl font-bold text-white">Account Management</h1>
               </div>
-              <button
-                onClick={refreshLogs}
-                disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                {loading ? 'Refreshing...' : 'Refresh'}
-              </button>
             </div>
           </div>
         </header>
 
-        {/* Main Content */}
-        <main className="px-4 sm:px-6 lg:px-8 py-8">
+        {/* Main Content - Scrollable */}
+        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-8 custom-scrollbar scroll-smooth">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div className="bg-gray-800/80 backdrop-blur-xl border border-gray-700 rounded-xl p-6">
@@ -306,9 +296,21 @@ function AccountManagement() {
           <div className="bg-gray-800/80 backdrop-blur-xl border border-gray-700 rounded-xl p-8">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-white">User Login Activity</h2>
-              <div className="text-sm text-gray-400">
-                Showing {currentLogs.length} of {filteredLogs.length} logs
-                {searchTerm && ` (filtered from ${userLogs.length} total)`}
+              <div className="flex items-center space-x-4">
+                <div className="text-sm text-gray-400">
+                  Showing {currentLogs.length} of {filteredLogs.length} logs
+                  {searchTerm && ` (filtered from ${userLogs.length} total)`}
+                </div>
+                <button
+                  onClick={refreshLogs}
+                  disabled={loading}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  {loading ? 'Refreshing...' : 'Refresh'}
+                </button>
               </div>
             </div>
             
@@ -446,7 +448,7 @@ function AccountManagement() {
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                {usersLoading ? 'Refreshing...' : 'Refresh Users'}
+                {usersLoading ? 'Refreshing...' : 'Refresh'}
               </button>
             </div>
             {usersLoading ? (

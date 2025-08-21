@@ -40,7 +40,7 @@ function Sidebar({ isOpen, onToggle, userType = 'admin', onLogout }) {
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:relative lg:z-auto
-        w-64 flex-shrink-0 flex flex-col
+        w-64 flex-shrink-0 flex flex-col overflow-hidden
       `}>
         {/* Logo and title */}
         <div className="flex items-center p-6 border-b border-gray-700 flex-shrink-0">

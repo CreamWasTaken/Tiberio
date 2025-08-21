@@ -24,7 +24,7 @@ function Patients() {
   ];
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
+    <div className="flex h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 overflow-hidden">
       {/* Sidebar */}
       <Sidebar 
         isOpen={sidebarOpen} 
@@ -34,9 +34,9 @@ function Patients() {
       />
 
       {/* Main content area */}
-      <div className="flex-1 lg:ml-0">
+      <div className="flex-1 lg:ml-0 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-gray-800/80 backdrop-blur-xl border-b border-gray-700">
+        <header className="bg-gray-800/80 backdrop-blur-xl border-b border-gray-700 flex-shrink-0">
           <div className="px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-6">
               <div className="flex items-center">
@@ -62,8 +62,8 @@ function Patients() {
           </div>
         </header>
 
-        {/* Main Content */}
-        <main className="px-4 sm:px-6 lg:px-8 py-8">
+        {/* Main Content - Scrollable */}
+        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-8 custom-scrollbar scroll-smooth">
           {/* Search and Filters */}
           <div className="mb-6 flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
