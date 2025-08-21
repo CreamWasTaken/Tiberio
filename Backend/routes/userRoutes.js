@@ -9,5 +9,8 @@ router.post("/login", userController.login);
 router.get("/get-user-logs",authenticateToken,userController.getUserLogs);
 router.get("/get-user",authenticateToken,userController.getAllUser);
 
+router.put("/change-user-status/:id",authenticateToken,userController.changeUserStatus);
+router.put("/change-password/:id",authenticateToken,userController.changePassword);
+
 
 module.exports = router;

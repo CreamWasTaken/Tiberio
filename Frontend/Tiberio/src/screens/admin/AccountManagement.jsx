@@ -1,22 +1,79 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
-import { getUserLogs } from '../../services/auth';
+import { getUserLogs, getAllUsers, changeUserStatus, changePassword } from '../../services/auth';
 
 function AccountManagement() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userLogs, setUserLogs] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [logsPerPage] = useState(10);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [confirmDialog, setConfirmDialog] = useState({ show: false, message: '', onConfirm: null, title: '' });
 
   // Set user role when component mounts
   useEffect(() => {
     localStorage.setItem('userRole', 'admin');
     fetchUserLogs();
+    fetchUsers();
   }, []);
+
+  // Auto-hide toast after 5 seconds
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => {
+        setToast({ show: false, message: '', type: 'success' });
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast.show]);
+
+  // Handle Escape key to close modals
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        if (showPasswordModal) {
+          setShowPasswordModal(false);
+          setSelectedUser(null);
+          setNewPassword('');
+        }
+        if (confirmDialog.show) {
+          setConfirmDialog({ show: false, message: '', onConfirm: null, title: '' });
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showPasswordModal, confirmDialog.show]);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+  };
+
+  const showConfirmDialog = (title, message, onConfirm) => {
+    setConfirmDialog({ show: true, title, message, onConfirm });
+  };
+
+  const handleConfirm = () => {
+    if (confirmDialog.onConfirm) {
+      confirmDialog.onConfirm();
+    }
+    setConfirmDialog({ show: false, message: '', onConfirm: null, title: '' });
+  };
+
+  const handleCancel = () => {
+    setConfirmDialog({ show: false, message: '', onConfirm: null, title: '' });
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -41,10 +98,73 @@ function AccountManagement() {
       }
     } catch (error) {
       console.error('Error fetching user logs:', error);
-      alert('Failed to fetch user logs: ' + error.message);
+      showToast('Failed to fetch user logs: ' + error.message, 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchUsers = async () => {
+    setUsersLoading(true);
+    try {
+      const response = await getAllUsers();
+      if (response && response.users && Array.isArray(response.users)) {
+        setUsers(response.users);
+      } else {
+        setUsers([]);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      showToast('Failed to fetch users: ' + error.message, 'error');
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  const handleChangeUserStatus = async (userId, newStatus) => {
+    const action = newStatus === 'active' ? 'activate' : 'deactivate';
+    showConfirmDialog(
+      `Confirm ${action}`,
+      `Are you sure you want to ${action} this user?`,
+      async () => {
+        try {
+          await changeUserStatus(userId, newStatus);
+          showToast(`User ${action}d successfully!`, 'success');
+          fetchUsers(); // Refresh users list
+        } catch (error) {
+          showToast('Failed to update user status: ' + error.message, 'error');
+        }
+      }
+    );
+  };
+
+  const handleChangePassword = async (userId) => {
+    setSelectedUser(userId);
+    setNewPassword('');
+    setShowPassword(false);
+    setShowPasswordModal(true);
+  };
+
+  const handleConfirmPasswordChange = async () => {
+    if (!newPassword) {
+      showToast('New password cannot be empty!', 'error');
+      return;
+    }
+    showConfirmDialog(
+      'Confirm Password Change',
+      'Are you sure you want to change this user\'s password?',
+      async () => {
+        try {
+          await changePassword(selectedUser, newPassword);
+          showToast('Password changed successfully!', 'success');
+          setShowPasswordModal(false);
+          setSelectedUser(null);
+          setNewPassword('');
+        } catch (error) {
+          showToast('Failed to change password: ' + error.message, 'error');
+        }
+      }
+    );
   };
 
   const filteredLogs = userLogs.filter(log => {
@@ -313,8 +433,272 @@ function AccountManagement() {
               </div>
             )}
           </div>
+
+          {/* All Users Section */}
+          <div className="bg-gray-800/80 backdrop-blur-xl border border-gray-700 rounded-xl p-8 mt-8">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white">Manage Users</h2>
+              <button
+                onClick={fetchUsers}
+                disabled={usersLoading}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {usersLoading ? 'Refreshing...' : 'Refresh Users'}
+              </button>
+            </div>
+            {usersLoading ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <p className="text-gray-400 mt-4">Loading users...</p>
+              </div>
+            ) : users.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-700 text-sm">
+                  <thead className="bg-gray-700/50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Username
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Role
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-gray-800/50 divide-y divide-gray-700">
+                    {users.map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-700/30 transition-colors duration-200">
+                                                 <td className="px-3 py-2 whitespace-nowrap">
+                           <div className="flex items-center">
+                             <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-2">
+                               <span className="text-[10px] font-bold text-white">
+                                 {(user.first_name || 'U').charAt(0).toUpperCase()}
+                               </span>
+                             </div>
+                             <div className="text-xs font-medium text-white">
+                               {user.first_name} {user.last_name}
+                             </div>
+                           </div>
+                         </td>
+                         <td className="px-3 py-2 whitespace-nowrap">
+                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                             user.type === 'admin' 
+                               ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow' 
+                               : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow'
+                           }`}>
+                             {user.type}
+                           </span>
+                         </td>
+                         <td className="px-3 py-2 whitespace-nowrap">
+                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                             user.status === 'active' 
+                               ? 'bg-green-500 text-white shadow' 
+                               : 'bg-red-500 text-white shadow'
+                           }`}>
+                             {user.status || 'active'}
+                           </span>
+                         </td>
+                                                 <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-300">
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleChangeUserStatus(user.id, user.status === 'active' ? 'inactive' : 'active')}
+                              className={`inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 min-w-[100px] ${
+                                user.status === 'active' 
+                                  ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg' 
+                                  : 'bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg'
+                              }`}
+                              title={user.status === 'active' ? 'Deactivate User' : 'Activate User'}
+                            >
+                              {user.status === 'active' ? 'Deactivate' : 'Activate'}
+                            </button>
+                            <button
+                              onClick={() => handleChangePassword(user.id)}
+                              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all duration-200 shadow-md hover:shadow-lg min-w-[100px]"
+                              title="Change Password"
+                            >
+                              <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-2.348-.054-4.597-.75-6.396-2.247A6 6 0 016.75 7.5c0-1.152.27-2.25.76-3.188A3 3 0 017.5 3m3 0H21" />
+                              </svg>
+                              Change
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-400 text-lg">No users found. Add new users from the authentication service.</p>
+              </div>
+            )}
+          </div>
         </main>
       </div>
+
+      {/* Password Change Modal */}
+      {showPasswordModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
+          <div className="bg-gray-900/95 backdrop-blur-xl border border-gray-600 rounded-2xl p-8 w-full max-w-md mx-4 shadow-2xl animate-slideUp">
+            {/* Header */}
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-2.348-.054-4.597-.75-6.396-2.247A6 6 0 016.75 7.5c0-1.152.27-2.25.76-3.188A3 3 0 017.5 3m3 0H21" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">Change Password</h3>
+              <p className="text-gray-400">
+                for {users.find(u => u.id === selectedUser) ? `${users.find(u => u.id === selectedUser).first_name} ${users.find(u => u.id === selectedUser).last_name}` : 'User'}
+              </p>
+            </div>
+
+            {/* Password Input */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-300 mb-3">New Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  className="w-full px-4 py-3 pr-12 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-300 transition-colors duration-200"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                className="flex-1 px-4 py-3 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-600 rounded-xl hover:bg-gray-700 hover:border-gray-500 transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmPasswordChange}
+                disabled={!newPassword.trim()}
+                className="flex-1 px-4 py-3 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
+              >
+                Change Password
+              </button>
+            </div>
+
+            {/* Close button */}
+            <button
+              onClick={() => setShowPasswordModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors duration-200"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {confirmDialog.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
+          <div className="bg-gray-900/95 backdrop-blur-xl border border-gray-600 rounded-2xl p-8 w-full max-w-md mx-4 shadow-2xl animate-slideUp">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-.667-1.732-.001-1.732 1.586v11.134c0 1.586-.962 2.252-1.732 1.585L6.732 16.414c-.77-.666-.77-1.332 0-2z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">{confirmDialog.title}</h3>
+              <p className="text-gray-400">{confirmDialog.message}</p>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={handleCancel}
+                className="flex-1 px-4 py-3 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-600 rounded-xl hover:bg-gray-700 hover:border-gray-500 transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="flex-1 px-4 py-3 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all duration-200"
+              >
+                Confirm
+              </button>
+            </div>
+            <button
+              onClick={handleCancel}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors duration-200"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-sm w-full mx-4 animate-slideUp`}>
+          <div className={`rounded-xl shadow-2xl border-l-4 ${
+            toast.type === 'success' 
+              ? 'bg-green-500 border-green-400 text-white' 
+              : 'bg-red-500 border-red-400 text-white'
+          }`}>
+            <div className="flex items-center p-4">
+              <div className="flex-shrink-0">
+                {toast.type === 'success' ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium">{toast.message}</p>
+              </div>
+              <div className="ml-auto pl-3">
+                <button
+                  onClick={() => setToast({ show: false, message: '', type: 'success' })}
+                  className="inline-flex text-white hover:text-gray-100 focus:outline-none focus:text-gray-100 transition-colors duration-200"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

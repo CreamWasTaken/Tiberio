@@ -49,6 +49,11 @@ exports.login = async (req, res) => {
     }
     const user = result[0];
 
+    // Check if user status is inactive
+    if (user.status === "inactive") {
+      return res.status(403).json({ error: "Account is inactive. Please contact administrator." });
+    }
+
     const match = await bcrypt.compare(password, user.password);
 
     if (!match) {
@@ -110,7 +115,7 @@ ORDER BY logs.created_at DESC;
 exports.getAllUser = async (req, res) => {
   try {
     
-    const query = `SELECT id, first_name,last_name, type FROM users`;
+    const query = `SELECT id, first_name, last_name, type, status FROM users`;
     const [result] = await db.query(query);
 
     res.status(200).json({
@@ -124,13 +129,31 @@ exports.getAllUser = async (req, res) => {
   }
 };
 
+exports.changeUserStatus = async (req, res) => {
+  const {id} = req.params;
+  const {status} = req.body;
+  try {
+    const query = "UPDATE users SET status = ? WHERE id = ?";
+    await db.query(query, [status, id]);
+    res.status(200).json({message: "User status changed successfully"});
+  } catch (error) {
+    console.error("Error changing user status:", error);
+    res.status(500).json({error: "Internal server error"});
+  }
+};
 
-// exports.changeUserStatus = async (req, res) => {
-  
-// };
-
-// exports.changePassword = async (req, res) => {
-  
-// };
+exports.changePassword = async (req, res) => {
+ const {id} = req.params;
+ const {password} = req.body;
+ try {
+  const hashedPassword = await bcrypt.hash(password, saltRounds);
+  const query = "UPDATE users SET password = ? WHERE id = ?";
+  await db.query(query, [hashedPassword, id]);
+  res.status(200).json({message: "Password changed successfully"});
+ } catch (error) {
+  console.error("Error changing password:", error);
+  res.status(500).json({error: "Internal server error"});
+ }
+};
 
 
