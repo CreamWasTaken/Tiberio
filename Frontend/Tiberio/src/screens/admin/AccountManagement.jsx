@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
-import { getUserLogs, getAllUsers, changeUserStatus, changePassword } from '../../services/auth';
+import { getUserLogs, getAllUsers, changeUserStatus, changePassword, addUser } from '../../services/auth';
 
 function AccountManagement() {
   const navigate = useNavigate();
@@ -19,6 +19,18 @@ function AccountManagement() {
   const [showPassword, setShowPassword] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [confirmDialog, setConfirmDialog] = useState({ show: false, message: '', onConfirm: null, title: '' });
+  
+  // Add User Form State
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [addUserForm, setAddUserForm] = useState({
+    username: '',
+    password: '',
+    first_name: '',
+    last_name: '',
+    type: 'employee'
+  });
+  const [addUserLoading, setAddUserLoading] = useState(false);
+  const [showAddUserPassword, setShowAddUserPassword] = useState(false);
 
   // Set user role when component mounts
   useEffect(() => {
@@ -46,6 +58,10 @@ function AccountManagement() {
           setSelectedUser(null);
           setNewPassword('');
         }
+        if (showAddUserModal) {
+          setShowAddUserModal(false);
+          resetAddUserForm();
+        }
         if (confirmDialog.show) {
           setConfirmDialog({ show: false, message: '', onConfirm: null, title: '' });
         }
@@ -54,7 +70,7 @@ function AccountManagement() {
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [showPasswordModal, confirmDialog.show]);
+  }, [showPasswordModal, showAddUserModal, confirmDialog.show]);
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -165,6 +181,54 @@ function AccountManagement() {
         }
       }
     );
+  };
+
+  // Add User Form Handlers
+  const handleAddUserInputChange = (e) => {
+    const { name, value } = e.target;
+    setAddUserForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleAddUserSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!addUserForm.username || !addUserForm.password || !addUserForm.first_name || !addUserForm.last_name || !addUserForm.type) {
+      showToast('All fields are required!', 'error');
+      return;
+    }
+
+    setAddUserLoading(true);
+    try {
+      await addUser(addUserForm);
+      showToast('User created successfully!', 'success');
+      setShowAddUserModal(false);
+      setAddUserForm({
+        username: '',
+        password: '',
+        first_name: '',
+        last_name: '',
+        type: 'employee'
+      });
+      fetchUsers(); // Refresh users list
+    } catch (error) {
+      showToast('Failed to create user: ' + error.message, 'error');
+    } finally {
+      setAddUserLoading(false);
+    }
+  };
+
+  const resetAddUserForm = () => {
+    setAddUserForm({
+      username: '',
+      password: '',
+      first_name: '',
+      last_name: '',
+      type: 'employee'
+    });
+    setShowAddUserPassword(false);
   };
 
   const filteredLogs = userLogs.filter(log => {
@@ -440,16 +504,27 @@ function AccountManagement() {
           <div className="bg-gray-800/80 backdrop-blur-xl border border-gray-700 rounded-xl p-8 mt-8">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-white">Manage Users</h2>
-              <button
-                onClick={fetchUsers}
-                disabled={usersLoading}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                {usersLoading ? 'Refreshing...' : 'Refresh'}
-              </button>
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => setShowAddUserModal(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Add User
+                </button>
+                <button
+                  onClick={fetchUsers}
+                  disabled={usersLoading}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  {usersLoading ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
             </div>
             {usersLoading ? (
               <div className="text-center py-12">
@@ -615,6 +690,154 @@ function AccountManagement() {
             {/* Close button */}
             <button
               onClick={() => setShowPasswordModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors duration-200"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add User Modal */}
+      {showAddUserModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
+          <div className="bg-gray-900/95 backdrop-blur-xl border border-gray-600 rounded-2xl p-8 w-full max-w-lg mx-4 shadow-2xl animate-slideUp">
+            {/* Header */}
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">Add New User</h3>
+              <p className="text-gray-400">Create a new user account</p>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleAddUserSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">First Name</label>
+                  <input
+                    type="text"
+                    name="first_name"
+                    value={addUserForm.first_name}
+                    onChange={handleAddUserInputChange}
+                    placeholder="Enter first name"
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Last Name</label>
+                  <input
+                    type="text"
+                    name="last_name"
+                    value={addUserForm.last_name}
+                    onChange={handleAddUserInputChange}
+                    placeholder="Enter last name"
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                <input
+                  type="text"
+                  name="username"
+                  value={addUserForm.username}
+                  onChange={handleAddUserInputChange}
+                  placeholder="Enter username"
+                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                <div className="relative">
+                  <input
+                    type={showAddUserPassword ? "text" : "password"}
+                    name="password"
+                    value={addUserForm.password}
+                    onChange={handleAddUserInputChange}
+                    placeholder="Enter password"
+                    className="w-full px-4 py-3 pr-12 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAddUserPassword(!showAddUserPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-300 transition-colors duration-200"
+                    title={showAddUserPassword ? "Hide password" : "Show password"}
+                  >
+                    {showAddUserPassword ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">User Type</label>
+                <select
+                  name="type"
+                  value={addUserForm.type}
+                  onChange={handleAddUserInputChange}
+                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                  required
+                >
+                  <option value="employee">Employee</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddUserModal(false);
+                    resetAddUserForm();
+                  }}
+                  className="flex-1 px-4 py-3 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-600 rounded-xl hover:bg-gray-700 hover:border-gray-500 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addUserLoading}
+                  className="flex-1 px-4 py-3 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed transition-all duration-200 shadow-lg flex items-center justify-center"
+                >
+                  {addUserLoading ? (
+                    <>
+                      <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    'Create User'
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {/* Close button */}
+            <button
+              onClick={() => {
+                setShowAddUserModal(false);
+                resetAddUserForm();
+              }}
               className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors duration-200"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

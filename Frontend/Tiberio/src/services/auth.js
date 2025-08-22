@@ -137,4 +137,24 @@ export const login = async (username, password) => {
     }
   };
 
+export const addUser = async (userData) => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.post(`${API_URL}/api/users/add-user`, userData, {
+      headers: {
+        Authorization: `Bearer ${token}` 
+      }
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data.error);
+    } else if (error.request) {
+      throw new Error("No response from server");
+    } else {
+      throw new Error(error.message);
+    }
+  }
+};
+
 

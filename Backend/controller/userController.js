@@ -115,7 +115,7 @@ ORDER BY logs.created_at DESC;
 exports.getAllUser = async (req, res) => {
   try {
     
-    const query = `SELECT id, first_name, last_name, type, status FROM users`;
+    const query = `SELECT id, first_name, last_name, type, status,created_at,updated_at FROM users`;
     const [result] = await db.query(query);
 
     res.status(200).json({
