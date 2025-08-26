@@ -14,4 +14,7 @@ router.post("/patients/:patientId/checkups", authenticateToken, (req, res, next)
 });
 router.get("/patients/:patientId/checkups", authenticateToken, checkupController.getPatientCheckups);
 
+// summary
+router.get("/checkups/count", authenticateToken, checkupController.getTotalCheckupsCount);
+
 module.exports = router;

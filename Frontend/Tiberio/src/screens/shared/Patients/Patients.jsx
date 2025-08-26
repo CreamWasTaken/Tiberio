@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi } from '../../../services/patient';
+import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi, getTotalCheckupsCount } from '../../../services/patient';
 import Sidebar from '../../../components/Sidebar';
 import AddPatientModal from './components/AddPatientModal';
 import AddCheckupModal from './components/AddCheckupModal';
@@ -9,6 +9,7 @@ function Patients() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [patients, setPatients] = useState([]);
+  const [totalCheckups, setTotalCheckups] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -35,8 +36,21 @@ function Patients() {
     fetchPatients();
   }, []);
 
+  // Load total checkups count
+  useEffect(() => {
+    const loadTotalCheckups = async () => {
+      try {
+        const count = await getTotalCheckupsCount();
+        setTotalCheckups(Number(count) || 0);
+      } catch {
+        // keep silent for now
+      }
+    };
+    loadTotalCheckups();
+  }, []);
+
   const totalPatients = patients.length;
-  const activePatients = patients.length; // No status field from API yet; count all
+  // const activePatients = patients.length; // kept for future use if needed
 
   const getYearMonthInTz = (dateLike, timeZone) => {
     if (!dateLike) return { year: '0000', month: '00' };
@@ -168,7 +182,7 @@ function Patients() {
     load();
   }, [selectedPatient, activeTab]);
 
-  // No pagination; suggestions are limited in dropdown
+
 
   const normalizedQuery = (searchQuery || '').trim().toLowerCase();
   const filteredPatients = normalizedQuery
@@ -179,7 +193,7 @@ function Patients() {
       })
     : patients;
 
-  // Removed pagination list; using suggestions dropdown instead
+ 
 
   // Limit suggestions for dropdown
   const suggestionPatients = filteredPatients.slice(0, 8);
@@ -267,8 +281,8 @@ function Patients() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">Active Patients</p>
-                  <p className="text-2xl font-bold text-white">{activePatients}</p>
+                  <p className="text-sm text-gray-400">Total checkups</p>
+                  <p className="text-2xl font-bold text-white">{totalCheckups}</p>
                 </div>
               </div>
             </div>

@@ -74,4 +74,22 @@ export const addCheckup = async (patientId, payload) => {
   }
 };
 
+export const getTotalCheckupsCount = async () => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.get(`${API_URL}/api/patients/checkups/count`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return response.data?.count ?? 0;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data.error || 'Failed to fetch total checkups count');
+    } else if (error.request) {
+      throw new Error('No response from server');
+    } else {
+      throw new Error(error.message);
+    }
+  }
+};
+
 
