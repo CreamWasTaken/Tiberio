@@ -32,8 +32,9 @@ exports.addPatient = async (req, res) => {
             age--;
         }
 
-        const query = "INSERT INTO patients (first_name, middle_name, last_name, sex, birthdate, age, contact_number, telephone_number, senior_number,address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)";
-        const [result] = await db.query(query, [first_name, middle_name, last_name, sex, birthdate, age, contact_number, telephone_number, senior_number,address]);
+        const userId = req.user?.id || null;
+        const query = "INSERT INTO patients (first_name, middle_name, last_name, sex, birthdate, age, contact_number, telephone_number, senior_number,address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        const [result] = await db.query(query, [first_name, middle_name, last_name, sex, birthdate, age, contact_number, telephone_number, senior_number, address, userId]);
 
         res.status(201).json({
             message: "Patient created successfully",
@@ -48,7 +49,8 @@ exports.addPatient = async (req, res) => {
                 contact_number,
                 telephone_number,
                 senior_number,
-                address
+                address,
+                user_id: userId
             }
         });
     } catch (err) {

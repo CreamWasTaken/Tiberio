@@ -4,7 +4,10 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 export const getPatients = async () => {
   try {
-    const response = await axios.get(`${API_URL}/api/patients/get-patients`);
+    const token = localStorage.getItem('authToken');
+    const response = await axios.get(`${API_URL}/api/patients/get-patients`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
     return response.data;
   } catch (error) {
     if (error.response) {
@@ -19,7 +22,10 @@ export const getPatients = async () => {
 
 export const addPatient = async (patientData) => {
   try {
-    const response = await axios.post(`${API_URL}/api/patients/add-patient`, patientData);
+    const token = localStorage.getItem('authToken');
+    const response = await axios.post(`${API_URL}/api/patients/add-patient`, patientData, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
     return response.data;
   } catch (error) {
     if (error.response) {
