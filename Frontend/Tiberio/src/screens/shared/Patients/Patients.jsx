@@ -295,7 +295,7 @@ function Patients() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">This Month</p>
+                  <p className="text-sm text-gray-400">Patients this Month</p>
                   <p className="text-2xl font-bold text-white">{thisMonthCount}</p>
                 </div>
               </div>
