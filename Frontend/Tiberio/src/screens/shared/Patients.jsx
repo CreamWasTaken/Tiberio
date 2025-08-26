@@ -504,6 +504,9 @@ function Patients() {
                     <div>
                       <label className="block text-sm text-gray-300 mb-1">Contact Number</label>
                       <input className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
+                        type="tel"
+                        maxLength={10}
+                        placeholder="09XXXXXXXXX"
                         value={form.contact_number}
                         onChange={(e) => setForm({ ...form, contact_number: e.target.value })}
                       />
@@ -511,6 +514,7 @@ function Patients() {
                     <div>
                       <label className="block text-sm text-gray-300 mb-1">Telephone Number</label>
                       <input className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
+                        type="tel"
                         value={form.telephone_number}
                         onChange={(e) => setForm({ ...form, telephone_number: e.target.value })}
                       />
