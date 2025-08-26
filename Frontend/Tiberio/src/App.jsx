@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Login } from './screens/auth'
 import { AdminDashboard, AccountManagement } from './screens/admin'
 import { EmployeeDashboard } from './screens/employee'
-import { Patients } from './screens/shared'
+import { Patients } from './screens/shared/Patients'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {

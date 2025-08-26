@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi } from '../../services/patient';
-import Sidebar from '../../components/Sidebar';
+import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi } from '../../../services/patient';
+import Sidebar from '../../../components/Sidebar';
 
 function Patients() {
   const navigate = useNavigate();
