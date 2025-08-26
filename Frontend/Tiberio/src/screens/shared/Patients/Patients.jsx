@@ -2,6 +2,8 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi } from '../../../services/patient';
 import Sidebar from '../../../components/Sidebar';
+import AddPatientModal from './components/AddPatientModal';
+import AddCheckupModal from './components/AddCheckupModal';
 
 function Patients() {
   const navigate = useNavigate();
@@ -578,341 +580,93 @@ function Patients() {
           {/* Profile modal removed in favor of persistent left profile panel */}
 
           {/* Add Patient Modal */}
-          {isAddOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-              <div className="absolute inset-0 bg-black/60" onClick={() => setIsAddOpen(false)}></div>
-              <div className="relative w-full max-w-2xl mx-4 shadow-2xl">
-                <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 rounded-t-xl border border-gray-700 p-6 flex items-center justify-between">
-                  <h2 className="text-2xl font-semibold text-white">Add New Patient</h2>
-                  <button className="text-blue-100 hover:text-white" onClick={() => setIsAddOpen(false)} aria-label="Close add form">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="bg-gray-800 border-x border-b border-gray-700 rounded-b-xl p-6">
-                  {formError && (
-                    <div className="mb-4 text-sm text-red-400">{formError}</div>
-                  )}
-                  <form
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      setFormError(null);
-                      setIsSubmitting(true);
-                      try {
-                        const payload = {
-                          ...form,
-                          // Send date as YYYY-MM-DD string to avoid timezone shifts
-                          birthdate: form.birthdate || ''
-                        };
-                        await addPatientApi(payload);
-                        // refresh list
-                        const data = await fetchPatientsApi();
-                        setPatients(data || []);
-                        setIsAddOpen(false);
-                      } catch (err) {
-                        setFormError(err.message || 'Failed to add patient');
-                      } finally {
-                        setIsSubmitting(false);
-                      }
-                    }}
-                    className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-                  >
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-1">First Name</label>
-                      <input className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
-                        value={form.first_name}
-                        onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-1">Middle Name</label>
-                      <input className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
-                        value={form.middle_name}
-                        onChange={(e) => setForm({ ...form, middle_name: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-1">Last Name</label>
-                      <input className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
-                        value={form.last_name}
-                        onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-1">Sex</label>
-                      <select className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
-                        value={form.sex}
-                        onChange={(e) => setForm({ ...form, sex: e.target.value })}
-                        required
-                      >
-                        <option value="">Select</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-1">Birthdate</label>
-                      <input type="date" className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
-                        value={form.birthdate}
-                        onChange={(e) => setForm({ ...form, birthdate: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className="block text-sm text-gray-300 mb-1">Address</label>
-                      <input className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
-                        value={form.address}
-                        onChange={(e) => setForm({ ...form, address: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-1">Contact Number</label>
-                      <input className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
-                        type="tel"
-                        maxLength={10}
-                        placeholder="09XXXXXXXXX"
-                        value={form.contact_number}
-                        onChange={(e) => setForm({ ...form, contact_number: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-1">Telephone Number</label>
-                      <input className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
-                        type="tel"
-                        value={form.telephone_number}
-                        onChange={(e) => setForm({ ...form, telephone_number: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-1">Senior Number</label>
-                      <input className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
-                        value={form.senior_number}
-                        onChange={(e) => setForm({ ...form, senior_number: e.target.value })}
-                      />
-                    </div>
-                    <div className="sm:col-span-2 flex justify-end gap-3 mt-2">
-                      <button type="button" className="px-4 py-2 bg-gray-700 text-white rounded-lg" onClick={() => setIsAddOpen(false)} disabled={isSubmitting}>Cancel</button>
-                      <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-          )}
+          <AddPatientModal
+            isOpen={isAddOpen}
+            onClose={() => setIsAddOpen(false)}
+            form={form}
+            setForm={setForm}
+            formError={formError}
+            isSubmitting={isSubmitting}
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setFormError(null);
+              setIsSubmitting(true);
+              try {
+                const payload = {
+                  ...form,
+                  birthdate: form.birthdate || ''
+                };
+                await addPatientApi(payload);
+                const data = await fetchPatientsApi();
+                setPatients(data || []);
+                setIsAddOpen(false);
+              } catch (err) {
+                setFormError(err.message || 'Failed to add patient');
+              } finally {
+                setIsSubmitting(false);
+              }
+            }}
+          />
 
           {/* Add Checkup Modal */}
-          {isAddCheckupOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-              <div className="absolute inset-0 bg-black/60" onClick={() => setIsAddCheckupOpen(false)}></div>
-              <div className="relative w-full max-w-xl mx-4 shadow-2xl max-h-[90vh] flex flex-col">
-                <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 rounded-t-xl border border-gray-700 p-6 flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-white">Add Checkup</h2>
-                  <button className="text-blue-100 hover:text-white" onClick={() => setIsAddCheckupOpen(false)} aria-label="Close add form">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="bg-gray-800 border-x border-b border-gray-700 rounded-b-xl p-6 overflow-y-auto custom-scrollbar">
-                  {checkupFormError && (
-                    <div className="mb-4 text-sm text-red-400">{checkupFormError}</div>
-                  )}
-                  <form
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      if (!selectedPatient) return;
-                      setCheckupFormError(null);
-                      setIsSavingCheckup(true);
-                      try {
-                        const payload = {
-                          checkup_date: checkupForm.checkup_date || null,
-                          notes: checkupForm.notes || null,
-                          diagnosis: checkupForm.diagnosis || null,
-                          binocular_pd: checkupForm.binocular_pd || null,
-                          spectacle_prescription: {
-                            sphereRight: checkupForm.spectacle.sphereRight || null,
-                            cylinderRight: checkupForm.spectacle.cylinderRight || null,
-                            axisRight: checkupForm.spectacle.axisRight || null,
-                            additionRight: checkupForm.spectacle.additionRight || null,
-                            visualAcuityRight: checkupForm.spectacle.visualAcuityRight || null,
-                            monocularPdRight: checkupForm.spectacle.monocularPdRight || null,
-                            sphereLeft: checkupForm.spectacle.sphereLeft || null,
-                            cylinderLeft: checkupForm.spectacle.cylinderLeft || null,
-                            axisLeft: checkupForm.spectacle.axisLeft || null,
-                            additionLeft: checkupForm.spectacle.additionLeft || null,
-                            visualAcuityLeft: checkupForm.spectacle.visualAcuityLeft || null,
-                            monocularPdLeft: checkupForm.spectacle.monocularPdLeft || null
-                          },
-                          contact_lens_prescription: {
-                            sphereRight: checkupForm.contact.sphereRight || null,
-                            sphereLeft: checkupForm.contact.sphereLeft || null,
-                            cylinderRight: checkupForm.contact.cylinderRight || null,
-                            cylinderLeft: checkupForm.contact.cylinderLeft || null,
-                            axisRight: checkupForm.contact.axisRight || null,
-                            axisLeft: checkupForm.contact.axisLeft || null,
-                            additionRight: checkupForm.contact.additionRight || null,
-                            additionLeft: checkupForm.contact.additionLeft || null,
-                            baseCurveRight: checkupForm.contact.baseCurveRight || null,
-                            baseCurveLeft: checkupForm.contact.baseCurveLeft || null,
-                            diameterRight: checkupForm.contact.diameterRight || null,
-                            diameterLeft: checkupForm.contact.diameterLeft || null
-                          }
-                        };
-                        await addCheckupApi(selectedPatient.id, payload);
-                        const data = await getPatientCheckups(selectedPatient.id);
-                        setCheckups(Array.isArray(data) ? data : []);
-                        setIsAddCheckupOpen(false);
-                      } catch (err) {
-                        setCheckupFormError(err.message || 'Failed to add checkup');
-                      } finally {
-                        setIsSavingCheckup(false);
-                      }
-                    }}
-                    className="grid grid-cols-1 gap-4"
-                  >
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-1">Checkup Date</label>
-                      <input type="date" className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
-                        value={checkupForm.checkup_date}
-                        onChange={(e) => setCheckupForm({ ...checkupForm, checkup_date: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-1">Diagnosis</label>
-                      <input className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
-                        value={checkupForm.diagnosis}
-                        onChange={(e) => setCheckupForm({ ...checkupForm, diagnosis: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-1">Notes</label>
-                      <textarea className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
-                        rows={3}
-                        value={checkupForm.notes}
-                        onChange={(e) => setCheckupForm({ ...checkupForm, notes: e.target.value })}
-                      />
-                    </div>
-                    {/* Spectacle Prescription - Table Style */}
-                    <div className="mt-2">
-                      <div className="text-white font-medium mb-2">Spectacle Prescription</div>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full text-sm text-left border border-gray-700">
-                          <thead className="bg-gray-900/70">
-                            <tr>
-                              <th className="px-3 py-2 border-b border-gray-700">Eye</th>
-                              <th className="px-3 py-2 border-b border-gray-700">Sphere</th>
-                              <th className="px-3 py-2 border-b border-gray-700">Cylinder</th>
-                              <th className="px-3 py-2 border-b border-gray-700">Axis</th>
-                              <th className="px-3 py-2 border-b border-gray-700">Addition</th>
-                              <th className="px-3 py-2 border-b border-gray-700">Visual acuity</th>
-                              <th className="px-3 py-2 border-b border-gray-700">MPD</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr className="odd:bg-gray-800/40">
-                              <td className="px-3 py-2 border-t border-gray-700 text-gray-300">Right Eye</td>
-                              <td className="px-3 py-2 border-t border-gray-700">
-                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.sphereRight} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, sphereRight: e.target.value } })} />
-                              </td>
-                              <td className="px-3 py-2 border-t border-gray-700">
-                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.cylinderRight} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, cylinderRight: e.target.value } })} />
-                              </td>
-                              <td className="px-3 py-2 border-t border-gray-700">
-                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.axisRight} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, axisRight: e.target.value } })} />
-                              </td>
-                              <td className="px-3 py-2 border-t border-gray-700">
-                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.additionRight} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, additionRight: e.target.value } })} />
-                              </td>
-                              <td className="px-3 py-2 border-t border-gray-700">
-                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.visualAcuityRight} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, visualAcuityRight: e.target.value } })} />
-                              </td>
-                              <td className="px-3 py-2 border-t border-gray-700">
-                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.monocularPdRight} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, monocularPdRight: e.target.value } })} />
-                              </td>
-                            </tr>
-                            <tr className="odd:bg-gray-800/40">
-                              <td className="px-3 py-2 border-t border-gray-700 text-gray-300">Left Eye</td>
-                              <td className="px-3 py-2 border-t border-gray-700">
-                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.sphereLeft} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, sphereLeft: e.target.value } })} />
-                              </td>
-                              <td className="px-3 py-2 border-t border-gray-700">
-                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.cylinderLeft} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, cylinderLeft: e.target.value } })} />
-                              </td>
-                              <td className="px-3 py-2 border-t border-gray-700">
-                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.axisLeft} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, axisLeft: e.target.value } })} />
-                              </td>
-                              <td className="px-3 py-2 border-t border-gray-700">
-                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.additionLeft} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, additionLeft: e.target.value } })} />
-                              </td>
-                              <td className="px-3 py-2 border-t border-gray-700">
-                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.visualAcuityLeft} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, visualAcuityLeft: e.target.value } })} />
-                              </td>
-                              <td className="px-3 py-2 border-t border-gray-700">
-                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.monocularPdLeft} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, monocularPdLeft: e.target.value } })} />
-                              </td>
-                            </tr>
-                            <tr>
-                              <td className="px-3 py-2 border-t border-gray-700 text-gray-300">BPD</td>
-                              <td className="px-3 py-2 border-t border-gray-700" colSpan={6}>
-                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.binocular_pd} onChange={(e) => setCheckupForm({ ...checkupForm, binocular_pd: e.target.value })} />
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* Contact Lens Prescription - Table Style */}
-                    <div className="mt-4">
-                      <div className="text-white font-medium mb-2">Contact Lens Prescription</div>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full text-sm text-left border border-gray-700">
-                          <thead className="bg-gray-900/70">
-                            <tr>
-                              <th className="px-3 py-2 border-b border-gray-700">Eye</th>
-                              <th className="px-3 py-2 border-b border-gray-700">Sphere</th>
-                              <th className="px-3 py-2 border-b border-gray-700">Cylinder</th>
-                              <th className="px-3 py-2 border-b border-gray-700">Axis</th>
-                              <th className="px-3 py-2 border-b border-gray-700">Addition</th>
-                              <th className="px-3 py-2 border-b border-gray-700">Base Curve</th>
-                              <th className="px-3 py-2 border-b border-gray-700">Diameter</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr className="odd:bg-gray-800/40">
-                              <td className="px-3 py-2 border-t border-gray-700 text-gray-300">Right Eye</td>
-                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.sphereRight} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, sphereRight: e.target.value } })} /></td>
-                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.cylinderRight} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, cylinderRight: e.target.value } })} /></td>
-                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.axisRight} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, axisRight: e.target.value } })} /></td>
-                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.additionRight} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, additionRight: e.target.value } })} /></td>
-                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.baseCurveRight} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, baseCurveRight: e.target.value } })} /></td>
-                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.diameterRight} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, diameterRight: e.target.value } })} /></td>
-                            </tr>
-                            <tr className="odd:bg-gray-800/40">
-                              <td className="px-3 py-2 border-t border-gray-700 text-gray-300">Left Eye</td>
-                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.sphereLeft} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, sphereLeft: e.target.value } })} /></td>
-                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.cylinderLeft} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, cylinderLeft: e.target.value } })} /></td>
-                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.axisLeft} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, axisLeft: e.target.value } })} /></td>
-                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.additionLeft} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, additionLeft: e.target.value } })} /></td>
-                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.baseCurveLeft} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, baseCurveLeft: e.target.value } })} /></td>
-                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.diameterLeft} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, diameterLeft: e.target.value } })} /></td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-3 mt-2">
-                      <button type="button" className="px-4 py-2 bg-gray-700 text-white rounded-lg" onClick={() => setIsAddCheckupOpen(false)} disabled={isSavingCheckup}>Cancel</button>
-                      <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg" disabled={isSavingCheckup}>{isSavingCheckup ? 'Saving...' : 'Save'}</button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-          )}
+          <AddCheckupModal
+            isOpen={isAddCheckupOpen}
+            onClose={() => setIsAddCheckupOpen(false)}
+            checkupForm={checkupForm}
+            setCheckupForm={setCheckupForm}
+            checkupFormError={checkupFormError}
+            isSavingCheckup={isSavingCheckup}
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!selectedPatient) return;
+              setCheckupFormError(null);
+              setIsSavingCheckup(true);
+              try {
+                const payload = {
+                  checkup_date: checkupForm.checkup_date || null,
+                  notes: checkupForm.notes || null,
+                  diagnosis: checkupForm.diagnosis || null,
+                  binocular_pd: checkupForm.binocular_pd || null,
+                  spectacle_prescription: {
+                    sphereRight: checkupForm.spectacle.sphereRight || null,
+                    cylinderRight: checkupForm.spectacle.cylinderRight || null,
+                    axisRight: checkupForm.spectacle.axisRight || null,
+                    additionRight: checkupForm.spectacle.additionRight || null,
+                    visualAcuityRight: checkupForm.spectacle.visualAcuityRight || null,
+                    monocularPdRight: checkupForm.spectacle.monocularPdRight || null,
+                    sphereLeft: checkupForm.spectacle.sphereLeft || null,
+                    cylinderLeft: checkupForm.spectacle.cylinderLeft || null,
+                    axisLeft: checkupForm.spectacle.axisLeft || null,
+                    additionLeft: checkupForm.spectacle.additionLeft || null,
+                    visualAcuityLeft: checkupForm.spectacle.visualAcuityLeft || null,
+                    monocularPdLeft: checkupForm.spectacle.monocularPdLeft || null
+                  },
+                  contact_lens_prescription: {
+                    sphereRight: checkupForm.contact.sphereRight || null,
+                    sphereLeft: checkupForm.contact.sphereLeft || null,
+                    cylinderRight: checkupForm.contact.cylinderRight || null,
+                    cylinderLeft: checkupForm.contact.cylinderLeft || null,
+                    axisRight: checkupForm.contact.axisRight || null,
+                    axisLeft: checkupForm.contact.axisLeft || null,
+                    additionRight: checkupForm.contact.additionRight || null,
+                    additionLeft: checkupForm.contact.additionLeft || null,
+                    baseCurveRight: checkupForm.contact.baseCurveRight || null,
+                    baseCurveLeft: checkupForm.contact.baseCurveLeft || null,
+                    diameterRight: checkupForm.contact.diameterRight || null,
+                    diameterLeft: checkupForm.contact.diameterLeft || null
+                  }
+                };
+                await addCheckupApi(selectedPatient.id, payload);
+                const data = await getPatientCheckups(selectedPatient.id);
+                setCheckups(Array.isArray(data) ? data : []);
+                setIsAddCheckupOpen(false);
+              } catch (err) {
+                setCheckupFormError(err.message || 'Failed to add checkup');
+              } finally {
+                setIsSavingCheckup(false);
+              }
+            }}
+          />
         </main>
       </div>
     </div>
