@@ -61,7 +61,13 @@ exports.addPatient = async (req, res) => {
 
 exports.getPatients = async (req, res) => {
     try {
-        const query = "SELECT * FROM patients";
+        const query = `
+            SELECT 
+                p.*, 
+                CONCAT(u.first_name, ' ', u.last_name) AS created_by_name
+            FROM patients p
+            LEFT JOIN users u ON p.user_id = u.id
+        `;
         const [result] = await db.query(query);
         res.status(200).json(result);
     } catch (err) {
