@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { getPatients as fetchPatientsApi, addPatient as addPatientApi } from '../../services/patient';
+import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi } from '../../services/patient';
 import Sidebar from '../../components/Sidebar';
 
 function Patients() {
@@ -58,6 +58,25 @@ function Patients() {
 
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [activeTab, setActiveTab] = useState('checkups');
+  const [checkups, setCheckups] = useState([]);
+  const [expandedCheckups, setExpandedCheckups] = useState({});
+  const [isAddCheckupOpen, setIsAddCheckupOpen] = useState(false);
+  const [isSavingCheckup, setIsSavingCheckup] = useState(false);
+  const [checkupFormError, setCheckupFormError] = useState(null);
+  const initialCheckupForm = {
+    checkup_date: '',
+    notes: '',
+    diagnosis: '',
+    binocular_pd: '',
+    spectacle: {
+      sphereRight: '', cylinderRight: '', axisRight: '', additionRight: '', visualAcuityRight: '', monocularPdRight: '',
+      sphereLeft: '', cylinderLeft: '', axisLeft: '', additionLeft: '', visualAcuityLeft: '', monocularPdLeft: ''
+    },
+    contact: {
+      sphereRight: '', sphereLeft: '', cylinderRight: '', cylinderLeft: '', axisRight: '', axisLeft: '', additionRight: '', additionLeft: '', baseCurveRight: '', baseCurveLeft: '', diameterRight: '', diameterLeft: ''
+    }
+  };
+  const [checkupForm, setCheckupForm] = useState(initialCheckupForm);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -131,6 +150,21 @@ function Patients() {
       setSelectedPatient({ ...p, displayName, phone, birthdate, status: p.status || 'Active' });
     }
   }, [patients, selectedPatient]);
+
+  // Load checkups when patient or tab changes
+  useEffect(() => {
+    const load = async () => {
+      if (selectedPatient && activeTab === 'checkups') {
+        try {
+          const data = await getPatientCheckups(selectedPatient.id);
+          setCheckups(Array.isArray(data) ? data : []);
+        } catch {
+          // silent for now
+        }
+      }
+    };
+    load();
+  }, [selectedPatient, activeTab]);
 
   // No pagination; suggestions are limited in dropdown
 
@@ -387,8 +421,141 @@ function Patients() {
                   )}
                   {selectedPatient && activeTab === 'checkups' && (
                     <div className="text-gray-200">
-                      <h3 className="text-lg font-semibold mb-3">Checkups</h3>
-                      <p className="text-gray-400 text-sm">No checkups to display yet. This is a placeholder.</p>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-lg font-semibold">Checkups</h3>
+                        {(userRole === 'admin' || userRole === 'employee') && (
+                          <button
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm"
+                            onClick={() => { setCheckupForm(initialCheckupForm); setCheckupFormError(null); setIsAddCheckupOpen(true); }}
+                          >
+                            Add Checkup
+                          </button>
+                        )}
+                      </div>
+                      {(!checkups || checkups.length === 0) ? (
+                        <p className="text-gray-400 text-sm">No checkups yet.</p>
+                      ) : (
+                        <div className="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1">
+                          {checkups.map(c => (
+                            <div key={c.id} className="bg-gray-900/60 border border-gray-700 rounded-lg">
+                              <button
+                                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-800/60"
+                                onClick={() => setExpandedCheckups(prev => ({ ...prev, [c.id]: !prev[c.id] }))}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className={'inline-block w-4 h-4 text-gray-300 transform transition-transform ' + (expandedCheckups[c.id] ? 'rotate-90' : '')}>▶</span>
+                                  <div className="text-white font-medium text-sm">{formatDateYMDSlash(c.checkup_date) || '—'}</div>
+                                </div>
+                                <div className="text-gray-400 text-xs">By: {c.created_by_name || '—'}</div>
+                              </button>
+                              <div className={`${expandedCheckups[c.id] ? 'block' : 'hidden'} px-4 pb-4`}>
+                                <div className="mt-1 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                                  <div>
+                                    <div className="text-gray-400 text-xs uppercase">Diagnosis</div>
+                                    <div className="text-white">{c.diagnosis || '—'}</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-gray-400 text-xs uppercase">Notes</div>
+                                    <div className="text-white">{c.notes || '—'}</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-gray-400 text-xs uppercase">Binocular PD</div>
+                                    <div className="text-white">{c.binocular_pd || '—'}</div>
+                                  </div>
+                                </div>
+
+                              {/* Spectacle Prescription Table */}
+                              {c.spectacle_prescription && (
+                                <div className="mt-3">
+                                  <div className="text-gray-300 text-sm font-medium mb-2">Spectacle</div>
+                                  <div className="overflow-x-auto">
+                                    <table className="min-w-full text-sm text-left border border-gray-700">
+                                      <thead className="bg-gray-900/70">
+                                        <tr>
+                                          <th className="px-3 py-2 border-b border-gray-700">Eye</th>
+                                          <th className="px-3 py-2 border-b border-gray-700">Sphere</th>
+                                          <th className="px-3 py-2 border-b border-gray-700">Cylinder</th>
+                                          <th className="px-3 py-2 border-b border-gray-700">Axis</th>
+                                          <th className="px-3 py-2 border-b border-gray-700">Addition</th>
+                                          <th className="px-3 py-2 border-b border-gray-700">Visual acuity</th>
+                                          <th className="px-3 py-2 border-b border-gray-700">MPD</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        <tr className="odd:bg-gray-800/40">
+                                          <td className="px-3 py-2 border-t border-gray-700 text-gray-300">Right Eye</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.spectacle_prescription.sphereRight ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.spectacle_prescription.cylinderRight ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.spectacle_prescription.axisRight ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.spectacle_prescription.additionRight ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.spectacle_prescription.visualAcuityRight ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.spectacle_prescription.monocularPdRight ?? '—'}</td>
+                                        </tr>
+                                        <tr className="odd:bg-gray-800/40">
+                                          <td className="px-3 py-2 border-t border-gray-700 text-gray-300">Left Eye</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.spectacle_prescription.sphereLeft ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.spectacle_prescription.cylinderLeft ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.spectacle_prescription.axisLeft ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.spectacle_prescription.additionLeft ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.spectacle_prescription.visualAcuityLeft ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.spectacle_prescription.monocularPdLeft ?? '—'}</td>
+                                        </tr>
+                                        <tr>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-gray-300">BPD</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white" colSpan={6}>{c.binocular_pd ?? '—'}</td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Contact Lens Prescription Table */}
+                              {c.contact_lens_prescription && (
+                                <div className="mt-3">
+                                  <div className="text-gray-300 text-sm font-medium mb-2">Contact Lens</div>
+                                  <div className="overflow-x-auto">
+                                    <table className="min-w-full text-sm text-left border border-gray-700">
+                                      <thead className="bg-gray-900/70">
+                                        <tr>
+                                          <th className="px-3 py-2 border-b border-gray-700">Eye</th>
+                                          <th className="px-3 py-2 border-b border-gray-700">Sphere</th>
+                                          <th className="px-3 py-2 border-b border-gray-700">Cylinder</th>
+                                          <th className="px-3 py-2 border-b border-gray-700">Axis</th>
+                                          <th className="px-3 py-2 border-b border-gray-700">Addition</th>
+                                          <th className="px-3 py-2 border-b border-gray-700">Base Curve</th>
+                                          <th className="px-3 py-2 border-b border-gray-700">Diameter</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        <tr className="odd:bg-gray-800/40">
+                                          <td className="px-3 py-2 border-t border-gray-700 text-gray-300">Right Eye</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.contact_lens_prescription.sphereRight ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.contact_lens_prescription.cylinderRight ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.contact_lens_prescription.axisRight ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.contact_lens_prescription.additionRight ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.contact_lens_prescription.baseCurveRight ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.contact_lens_prescription.diameterRight ?? '—'}</td>
+                                        </tr>
+                                        <tr className="odd:bg-gray-800/40">
+                                          <td className="px-3 py-2 border-t border-gray-700 text-gray-300">Left Eye</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.contact_lens_prescription.sphereLeft ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.contact_lens_prescription.cylinderLeft ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.contact_lens_prescription.axisLeft ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.contact_lens_prescription.additionLeft ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.contact_lens_prescription.baseCurveLeft ?? '—'}</td>
+                                          <td className="px-3 py-2 border-t border-gray-700 text-white">{c.contact_lens_prescription.diameterLeft ?? '—'}</td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                   {selectedPatient && activeTab === 'transactions' && (
@@ -529,6 +696,217 @@ function Patients() {
                     <div className="sm:col-span-2 flex justify-end gap-3 mt-2">
                       <button type="button" className="px-4 py-2 bg-gray-700 text-white rounded-lg" onClick={() => setIsAddOpen(false)} disabled={isSubmitting}>Cancel</button>
                       <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Add Checkup Modal */}
+          {isAddCheckupOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/60" onClick={() => setIsAddCheckupOpen(false)}></div>
+              <div className="relative w-full max-w-xl mx-4 shadow-2xl max-h-[90vh] flex flex-col">
+                <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 rounded-t-xl border border-gray-700 p-6 flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-white">Add Checkup</h2>
+                  <button className="text-blue-100 hover:text-white" onClick={() => setIsAddCheckupOpen(false)} aria-label="Close add form">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="bg-gray-800 border-x border-b border-gray-700 rounded-b-xl p-6 overflow-y-auto custom-scrollbar">
+                  {checkupFormError && (
+                    <div className="mb-4 text-sm text-red-400">{checkupFormError}</div>
+                  )}
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!selectedPatient) return;
+                      setCheckupFormError(null);
+                      setIsSavingCheckup(true);
+                      try {
+                        const payload = {
+                          checkup_date: checkupForm.checkup_date || null,
+                          notes: checkupForm.notes || null,
+                          diagnosis: checkupForm.diagnosis || null,
+                          binocular_pd: checkupForm.binocular_pd || null,
+                          spectacle_prescription: {
+                            sphereRight: checkupForm.spectacle.sphereRight || null,
+                            cylinderRight: checkupForm.spectacle.cylinderRight || null,
+                            axisRight: checkupForm.spectacle.axisRight || null,
+                            additionRight: checkupForm.spectacle.additionRight || null,
+                            visualAcuityRight: checkupForm.spectacle.visualAcuityRight || null,
+                            monocularPdRight: checkupForm.spectacle.monocularPdRight || null,
+                            sphereLeft: checkupForm.spectacle.sphereLeft || null,
+                            cylinderLeft: checkupForm.spectacle.cylinderLeft || null,
+                            axisLeft: checkupForm.spectacle.axisLeft || null,
+                            additionLeft: checkupForm.spectacle.additionLeft || null,
+                            visualAcuityLeft: checkupForm.spectacle.visualAcuityLeft || null,
+                            monocularPdLeft: checkupForm.spectacle.monocularPdLeft || null
+                          },
+                          contact_lens_prescription: {
+                            sphereRight: checkupForm.contact.sphereRight || null,
+                            sphereLeft: checkupForm.contact.sphereLeft || null,
+                            cylinderRight: checkupForm.contact.cylinderRight || null,
+                            cylinderLeft: checkupForm.contact.cylinderLeft || null,
+                            axisRight: checkupForm.contact.axisRight || null,
+                            axisLeft: checkupForm.contact.axisLeft || null,
+                            additionRight: checkupForm.contact.additionRight || null,
+                            additionLeft: checkupForm.contact.additionLeft || null,
+                            baseCurveRight: checkupForm.contact.baseCurveRight || null,
+                            baseCurveLeft: checkupForm.contact.baseCurveLeft || null,
+                            diameterRight: checkupForm.contact.diameterRight || null,
+                            diameterLeft: checkupForm.contact.diameterLeft || null
+                          }
+                        };
+                        await addCheckupApi(selectedPatient.id, payload);
+                        const data = await getPatientCheckups(selectedPatient.id);
+                        setCheckups(Array.isArray(data) ? data : []);
+                        setIsAddCheckupOpen(false);
+                      } catch (err) {
+                        setCheckupFormError(err.message || 'Failed to add checkup');
+                      } finally {
+                        setIsSavingCheckup(false);
+                      }
+                    }}
+                    className="grid grid-cols-1 gap-4"
+                  >
+                    <div>
+                      <label className="block text-sm text-gray-300 mb-1">Checkup Date</label>
+                      <input type="date" className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
+                        value={checkupForm.checkup_date}
+                        onChange={(e) => setCheckupForm({ ...checkupForm, checkup_date: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-300 mb-1">Diagnosis</label>
+                      <input className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
+                        value={checkupForm.diagnosis}
+                        onChange={(e) => setCheckupForm({ ...checkupForm, diagnosis: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-300 mb-1">Notes</label>
+                      <textarea className="w-full px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-lg text-white"
+                        rows={3}
+                        value={checkupForm.notes}
+                        onChange={(e) => setCheckupForm({ ...checkupForm, notes: e.target.value })}
+                      />
+                    </div>
+                    {/* Spectacle Prescription - Table Style */}
+                    <div className="mt-2">
+                      <div className="text-white font-medium mb-2">Spectacle Prescription</div>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm text-left border border-gray-700">
+                          <thead className="bg-gray-900/70">
+                            <tr>
+                              <th className="px-3 py-2 border-b border-gray-700">Eye</th>
+                              <th className="px-3 py-2 border-b border-gray-700">Sphere</th>
+                              <th className="px-3 py-2 border-b border-gray-700">Cylinder</th>
+                              <th className="px-3 py-2 border-b border-gray-700">Axis</th>
+                              <th className="px-3 py-2 border-b border-gray-700">Addition</th>
+                              <th className="px-3 py-2 border-b border-gray-700">Visual acuity</th>
+                              <th className="px-3 py-2 border-b border-gray-700">MPD</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="odd:bg-gray-800/40">
+                              <td className="px-3 py-2 border-t border-gray-700 text-gray-300">Right Eye</td>
+                              <td className="px-3 py-2 border-t border-gray-700">
+                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.sphereRight} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, sphereRight: e.target.value } })} />
+                              </td>
+                              <td className="px-3 py-2 border-t border-gray-700">
+                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.cylinderRight} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, cylinderRight: e.target.value } })} />
+                              </td>
+                              <td className="px-3 py-2 border-t border-gray-700">
+                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.axisRight} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, axisRight: e.target.value } })} />
+                              </td>
+                              <td className="px-3 py-2 border-t border-gray-700">
+                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.additionRight} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, additionRight: e.target.value } })} />
+                              </td>
+                              <td className="px-3 py-2 border-t border-gray-700">
+                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.visualAcuityRight} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, visualAcuityRight: e.target.value } })} />
+                              </td>
+                              <td className="px-3 py-2 border-t border-gray-700">
+                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.monocularPdRight} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, monocularPdRight: e.target.value } })} />
+                              </td>
+                            </tr>
+                            <tr className="odd:bg-gray-800/40">
+                              <td className="px-3 py-2 border-t border-gray-700 text-gray-300">Left Eye</td>
+                              <td className="px-3 py-2 border-t border-gray-700">
+                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.sphereLeft} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, sphereLeft: e.target.value } })} />
+                              </td>
+                              <td className="px-3 py-2 border-t border-gray-700">
+                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.cylinderLeft} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, cylinderLeft: e.target.value } })} />
+                              </td>
+                              <td className="px-3 py-2 border-t border-gray-700">
+                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.axisLeft} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, axisLeft: e.target.value } })} />
+                              </td>
+                              <td className="px-3 py-2 border-t border-gray-700">
+                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.additionLeft} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, additionLeft: e.target.value } })} />
+                              </td>
+                              <td className="px-3 py-2 border-t border-gray-700">
+                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.visualAcuityLeft} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, visualAcuityLeft: e.target.value } })} />
+                              </td>
+                              <td className="px-3 py-2 border-t border-gray-700">
+                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.spectacle.monocularPdLeft} onChange={(e) => setCheckupForm({ ...checkupForm, spectacle: { ...checkupForm.spectacle, monocularPdLeft: e.target.value } })} />
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="px-3 py-2 border-t border-gray-700 text-gray-300">BPD</td>
+                              <td className="px-3 py-2 border-t border-gray-700" colSpan={6}>
+                                <input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.binocular_pd} onChange={(e) => setCheckupForm({ ...checkupForm, binocular_pd: e.target.value })} />
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Contact Lens Prescription - Table Style */}
+                    <div className="mt-4">
+                      <div className="text-white font-medium mb-2">Contact Lens Prescription</div>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm text-left border border-gray-700">
+                          <thead className="bg-gray-900/70">
+                            <tr>
+                              <th className="px-3 py-2 border-b border-gray-700">Eye</th>
+                              <th className="px-3 py-2 border-b border-gray-700">Sphere</th>
+                              <th className="px-3 py-2 border-b border-gray-700">Cylinder</th>
+                              <th className="px-3 py-2 border-b border-gray-700">Axis</th>
+                              <th className="px-3 py-2 border-b border-gray-700">Addition</th>
+                              <th className="px-3 py-2 border-b border-gray-700">Base Curve</th>
+                              <th className="px-3 py-2 border-b border-gray-700">Diameter</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="odd:bg-gray-800/40">
+                              <td className="px-3 py-2 border-t border-gray-700 text-gray-300">Right Eye</td>
+                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.sphereRight} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, sphereRight: e.target.value } })} /></td>
+                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.cylinderRight} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, cylinderRight: e.target.value } })} /></td>
+                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.axisRight} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, axisRight: e.target.value } })} /></td>
+                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.additionRight} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, additionRight: e.target.value } })} /></td>
+                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.baseCurveRight} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, baseCurveRight: e.target.value } })} /></td>
+                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.diameterRight} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, diameterRight: e.target.value } })} /></td>
+                            </tr>
+                            <tr className="odd:bg-gray-800/40">
+                              <td className="px-3 py-2 border-t border-gray-700 text-gray-300">Left Eye</td>
+                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.sphereLeft} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, sphereLeft: e.target.value } })} /></td>
+                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.cylinderLeft} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, cylinderLeft: e.target.value } })} /></td>
+                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.axisLeft} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, axisLeft: e.target.value } })} /></td>
+                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.additionLeft} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, additionLeft: e.target.value } })} /></td>
+                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.baseCurveLeft} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, baseCurveLeft: e.target.value } })} /></td>
+                              <td className="px-3 py-2 border-t border-gray-700"><input className="w-full px-2 py-1 bg-gray-900/70 border border-gray-700 rounded text-white" value={checkupForm.contact.diameterLeft} onChange={(e) => setCheckupForm({ ...checkupForm, contact: { ...checkupForm.contact, diameterLeft: e.target.value } })} /></td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-3 mt-2">
+                      <button type="button" className="px-4 py-2 bg-gray-700 text-white rounded-lg" onClick={() => setIsAddCheckupOpen(false)} disabled={isSavingCheckup}>Cancel</button>
+                      <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg" disabled={isSavingCheckup}>{isSavingCheckup ? 'Saving...' : 'Save'}</button>
                     </div>
                   </form>
                 </div>

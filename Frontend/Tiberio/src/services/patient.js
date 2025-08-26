@@ -38,4 +38,40 @@ export const addPatient = async (patientData) => {
   }
 };
 
+export const getPatientCheckups = async (patientId) => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.get(`${API_URL}/api/patients/patients/${patientId}/checkups`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data.error || 'Failed to fetch checkups');
+    } else if (error.request) {
+      throw new Error('No response from server');
+    } else {
+      throw new Error(error.message);
+    }
+  }
+};
+
+export const addCheckup = async (patientId, payload) => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.post(`${API_URL}/api/patients/patients/${patientId}/checkups`, payload, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data.error || 'Failed to add checkup');
+    } else if (error.request) {
+      throw new Error('No response from server');
+    } else {
+      throw new Error(error.message);
+    }
+  }
+};
+
 

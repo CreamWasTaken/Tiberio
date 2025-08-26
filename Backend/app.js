@@ -47,3 +47,16 @@ const PORT = process.env.PORT || 3000;
     process.exit(1); // Stop app if DB connection fails
   }
 })();
+
+
+
+
+//to do
+
+// change patient summary to active patients to check ups count this month
+
+//make delete patient (soft delete and hard delete)
+
+//make backend query to get all checkups base on user selected(get,add,edit,delete)
+
+
