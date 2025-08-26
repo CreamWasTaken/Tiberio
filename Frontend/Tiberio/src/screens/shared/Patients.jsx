@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getPatients as fetchPatientsApi, addPatient as addPatientApi } from '../../services/patient';
 import Sidebar from '../../components/Sidebar';
 
@@ -59,7 +59,6 @@ function Patients() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [activeTab, setActiveTab] = useState('checkups');
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -74,6 +73,11 @@ function Patients() {
     telephone_number: '',
     senior_number: ''
   });
+
+  // Suggestion dropdown state and refs
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
+  const searchInputRef = useRef(null);
+  const suggestionsRef = useRef(null);
 
   const formatDateYMD = (value) => {
     if (!value) return '—';
@@ -128,10 +132,7 @@ function Patients() {
     }
   }, [patients, selectedPatient]);
 
-  // Reset pagination on search or dataset change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, patients]);
+  // No pagination; suggestions are limited in dropdown
 
   const normalizedQuery = (searchQuery || '').trim().toLowerCase();
   const filteredPatients = normalizedQuery
@@ -142,12 +143,27 @@ function Patients() {
       })
     : patients;
 
-  const pageSize = 10;
-  const totalPages = Math.max(1, Math.ceil((filteredPatients.length || 0) / pageSize));
-  const clampedPage = Math.min(currentPage, totalPages);
-  const startIdx = (clampedPage - 1) * pageSize;
-  const endIdx = startIdx + pageSize;
-  const pagePatients = filteredPatients.slice(startIdx, endIdx);
+  // Removed pagination list; using suggestions dropdown instead
+
+  // Limit suggestions for dropdown
+  const suggestionPatients = filteredPatients.slice(0, 8);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const target = event.target;
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(target) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(target)
+      ) {
+        setIsSuggestionsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 overflow-hidden">
@@ -241,69 +257,58 @@ function Patients() {
             {/* Left column: patient selector + profile */}
             <div className="lg:col-span-5 xl:col-span-4">
               <div className="bg-gray-800/80 backdrop-blur-xl border border-gray-700 rounded-xl p-4">
-                <div className="mb-4">
+                <div className="mb-4 relative" ref={searchInputRef}>
                   <input
                     type="text"
                     placeholder="Search patients..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => { setSearchQuery(e.target.value); setIsSuggestionsOpen(true); }}
+                    onFocus={() => setIsSuggestionsOpen(true)}
                     className="w-full px-3 py-2 bg-gray-900/60 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                </div>
-                <div className="max-h-80 overflow-y-auto custom-scrollbar divide-y divide-gray-700">
-                  {loading && (
-                    <div className="py-3 text-sm text-gray-400">Loading patients...</div>
-                  )}
-                  {error && !loading && (
-                    <div className="py-3 text-sm text-red-400">{error}</div>
-                  )}
-                  {!loading && !error && pagePatients.map((p) => {
-                    const displayName = `${p.first_name || ''} ${p.last_name || ''}`.trim() || `Patient ${p.id}`;
-                    const initials = `${(p.first_name?.[0] || '')}${(p.last_name?.[0] || '')}`.toUpperCase() || 'P';
-                    const isActive = selectedPatient?.id === p.id;
-                    return (
-                      <button
-                        key={p.id}
-                        onClick={() => {
-                          const phone = p.contact_number || p.telephone_number || '—';
-                          const birthdate = formatDateYMD(p.birthdate);
-                          setSelectedPatient({ ...p, displayName, phone, birthdate, status: p.status || 'Active' });
-                        }}
-                        className={`w-full text-left px-3 py-3 flex items-center gap-3 hover:bg-gray-700/40 ${isActive ? 'bg-gray-700/30' : ''}`}
-                      >
-                        <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center">
-                          <span className="text-white font-semibold text-sm">{initials}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-white truncate">{displayName}</div>
-                          <div className="text-xs text-gray-400">ID: {p.id}</div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-                {/* Pagination */}
-                {!loading && !error && filteredPatients.length > pageSize && (
-                  <div className="mt-3 flex items-center justify-between text-xs text-gray-300">
-                    <button
-                      className="px-2 py-1 bg-gray-700/70 rounded disabled:opacity-50"
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={clampedPage <= 1}
+                  {isSuggestionsOpen && (
+                    <div
+                      ref={suggestionsRef}
+                      className="absolute left-0 right-0 mt-2 bg-gray-900/95 border border-gray-700 rounded-lg shadow-xl z-20 max-h-80 overflow-y-auto custom-scrollbar divide-y divide-gray-800"
                     >
-                      Prev
-                    </button>
-                    <div className="flex items-center gap-2">
-                      <span>Page {clampedPage} of {totalPages}</span>
+                      {loading && (
+                        <div className="px-3 py-3 text-sm text-gray-400">Loading patients...</div>
+                      )}
+                      {error && !loading && (
+                        <div className="px-3 py-3 text-sm text-red-400">{error}</div>
+                      )}
+                      {!loading && !error && suggestionPatients.length === 0 && (
+                        <div className="px-3 py-3 text-sm text-gray-400">No patients found</div>
+                      )}
+                      {!loading && !error && suggestionPatients.map((p) => {
+                        const displayName = `${p.first_name || ''} ${p.last_name || ''}`.trim() || `Patient ${p.id}`;
+                        const initials = `${(p.first_name?.[0] || '')}${(p.last_name?.[0] || '')}`.toUpperCase() || 'P';
+                        const isActive = selectedPatient?.id === p.id;
+                        return (
+                          <button
+                            key={p.id}
+                            onClick={() => {
+                              const phone = p.contact_number || p.telephone_number || '—';
+                              const birthdate = formatDateYMD(p.birthdate);
+                              setSelectedPatient({ ...p, displayName, phone, birthdate, status: p.status || 'Active' });
+                              setIsSuggestionsOpen(false);
+                              setSearchQuery('');
+                            }}
+                            className={`w-full text-left px-3 py-3 flex items-center gap-3 hover:bg-gray-800 ${isActive ? 'bg-gray-800/70' : ''}`}
+                          >
+                            <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center">
+                              <span className="text-white font-semibold text-sm">{initials}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-white truncate">{displayName}</div>
+                              <div className="text-xs text-gray-400">ID: {p.id}</div>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
-                    <button
-                      className="px-2 py-1 bg-gray-700/70 rounded disabled:opacity-50"
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={clampedPage >= totalPages}
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {selectedPatient && (
                   <div className="mt-5 bg-gray-900/50 border border-gray-700 rounded-lg p-4">
