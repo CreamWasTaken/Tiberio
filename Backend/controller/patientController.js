@@ -2,7 +2,7 @@ require("dotenv").config();
 const db = require("../config/db");
 
 exports.addPatient = async (req, res) => {
-    const { first_name, last_name, middle_name, sex, birthdate, contact_number, telephone_number, senior_number } = req.body;
+    const { first_name, last_name, middle_name, sex, birthdate, contact_number, telephone_number, senior_number,address } = req.body;
 
     // Validation: Check if required fields are empty
     if (!first_name || !last_name || !sex || !birthdate) {
@@ -32,8 +32,8 @@ exports.addPatient = async (req, res) => {
             age--;
         }
 
-        const query = "INSERT INTO patients (first_name, middle_name, last_name, sex, birthdate, age, contact_number, telephone_number, senior_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        const [result] = await db.query(query, [first_name, middle_name, last_name, sex, birthdate, age, contact_number, telephone_number, senior_number]);
+        const query = "INSERT INTO patients (first_name, middle_name, last_name, sex, birthdate, age, contact_number, telephone_number, senior_number,address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)";
+        const [result] = await db.query(query, [first_name, middle_name, last_name, sex, birthdate, age, contact_number, telephone_number, senior_number,address]);
 
         res.status(201).json({
             message: "Patient created successfully",
@@ -47,11 +47,23 @@ exports.addPatient = async (req, res) => {
                 age,
                 contact_number,
                 telephone_number,
-                senior_number
+                senior_number,
+                address
             }
         });
     } catch (err) {
         console.error("Error inserting patient:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+exports.getPatients = async (req, res) => {
+    try {
+        const query = "SELECT * FROM patients";
+        const [result] = await db.query(query);
+        res.status(200).json(result);
+    } catch (err) {
+        console.error("Error fetching patients:", err);
         res.status(500).json({ error: "Internal server error" });
     }
 };
