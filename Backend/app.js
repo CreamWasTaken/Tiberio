@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const pool = require("./config/db"); // import DB
 const userRoutes = require("./routes/userRoutes");
+const patientRoutes = require("./routes/patientRoutes");
 
 const app = express();
 
@@ -16,7 +17,7 @@ app.get("/", (req, res) => {
 });
 // user
 app.use("/api/users", userRoutes);
-
+app.use("/api/patients", patientRoutes);
 
 // 404 handler
 app.use((req, res, next) => {

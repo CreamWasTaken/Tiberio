@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 19, 2025 at 08:25 AM
+-- Generation Time: Aug 25, 2025 at 04:52 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -42,6 +42,29 @@ CREATE TABLE `checkups` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `contact_lens_prescriptions`
+--
+
+CREATE TABLE `contact_lens_prescriptions` (
+  `contactId` int(11) NOT NULL,
+  `checkupId` int(11) NOT NULL,
+  `sphereRight` decimal(4,2) DEFAULT NULL,
+  `sphereLeft` decimal(4,2) DEFAULT NULL,
+  `cylinderRight` decimal(4,2) DEFAULT NULL,
+  `cylinderLeft` decimal(4,2) DEFAULT NULL,
+  `axisRight` tinyint(4) DEFAULT NULL,
+  `axisLeft` tinyint(4) DEFAULT NULL,
+  `additionRight` decimal(3,2) DEFAULT NULL,
+  `additionLeft` decimal(3,2) DEFAULT NULL,
+  `baseCurveRight` decimal(3,2) DEFAULT NULL,
+  `baseCurveLeft` decimal(3,2) DEFAULT NULL,
+  `diameterRight` decimal(3,2) DEFAULT NULL,
+  `diameterLeft` decimal(3,2) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `logs`
 --
 
@@ -58,7 +81,19 @@ CREATE TABLE `logs` (
 --
 
 INSERT INTO `logs` (`id`, `user_id`, `type`, `data`, `created_at`) VALUES
-(1, 1, '', NULL, '2025-08-19 06:24:33');
+(1, 1, '', NULL, '2025-08-19 06:24:33'),
+(2, 1, '', NULL, '2025-08-20 02:17:02'),
+(3, 2, '', NULL, '2025-08-20 02:17:55'),
+(4, 1, '', NULL, '2025-08-20 02:18:11'),
+(5, 1, '', NULL, '2025-08-20 02:20:20'),
+(6, 1, '', NULL, '2025-08-20 02:32:16'),
+(7, 2, '', NULL, '2025-08-20 02:32:32'),
+(8, 1, '', NULL, '2025-08-20 02:49:27'),
+(9, 1, '', NULL, '2025-08-20 02:54:39'),
+(10, 2, '', NULL, '2025-08-20 02:56:57'),
+(11, 1, '', NULL, '2025-08-20 03:11:47'),
+(12, 1, '', NULL, '2025-08-20 04:03:24'),
+(13, 2, '', NULL, '2025-08-20 04:09:59');
 
 -- --------------------------------------------------------
 
@@ -171,6 +206,29 @@ CREATE TABLE `products` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `spectacle_prescriptions`
+--
+
+CREATE TABLE `spectacle_prescriptions` (
+  `spectacleId` int(11) NOT NULL,
+  `checkupId` int(11) NOT NULL,
+  `sphereRight` decimal(4,2) DEFAULT NULL,
+  `cylinderRight` decimal(4,2) DEFAULT NULL,
+  `axisRight` tinyint(4) DEFAULT NULL,
+  `additionRight` decimal(3,2) DEFAULT NULL,
+  `visualAcuityRight` varchar(10) DEFAULT NULL,
+  `monocularPdRight` decimal(4,1) DEFAULT NULL,
+  `sphereLeft` decimal(4,2) DEFAULT NULL,
+  `cylinderLeft` decimal(4,2) DEFAULT NULL,
+  `axisLeft` tinyint(4) DEFAULT NULL,
+  `additionLeft` decimal(3,2) DEFAULT NULL,
+  `visualAcuityLeft` varchar(10) DEFAULT NULL,
+  `monocularPdLeft` decimal(4,1) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `suppliers`
 --
 
@@ -242,7 +300,8 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `first_name`, `last_name`, `username`, `password`, `type`, `status`, `created_at`, `updated_at`) VALUES
-(1, 'Jamin Paul', 'Sapalo', 'Admin', '$2b$10$NcW3/C5efRh7ls00moDvaeF0ButpLywpN17WmELJ7fv0U4sQeMgYG', 'admin', 'active', '2025-08-19 06:21:55', '2025-08-19 06:21:55');
+(1, 'Jamin Paul', 'Sapalo', 'Admin', '$2b$10$rvVn4wdqGvkOgq5oWnftRulfSLuBWC32/AUHUKI0ds/A6hrTSZEhG', 'admin', 'active', '2025-08-19 06:21:55', '2025-08-22 04:33:47'),
+(2, 'Ajay', 'Lim', 'Employee', '$2b$10$hPvfS0ojfxomkSd6VlQ3h.CyubZWIPqJ72VCkFBfCUbiAUm7e51v6', 'employee', 'active', '2025-08-20 02:17:44', '2025-08-22 04:33:58');
 
 --
 -- Indexes for dumped tables
@@ -255,6 +314,13 @@ ALTER TABLE `checkups`
   ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `patient_id` (`patient_id`);
+
+--
+-- Indexes for table `contact_lens_prescriptions`
+--
+ALTER TABLE `contact_lens_prescriptions`
+  ADD PRIMARY KEY (`contactId`),
+  ADD KEY `checkupId` (`checkupId`);
 
 --
 -- Indexes for table `logs`
@@ -306,6 +372,13 @@ ALTER TABLE `products`
   ADD KEY `supplier_id` (`supplier_id`);
 
 --
+-- Indexes for table `spectacle_prescriptions`
+--
+ALTER TABLE `spectacle_prescriptions`
+  ADD PRIMARY KEY (`spectacleId`),
+  ADD KEY `checkupId` (`checkupId`);
+
+--
 -- Indexes for table `suppliers`
 --
 ALTER TABLE `suppliers`
@@ -348,10 +421,16 @@ ALTER TABLE `checkups`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `contact_lens_prescriptions`
+--
+ALTER TABLE `contact_lens_prescriptions`
+  MODIFY `contactId` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `logs`
 --
 ALTER TABLE `logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `orders`
@@ -384,6 +463,12 @@ ALTER TABLE `products`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `spectacle_prescriptions`
+--
+ALTER TABLE `spectacle_prescriptions`
+  MODIFY `spectacleId` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `suppliers`
 --
 ALTER TABLE `suppliers`
@@ -405,7 +490,7 @@ ALTER TABLE `transaction_items`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- Constraints for dumped tables
@@ -417,6 +502,12 @@ ALTER TABLE `users`
 ALTER TABLE `checkups`
   ADD CONSTRAINT `checkups_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `checkups_ibfk_2` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `contact_lens_prescriptions`
+--
+ALTER TABLE `contact_lens_prescriptions`
+  ADD CONSTRAINT `contact_lens_prescriptions_ibfk_1` FOREIGN KEY (`checkupId`) REFERENCES `checkups` (`id`);
 
 --
 -- Constraints for table `logs`
@@ -450,6 +541,12 @@ ALTER TABLE `price_items`
 ALTER TABLE `products`
   ADD CONSTRAINT `products_ibfk_1` FOREIGN KEY (`price_item_id`) REFERENCES `price_items` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `products_ibfk_2` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `spectacle_prescriptions`
+--
+ALTER TABLE `spectacle_prescriptions`
+  ADD CONSTRAINT `spectacle_prescriptions_ibfk_1` FOREIGN KEY (`checkupId`) REFERENCES `checkups` (`id`);
 
 --
 -- Constraints for table `transactions`
