@@ -195,7 +195,7 @@ function Patients() {
                   {userRole === 'admin' ? 'Patient Management' : 'Patient Records'}
                 </h1>
               </div>
-              {userRole === 'admin' && (
+              {(userRole === 'admin' || userRole === 'employee') && (
                 <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200" onClick={() => { setForm({ first_name: '', middle_name: '', last_name: '', sex: '', birthdate: '', address: '', contact_number: '', telephone_number: '', senior_number: '' }); setFormError(null); setIsAddOpen(true); }}>
                   Add New Patient
                 </button>
