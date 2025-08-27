@@ -5,7 +5,7 @@ import AddSupplierModal from './components/AddSupplierModal';
 import EditSupplierModal from './components/EditSupplierModal';
 import Sidebar from '../../../components/Sidebar';
 
-const SupplierManagement = () => {
+const InventoryManagement = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [suppliers, setSuppliers] = useState([]);
@@ -115,7 +115,7 @@ const SupplierManagement = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
-                <h1 className="text-2xl font-bold text-white">Supplier Management</h1>
+                <h1 className="text-2xl font-bold text-white">Inventory Management</h1>
               </div>
             </div>
           </div>
@@ -342,4 +342,4 @@ const SupplierManagement = () => {
   );
 };
 
-export default SupplierManagement;
+export default InventoryManagement;
