@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Login } from './screens/auth'
-import { AdminDashboard, AccountManagement } from './screens/admin'
+import { AdminDashboard, AccountManagement, SupplierManagement } from './screens/admin'
 import { EmployeeDashboard } from './screens/employee'
 import { Patients } from './screens/shared/Patients'
 import { Pricelist } from './screens/shared/PriceList'
@@ -19,6 +19,11 @@ function App() {
         <Route path="/account" element={
           <ProtectedRoute requiredRole="admin">
             <AccountManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/suppliers" element={
+          <ProtectedRoute requiredRole="admin">
+            <SupplierManagement />
           </ProtectedRoute>
         } />
         <Route path="/employee" element={

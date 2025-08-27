@@ -68,6 +68,25 @@ function AdminDashboard() {
               </button>
             </div>
 
+            {/* Supplier Management Card */}
+            <div className="bg-gray-800/80 backdrop-blur-xl border border-gray-700 rounded-xl p-6 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-center mb-4">
+                <div className="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center mr-4">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-white">Supplier Management</h3>
+              </div>
+              <p className="text-gray-300 mb-4">Manage suppliers and their information</p>
+              <button 
+                onClick={() => navigate('/suppliers')}
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 px-4 rounded-lg transition-colors duration-200"
+              >
+                Manage Suppliers
+              </button>
+            </div>
+
 
 
             {/* Reports Card */}
