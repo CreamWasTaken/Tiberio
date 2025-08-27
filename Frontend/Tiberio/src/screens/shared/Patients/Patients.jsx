@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi, getTotalCheckupsCount } from '../../../services/patient';
+import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi, deleteCheckup as deleteCheckupApi, getTotalCheckupsCount } from '../../../services/patient';
 import Sidebar from '../../../components/Sidebar';
 import AddPatientModal from './components/AddPatientModal';
 import AddCheckupModal from './components/AddCheckupModal';
@@ -113,6 +113,16 @@ function Patients() {
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
   const searchInputRef = useRef(null);
   const suggestionsRef = useRef(null);
+
+  // Custom alert state
+  const [alertConfig, setAlertConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info', // 'info', 'success', 'warning', 'error'
+    onConfirm: null,
+    onCancel: null
+  });
 
   const formatDateYMD = (value) => {
     if (!value) return '—';
@@ -454,16 +464,53 @@ function Patients() {
                         <div className="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1">
                           {checkups.map(c => (
                             <div key={c.id} className="bg-gray-900/60 border border-gray-700 rounded-lg">
-                              <button
-                                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-800/60"
-                                onClick={() => setExpandedCheckups(prev => ({ ...prev, [c.id]: !prev[c.id] }))}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <span className={'inline-block w-4 h-4 text-gray-300 transform transition-transform ' + (expandedCheckups[c.id] ? 'rotate-90' : '')}>▶</span>
-                                  <div className="text-white font-medium text-sm">{formatDateYMDSlash(c.checkup_date) || '—'}</div>
-                                </div>
-                                <div className="text-gray-400 text-xs">By: {c.created_by_name || '—'}</div>
-                              </button>
+                              <div className="flex items-center justify-between px-4 py-3">
+                                <button
+                                  className="flex-1 flex items-center justify-between text-left hover:bg-gray-800/60"
+                                  onClick={() => setExpandedCheckups(prev => ({ ...prev, [c.id]: !prev[c.id] }))}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <span className={'inline-block w-4 h-4 text-gray-300 transform transition-transform ' + (expandedCheckups[c.id] ? 'rotate-90' : '')}>▶</span>
+                                    <div className="text-white font-medium text-sm">{formatDateYMDSlash(c.checkup_date) || '—'}</div>
+                                  </div>
+                                  <div className="text-gray-400 text-xs">By: {c.created_by_name || '—'}</div>
+                                </button>
+                                                                 <button
+                                   className="ml-2 p-1 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded"
+                                   onClick={async (e) => {
+                                     e.stopPropagation();
+                                     setAlertConfig({
+                                       isOpen: true,
+                                       title: 'Delete Checkup',
+                                       message: 'Are you sure you want to delete this checkup? This action cannot be undone.',
+                                       type: 'warning',
+                                       onConfirm: async () => {
+                                         try {
+                                           await deleteCheckupApi(c.id);
+                                           const data = await getPatientCheckups(selectedPatient.id);
+                                           setCheckups(Array.isArray(data) ? data : []);
+                                           setAlertConfig(prev => ({ ...prev, isOpen: false }));
+                                         } catch (err) {
+                                           setAlertConfig({
+                                             isOpen: true,
+                                             title: 'Error',
+                                             message: 'Failed to delete checkup: ' + err.message,
+                                             type: 'error',
+                                             onConfirm: () => setAlertConfig(prev => ({ ...prev, isOpen: false })),
+                                             onCancel: null
+                                           });
+                                         }
+                                       },
+                                       onCancel: () => setAlertConfig(prev => ({ ...prev, isOpen: false }))
+                                     });
+                                   }}
+                                   title="Delete checkup"
+                                 >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
                               <div className={`${expandedCheckups[c.id] ? 'block' : 'hidden'} px-4 pb-4`}>
                                 <div className="mt-1 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                                   <div>
@@ -680,11 +727,79 @@ function Patients() {
                 setIsSavingCheckup(false);
               }
             }}
-          />
-        </main>
-      </div>
-    </div>
-  );
-}
+                     />
+
+          {/* Custom Alert Modal */}
+          {alertConfig.isOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/60" onClick={alertConfig.onCancel || (() => setAlertConfig(prev => ({ ...prev, isOpen: false })))}></div>
+              <div className="relative w-full max-w-md mx-4 shadow-2xl">
+                <div className={`rounded-t-xl border border-gray-700 p-4 flex items-center gap-3 ${
+                  alertConfig.type === 'error' ? 'bg-gradient-to-r from-red-700 via-red-600 to-red-700' :
+                  alertConfig.type === 'warning' ? 'bg-gradient-to-r from-yellow-700 via-yellow-600 to-yellow-700' :
+                  alertConfig.type === 'success' ? 'bg-gradient-to-r from-green-700 via-green-600 to-green-700' :
+                  'bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700'
+                }`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    alertConfig.type === 'error' ? 'bg-red-800' :
+                    alertConfig.type === 'warning' ? 'bg-yellow-800' :
+                    alertConfig.type === 'success' ? 'bg-green-800' :
+                    'bg-blue-800'
+                  }`}>
+                    {alertConfig.type === 'error' && (
+                      <svg className="w-5 h-5 text-red-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    )}
+                    {alertConfig.type === 'warning' && (
+                      <svg className="w-5 h-5 text-yellow-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    )}
+                    {alertConfig.type === 'success' && (
+                      <svg className="w-5 h-5 text-green-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    )}
+                    {alertConfig.type === 'info' && (
+                      <svg className="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    )}
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">{alertConfig.title}</h3>
+                </div>
+                <div className="bg-gray-800 border-x border-b border-gray-700 rounded-b-xl p-6">
+                  <p className="text-gray-300 mb-6">{alertConfig.message}</p>
+                  <div className="flex justify-end gap-3">
+                    {alertConfig.onCancel && (
+                      <button
+                        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200"
+                        onClick={alertConfig.onCancel}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                    <button
+                      className={`px-4 py-2 text-white rounded-lg transition-colors duration-200 ${
+                        alertConfig.type === 'error' ? 'bg-red-600 hover:bg-red-700' :
+                        alertConfig.type === 'warning' ? 'bg-yellow-600 hover:bg-yellow-700' :
+                        alertConfig.type === 'success' ? 'bg-green-600 hover:bg-green-700' :
+                        'bg-blue-600 hover:bg-blue-700'
+                      }`}
+                      onClick={alertConfig.onConfirm}
+                    >
+                      {alertConfig.type === 'error' ? 'OK' : 'Confirm'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+         </main>
+       </div>
+     </div>
+   );
+ }
 
 export default Patients;

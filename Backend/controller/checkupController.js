@@ -112,7 +112,7 @@ exports.getPatientCheckups = async (req, res) => {
       `SELECT c.*, CONCAT(u.first_name,' ',u.last_name) AS created_by_name
        FROM checkups c
        LEFT JOIN users u ON u.id = c.user_id
-       WHERE c.patient_id = ?
+       WHERE c.patient_id = ? AND (c.is_deleted = 0 OR c.is_deleted IS NULL)
        ORDER BY c.created_at DESC`,
       [patientId]
     );
@@ -162,6 +162,35 @@ exports.getTotalCheckupsCount = async (req, res) => {
     res.status(200).json({ count });
   } catch (err) {
     console.error("Error fetching total checkups count:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Delete checkup (soft delete by setting is_deleted to 1)
+exports.deleteCheckup = async (req, res) => {
+  const { checkupId } = req.params;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  if (!checkupId) {
+    return res.status(400).json({ error: "checkupId is required" });
+  }
+
+  try {
+    const [result] = await db.query(
+      "UPDATE checkups SET is_deleted = 1 WHERE id = ?",
+      [checkupId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Checkup not found" });
+    }
+
+    res.status(200).json({ message: "Checkup deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting checkup:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 };

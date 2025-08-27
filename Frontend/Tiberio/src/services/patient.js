@@ -74,6 +74,24 @@ export const addCheckup = async (patientId, payload) => {
   }
 };
 
+export const deleteCheckup = async (checkupId) => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.delete(`${API_URL}/api/checkups/checkups/${checkupId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data.error || 'Failed to delete checkup');
+    } else if (error.request) {
+      throw new Error('No response from server');
+    } else {
+      throw new Error(error.message);
+    }
+  }
+};
+
 export const getTotalCheckupsCount = async () => {
   try {
     const token = localStorage.getItem('authToken');

@@ -15,4 +15,7 @@ router.get("/patients/:patientId/checkups", authenticateToken, checkupController
 // Get total count of all checkups
 router.get("/count", authenticateToken, checkupController.getTotalCheckupsCount);
 
+// Delete a specific checkup
+router.delete("/checkups/:checkupId", authenticateToken, checkupController.deleteCheckup);
+
 module.exports = router;
