@@ -6,6 +6,7 @@ import AddSupplierModal from './components/AddSupplierModal';
 import EditSupplierModal from './components/EditSupplierModal';
 import AddCategoryModal from './components/AddCategoryModal';
 import EditCategoryModal from './components/EditCategoryModal';
+import DeleteConfirmationModal from './components/DeleteConfirmationModal';
 import Sidebar from '../../../components/Sidebar';
 
 const InventoryManagement = () => {
@@ -25,6 +26,11 @@ const InventoryManagement = () => {
   const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [categorySearchTerm, setCategorySearchTerm] = useState('');
+
+  // Delete confirmation modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteItem, setDeleteItem] = useState(null);
+  const [deleteType, setDeleteType] = useState(''); // 'supplier' or 'category'
 
   useEffect(() => {
     fetchSuppliers();
@@ -68,15 +74,10 @@ const InventoryManagement = () => {
     setShowEditModal(true);
   };
 
-  const handleDeleteSupplier = async (id) => {
-    if (window.confirm('Are you sure you want to delete this supplier?')) {
-      try {
-        await deleteSupplier(id);
-        await fetchSuppliers();
-      } catch (err) {
-        setError(err.message);
-      }
-    }
+  const handleDeleteSupplier = (supplier) => {
+    setDeleteItem(supplier);
+    setDeleteType('supplier');
+    setShowDeleteModal(true);
   };
 
   const handleModalClose = () => {
@@ -105,15 +106,10 @@ const InventoryManagement = () => {
     setShowEditCategoryModal(true);
   };
 
-  const handleDeleteCategory = async (id) => {
-    if (window.confirm('Are you sure you want to delete this category?')) {
-      try {
-        await deleteCategory(id);
-        await fetchCategories();
-      } catch (err) {
-        setError(err.message);
-      }
-    }
+  const handleDeleteCategory = (category) => {
+    setDeleteItem(category);
+    setDeleteType('category');
+    setShowDeleteModal(true);
   };
 
   const handleCategoryModalClose = () => {
@@ -130,6 +126,28 @@ const InventoryManagement = () => {
   const handleCategoryUpdated = () => {
     fetchCategories();
     handleCategoryModalClose();
+  };
+
+  // Delete confirmation handlers
+  const handleDeleteConfirm = async () => {
+    try {
+      if (deleteType === 'supplier') {
+        await deleteSupplier(deleteItem.id);
+        await fetchSuppliers();
+      } else if (deleteType === 'category') {
+        await deleteCategory(deleteItem.id);
+        await fetchCategories();
+      }
+      handleDeleteModalClose();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleDeleteModalClose = () => {
+    setShowDeleteModal(false);
+    setDeleteItem(null);
+    setDeleteType('');
   };
 
   const filteredSuppliers = suppliers.filter(supplier =>
@@ -363,7 +381,7 @@ const InventoryManagement = () => {
                                 </svg>
                               </button>
                               <button
-                                onClick={() => handleDeleteSupplier(supplier.id)}
+                                onClick={() => handleDeleteSupplier(supplier)}
                                 className="text-red-400 hover:text-red-300 transition-colors duration-200"
                               >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -504,7 +522,7 @@ const InventoryManagement = () => {
                                   </svg>
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteCategory(category.id)}
+                                  onClick={() => handleDeleteCategory(category)}
                                   className="text-red-400 hover:text-red-300 transition-colors duration-200"
                                 >
                                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -549,14 +567,26 @@ const InventoryManagement = () => {
               />
             )}
 
-            {showEditCategoryModal && selectedCategory && (
-              <EditCategoryModal
-                isOpen={showEditCategoryModal}
-                onClose={handleCategoryModalClose}
-                onCategoryUpdated={handleCategoryUpdated}
-                category={selectedCategory}
-              />
-            )}
+                         {showEditCategoryModal && selectedCategory && (
+               <EditCategoryModal
+                 isOpen={showEditCategoryModal}
+                 onClose={handleCategoryModalClose}
+                 onCategoryUpdated={handleCategoryUpdated}
+                 category={selectedCategory}
+               />
+             )}
+
+             {/* Delete Confirmation Modal */}
+             {showDeleteModal && deleteItem && (
+               <DeleteConfirmationModal
+                 isOpen={showDeleteModal}
+                 onClose={handleDeleteModalClose}
+                 onConfirm={handleDeleteConfirm}
+                 title={`Delete ${deleteType === 'supplier' ? 'Supplier' : 'Category'}`}
+                 message={`Are you sure you want to delete this ${deleteType}?`}
+                 itemName={deleteItem.name}
+               />
+             )}
           </div>
         </main>
       </div>
