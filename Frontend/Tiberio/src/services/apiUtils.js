@@ -6,6 +6,9 @@ const API_URL = import.meta.env.VITE_API_URL;
 // Store active requests for deduplication and cancellation
 const activeRequests = new Map();
 
+// Add this to your apiUtils.js
+const persistentRequests = new Set();
+
 // Create axios instance with default config
 export const apiClient = axios.create({
   baseURL: API_URL,
@@ -38,10 +41,32 @@ apiClient.interceptors.response.use(
 );
 
 // Generic API request function with deduplication
-export const makeApiRequest = async (key, requestFn, signal = null) => {
-  // Cancel existing request if it exists
-  if (activeRequests.has(key)) {
+export const makeApiRequest = async (key, requestFn, signal = null, options = {}) => {
+  const { persistent = false, allowDuplicates = false } = options;
+  
+  // Mark persistent requests
+  if (persistent) {
+    persistentRequests.add(key);
+  }
+  
+  // Don't cancel persistent requests
+  if (!persistent && activeRequests.has(key)) {
     activeRequests.get(key).abort();
+  }
+  
+  // Handle duplicate requests for persistent data
+  if (!allowDuplicates && activeRequests.has(key) && persistent) {
+    // Wait for existing request to complete
+    return new Promise((resolve, reject) => {
+      const checkComplete = () => {
+        if (!activeRequests.has(key)) {
+          makeApiRequest(key, requestFn, signal, options).then(resolve).catch(reject);
+        } else {
+          setTimeout(checkComplete, 100);
+        }
+      };
+      checkComplete();
+    });
   }
 
   // Create new abort controller
@@ -63,12 +88,25 @@ export const makeApiRequest = async (key, requestFn, signal = null) => {
   }
 };
 
-// Cancel all active requests
+// Cancel only non-persistent requests
 export const cancelAllRequests = () => {
-  activeRequests.forEach((controller) => {
-    controller.abort();
+  activeRequests.forEach((controller, key) => {
+    if (!persistentRequests.has(key)) {
+      controller.abort();
+      activeRequests.delete(key);
+    }
   });
-  activeRequests.clear();
+};
+
+// Cancel persistent requests specifically
+export const cancelPersistentRequests = () => {
+  activeRequests.forEach((controller, key) => {
+    if (persistentRequests.has(key)) {
+      controller.abort();
+      activeRequests.delete(key);
+      persistentRequests.delete(key);
+    }
+  });
 };
 
 // Cancel specific request
