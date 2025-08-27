@@ -17,12 +17,17 @@ exports.addCategory = async (req, res) => {
 }
 
 exports.getCategory = async (req, res) => {
-    const conn = await db.getConnection();
+    let conn;
     try {
+        conn = await db.getConnection();
         const [result] = await conn.query("SELECT * FROM price_categories WHERE is_deleted = 0");
         res.status(200).json({categories: result});
     } catch (error) {
         res.status(500).json({message: "Failed to get categories", error: error.message});
+    } finally {
+        if (conn) {
+            conn.release();
+        }
     }
 }
 

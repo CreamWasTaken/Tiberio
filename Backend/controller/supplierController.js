@@ -17,12 +17,18 @@ exports.addSupplier = async (req, res) => {
   };
   
   exports.getSuppliers = async (req, res) => {
+    let conn;
     try {
-      const [rows] = await db.query("SELECT * FROM suppliers WHERE is_deleted = 0 OR is_deleted IS NULL");
+      conn = await db.getConnection();
+      const [rows] = await conn.query("SELECT * FROM suppliers WHERE is_deleted = 0 OR is_deleted IS NULL");
       res.status(200).json(rows);
     } catch (err) {
       console.error("Error fetching suppliers:", err);
       res.status(500).json({ error: "Internal server error" });
+    } finally {
+      if (conn) {
+        conn.release();
+      }
     }
   };
   

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSuppliers, deleteSupplier } from '../../../services/supplier';
 import { getCategories, deleteCategory } from '../../../services/category';
@@ -32,9 +32,36 @@ const InventoryManagement = () => {
   const [deleteItem, setDeleteItem] = useState(null);
   const [deleteType, setDeleteType] = useState(''); // 'supplier' or 'category'
 
+  // Abort controller for request cancellation
+  const abortControllerRef = useRef(null);
+
   useEffect(() => {
-    fetchSuppliers();
-    fetchCategories();
+    // Create abort controller for this component
+    abortControllerRef.current = new AbortController();
+    
+    // Fetch data with proper error handling for cancelled requests
+    const loadData = async () => {
+      try {
+        await Promise.all([
+          fetchSuppliers(),
+          fetchCategories()
+        ]);
+      } catch (error) {
+        // Only show error if it's not a cancellation
+        if (error.message !== 'Request cancelled') {
+          setError(error.message);
+        }
+      }
+    };
+
+    loadData();
+
+    // Cleanup function to abort requests when component unmounts
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   const handleLogout = () => {
@@ -46,11 +73,14 @@ const InventoryManagement = () => {
   const fetchSuppliers = async () => {
     try {
       setLoading(true);
-      const data = await getSuppliers();
+      const data = await getSuppliers(abortControllerRef.current?.signal);
       setSuppliers(data);
       setError(null);
     } catch (err) {
-      setError(err.message);
+      // Don't set error for cancelled requests
+      if (err.message !== 'Request cancelled') {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -58,10 +88,13 @@ const InventoryManagement = () => {
 
   const fetchCategories = async () => {
     try {
-      const data = await getCategories();
+      const data = await getCategories(abortControllerRef.current?.signal);
       setCategories(data);
     } catch (err) {
-      setError(err.message);
+      // Don't set error for cancelled requests
+      if (err.message !== 'Request cancelled') {
+        setError(err.message);
+      }
     }
   };
 

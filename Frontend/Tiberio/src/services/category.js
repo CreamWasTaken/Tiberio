@@ -2,17 +2,38 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export const getCategories = async () => {
+// Store active requests for cancellation
+const activeRequests = new Map();
+
+export const getCategories = async (signal = null) => {
   try {
+    // Cancel any existing request for categories
+    if (activeRequests.has('getCategories')) {
+      activeRequests.get('getCategories').abort();
+    }
+
+    // Create new abort controller for this request
+    const abortController = new AbortController();
+    activeRequests.set('getCategories', abortController);
+
     const token = localStorage.getItem('authToken');
     const response = await axios.get(`${API_URL}/api/categories/get-category`, {
       headers: {
         Authorization: `Bearer ${token}`
-      }
+      },
+      signal: signal || abortController.signal
     });
+
+    // Remove from active requests on success
+    activeRequests.delete('getCategories');
     return response.data.categories;
   } catch (error) {
-    if (error.response) {
+    // Remove from active requests on error
+    activeRequests.delete('getCategories');
+    
+    if (error.name === 'AbortError') {
+      throw new Error('Request cancelled');
+    } else if (error.response) {
       throw new Error(error.response.data.error);
     } else if (error.request) {
       throw new Error("No response from server");
