@@ -4,6 +4,9 @@ import { AdminDashboard, AccountManagement, SupplierManagement } from './screens
 import { EmployeeDashboard } from './screens/employee'
 import { Patients } from './screens/shared/Patients'
 import { Pricelist } from './screens/shared/PriceList'
+import { Inventory } from './screens/shared/Inventory'
+import { Orders } from './screens/shared/Orders'
+import { Transactions } from './screens/shared/Transanctions'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -39,6 +42,21 @@ function App() {
         <Route path="/prices" element={
           <ProtectedRoute requiredRole={['admin', 'employee']}>
             <Pricelist />
+          </ProtectedRoute>
+        } />
+        <Route path="/inventory" element={
+          <ProtectedRoute requiredRole={['admin', 'employee']}>
+            <Inventory />
+          </ProtectedRoute>
+        } />
+        <Route path="/orders" element={
+          <ProtectedRoute requiredRole={['admin', 'employee']}>
+            <Orders />
+          </ProtectedRoute>
+        } />
+        <Route path="/transactions" element={
+          <ProtectedRoute requiredRole={['admin', 'employee']}>
+            <Transactions />
           </ProtectedRoute>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
