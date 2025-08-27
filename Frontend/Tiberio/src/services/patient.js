@@ -41,7 +41,7 @@ export const addPatient = async (patientData) => {
 export const getPatientCheckups = async (patientId) => {
   try {
     const token = localStorage.getItem('authToken');
-    const response = await axios.get(`${API_URL}/api/patients/patients/${patientId}/checkups`, {
+    const response = await axios.get(`${API_URL}/api/checkups/patients/${patientId}/checkups`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     return response.data;
@@ -59,7 +59,7 @@ export const getPatientCheckups = async (patientId) => {
 export const addCheckup = async (patientId, payload) => {
   try {
     const token = localStorage.getItem('authToken');
-    const response = await axios.post(`${API_URL}/api/patients/patients/${patientId}/checkups`, payload, {
+    const response = await axios.post(`${API_URL}/api/checkups/patients/${patientId}/checkups`, payload, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     return response.data;
@@ -77,7 +77,7 @@ export const addCheckup = async (patientId, payload) => {
 export const getTotalCheckupsCount = async () => {
   try {
     const token = localStorage.getItem('authToken');
-    const response = await axios.get(`${API_URL}/api/patients/checkups/count`, {
+    const response = await axios.get(`${API_URL}/api/checkups/count`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     return response.data?.count ?? 0;

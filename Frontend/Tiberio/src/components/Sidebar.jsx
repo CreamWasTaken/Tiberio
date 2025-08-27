@@ -12,11 +12,19 @@ function Sidebar({ isOpen, onToggle, userType = 'admin', onLogout }) {
     ];
 
     if (userType === 'admin') {
-      baseItems.push({
-        name: 'Account Management',
-        icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-        path: '/account'
-      });
+      baseItems.push(
+        {
+          name: 'Supplier Management',
+          icon: 'M3 7h18M3 12h18M3 17h18', // simple menu icon
+          path: '/suppliers'
+        },
+        {
+          name: 'Account Management',
+          icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+          path: '/account'
+        }
+    
+      );
     }
 
     return baseItems;
@@ -54,7 +62,7 @@ function Sidebar({ isOpen, onToggle, userType = 'admin', onLogout }) {
           </h2>
         </div>
 
-        {/* Navigation - takes remaining space */}
+        {/* Navigation */}
         <nav className="flex-1 px-4 py-6 overflow-y-auto">
           <ul className="space-y-2">
             {navItems.map((item, index) => (
@@ -78,7 +86,7 @@ function Sidebar({ isOpen, onToggle, userType = 'admin', onLogout }) {
           </ul>
         </nav>
 
-        {/* Logout button at bottom */}
+        {/* Logout button */}
         <div className="p-4 border-t border-gray-700 flex-shrink-0">
           <button
             onClick={onLogout}
@@ -91,7 +99,7 @@ function Sidebar({ isOpen, onToggle, userType = 'admin', onLogout }) {
           </button>
         </div>
 
-        {/* Close button for mobile */}
+        {/* Close button (mobile) */}
         <button
           onClick={onToggle}
           className="lg:hidden absolute top-4 right-4 text-gray-400 hover:text-white"

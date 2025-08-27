@@ -4,6 +4,7 @@ const cors = require("cors");
 const pool = require("./config/db"); // import DB
 const userRoutes = require("./routes/userRoutes");
 const patientRoutes = require("./routes/patientRoutes");
+const checkUpRoutes = require("./routes/checkUpRoutes");
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.get("/", (req, res) => {
 // user
 app.use("/api/users", userRoutes);
 app.use("/api/patients", patientRoutes);
+app.use("/api/checkups", checkUpRoutes);
 
 // 404 handler
 app.use((req, res, next) => {
@@ -53,10 +55,19 @@ const PORT = process.env.PORT || 3000;
 
 //to do
 
-// change patient summary to active patients to check ups count this month
+//make delete patient (soft delete)
 
-//make delete patient (soft delete and hard delete)
+//make backend query to get all checkups base on user selected(edit,delete)
 
-//make backend query to get all checkups base on user selected(get,add,edit,delete)
+//change db for inventory category,subcategory,items table 
 
+//make pricelist screen
+//product automatically adds to inventory when new items are added (form of inventory and adding price list is the same)
 
+//make description of the products unique(no the same, make it except for Frames)
+
+//Progression
+//1. Edit Delete for patients
+//2 Edit Delete for Checkups
+//3. price module
+//4. inventory module

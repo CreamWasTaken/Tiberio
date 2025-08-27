@@ -3,6 +3,7 @@ import { Login } from './screens/auth'
 import { AdminDashboard, AccountManagement } from './screens/admin'
 import { EmployeeDashboard } from './screens/employee'
 import { Patients } from './screens/shared/Patients'
+import { Pricelist } from './screens/shared/PriceList'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -28,6 +29,11 @@ function App() {
         <Route path="/patients" element={
           <ProtectedRoute requiredRole={['admin', 'employee']}>
             <Patients />
+          </ProtectedRoute>
+        } />
+        <Route path="/prices" element={
+          <ProtectedRoute requiredRole={['admin', 'employee']}>
+            <Pricelist />
           </ProtectedRoute>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import Sidebar from '../../components/Sidebar';
-import { getUserLogs, getAllUsers, changeUserStatus, changePassword, addUser } from '../../services/auth';
+import Sidebar from '../../../components/Sidebar';
+import { getUserLogs, getAllUsers, changeUserStatus, changePassword, addUser } from '../../../services/auth';
 
 function AccountManagement() {
   const navigate = useNavigate();
