@@ -33,7 +33,26 @@ function Pricelist() {
     price: '',
     cost: '',
     subcategory_id: '',
-    supplier_id: null
+    supplier_id: null,
+    // Single Vision/Double Vision/Progressive fields
+    index: '',
+    diameter: '',
+    sphFR: '',
+    sphTo: '',
+    cylFr: '',
+    cylTo: '',
+    tp: '',
+    // Contact Lens fields
+    steps: '',
+    addFr: '',
+    addTo: '',
+    modality: '',
+    set: '',
+    bc: '',
+    // Solutions fields
+    volume: '',
+    // Service fields
+    set_cost: ''
   });
   const [editingSubcategory, setEditingSubcategory] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
@@ -242,13 +261,36 @@ function Pricelist() {
       price: '', 
       cost: '', 
       subcategory_id: selectedSubcategory?.id || '', 
-      supplier_id: null 
+      supplier_id: null,
+      index: '',
+      diameter: '',
+      sphFR: '',
+      sphTo: '',
+      cylFr: '',
+      cylTo: '',
+      tp: '',
+      steps: '',
+      addFr: '',
+      addTo: '',
+      modality: '',
+      set: '',
+      bc: '',
+      volume: '',
+      set_cost: ''
     });
     setIsItemModalOpen(true);
   };
 
   const handleEditPriceItem = (item) => {
-    setItemFormData({ ...item });
+    // Merge item data with attributes
+    const formData = {
+      ...item,
+      price: item.pc_price || item.price,
+      cost: item.pc_cost || item.cost,
+      // Extract attributes
+      ...(item.attributes || {})
+    };
+    setItemFormData(formData);
     setEditingItem(item);
     setIsItemModalOpen(true);
   };
@@ -296,6 +338,32 @@ function Pricelist() {
   const handleSubcategorySelect = (subcategory) => {
     setSelectedSubcategory(subcategory);
     fetchItems(subcategory.id);
+  };
+
+  // Function to determine form type based on category
+  const getFormType = () => {
+    if (!activeTab) return 'default';
+    
+    const category = categories.find(cat => cat.id.toString() === activeTab);
+    if (!category) return 'default';
+    
+    const categoryName = category.name.toLowerCase();
+    
+    if (categoryName.includes('single vision') || categoryName.includes('double vision') || categoryName.includes('progressive')) {
+      return 'lens';
+    } else if (categoryName.includes('contact lens')) {
+      return 'contact';
+    } else if (categoryName.includes('solution') || categoryName.includes('artificial tears')) {
+      return 'solution';
+    } else if (categoryName.includes('accessor')) {
+      return 'accessory';
+    } else if (categoryName.includes('frame')) {
+      return 'frame';
+    } else if (categoryName.includes('service')) {
+      return 'service';
+    }
+    
+    return 'default';
   };
 
   // Handle tab change with proper event handling
@@ -563,45 +631,113 @@ function Pricelist() {
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {items.map((item) => (
-                      <div key={item.id} className="bg-gray-900/60 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors duration-200">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-white mb-1">{item.description}</h3>
-                            {item.code && (
-                              <span className="inline-block bg-blue-600/20 text-blue-400 text-xs px-2 py-1 rounded-full border border-blue-600/30">
-                                {item.code}
-                              </span>
-                            )}
-                          </div>
-                          {userRole === 'admin' && (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleEditPriceItem(item)}
-                                className="text-gray-400 hover:text-blue-400 transition-colors duration-200"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleDeletePriceItem(item.id)}
-                                className="text-gray-400 hover:text-red-400 transition-colors duration-200"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full bg-gray-900/60 border border-gray-700 rounded-lg">
+                      <thead className="bg-gray-800/80">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Description</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Code</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Price</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Cost</th>
+                                                     {getFormType() === 'lens' && (
+                             <>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Index</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Diameter</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">SphFR</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">SphTo</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">CylFr</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">CylTo</th>
+                             </>
+                           )}
+                           {getFormType() === 'contact' && (
+                             <>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Steps</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Diameter</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Modality</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">SphFR</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">SphTo</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">CylFr</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">CylTo</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">AddFr</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">AddTo</th>
+                             </>
+                           )}
+                          {getFormType() === 'solution' && (
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Volume</th>
                           )}
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-2xl font-bold text-green-400">₱{parseFloat(item.price).toLocaleString()}</span>
-                          <span className="text-xs text-gray-400">ID: {item.id}</span>
-                        </div>
-                      </div>
-                    ))}
+                          {userRole === 'admin' && (
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-700">
+                        {items.map((item) => (
+                          <tr key={item.id} className="hover:bg-gray-800/40 transition-colors duration-200">
+                            <td className="px-4 py-3 text-sm text-white font-medium">{item.description}</td>
+                            <td className="px-4 py-3 text-sm text-gray-300">{item.code || '-'}</td>
+                            <td className="px-4 py-3 text-sm text-green-400 font-semibold">₱{parseFloat(item.pc_price || item.price).toLocaleString()}</td>
+                            <td className="px-4 py-3 text-sm text-gray-300">₱{parseFloat(item.pc_cost || item.cost || 0).toLocaleString()}</td>
+                            
+                                                         {/* Lens specific columns */}
+                             {getFormType() === 'lens' && (
+                               <>
+                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.index || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.diameter || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.sphFR || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.sphTo || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.cylFr || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.cylTo || '-'}</td>
+                               </>
+                             )}
+                             
+                             {/* Contact lens specific columns */}
+                             {getFormType() === 'contact' && (
+                               <>
+                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.steps || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.diameter || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.modality || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.sphFR || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.sphTo || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.cylFr || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.cylTo || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.addFr || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.addTo || '-'}</td>
+                               </>
+                             )}
+                            
+                            {/* Solution specific columns */}
+                            {getFormType() === 'solution' && (
+                              <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.volume || '-'}</td>
+                            )}
+                            
+                            {userRole === 'admin' && (
+                              <td className="px-4 py-3 text-sm text-gray-300">
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleEditPriceItem(item)}
+                                    className="text-gray-400 hover:text-blue-400 transition-colors duration-200"
+                                    title="Edit"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeletePriceItem(item.id)}
+                                    className="text-gray-400 hover:text-red-400 transition-colors duration-200"
+                                    title="Delete"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
 
                   {items.length === 0 && (
@@ -680,54 +816,273 @@ function Pricelist() {
       {/* Add/Edit Item Modal */}
       {isItemModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-full max-w-md">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-white mb-4">
-              {editingItem ? 'Edit Item' : 'Add New Item'}
+              {editingItem ? 'Edit Item' : 'Add New Item'} - {getCurrentCategoryName}
             </h3>
             <form onSubmit={handleItemSubmit}>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
-                  <input
-                    type="text"
-                    required
-                    value={itemFormData.description}
-                    onChange={(e) => setItemFormData({...itemFormData, description: e.target.value})}
-                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                {/* Common Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Description *</label>
+                    <input
+                      type="text"
+                      required
+                      value={itemFormData.description}
+                      onChange={(e) => setItemFormData({...itemFormData, description: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Code</label>
+                    <input
+                      type="text"
+                      value={itemFormData.code}
+                      onChange={(e) => setItemFormData({...itemFormData, code: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Code</label>
-                  <input
-                    type="text"
-                    value={itemFormData.code}
-                    onChange={(e) => setItemFormData({...itemFormData, code: e.target.value})}
-                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+
+                {/* Dynamic Fields Based on Category */}
+                {getFormType() === 'lens' && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Index</label>
+                      <input
+                        type="text"
+                        value={itemFormData.index}
+                        onChange={(e) => setItemFormData({...itemFormData, index: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Diameter</label>
+                      <input
+                        type="text"
+                        value={itemFormData.diameter}
+                        onChange={(e) => setItemFormData({...itemFormData, diameter: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">TP</label>
+                      <input
+                        type="text"
+                        value={itemFormData.tp}
+                        onChange={(e) => setItemFormData({...itemFormData, tp: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">SphFR</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., +2.50, -1.75"
+                        value={itemFormData.sphFR}
+                        onChange={(e) => setItemFormData({...itemFormData, sphFR: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">SphTo</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., +4.00, -3.25"
+                        value={itemFormData.sphTo}
+                        onChange={(e) => setItemFormData({...itemFormData, sphTo: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">CylFr</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., +0.50, -1.25"
+                        value={itemFormData.cylFr}
+                        onChange={(e) => setItemFormData({...itemFormData, cylFr: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">CylTo</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., +2.00, -3.50"
+                        value={itemFormData.cylTo}
+                        onChange={(e) => setItemFormData({...itemFormData, cylTo: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {getFormType() === 'contact' && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Steps</label>
+                      <input
+                        type="text"
+                        value={itemFormData.steps}
+                        onChange={(e) => setItemFormData({...itemFormData, steps: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Diameter</label>
+                      <input
+                        type="text"
+                        value={itemFormData.diameter}
+                        onChange={(e) => setItemFormData({...itemFormData, diameter: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Modality</label>
+                      <input
+                        type="text"
+                        value={itemFormData.modality}
+                        onChange={(e) => setItemFormData({...itemFormData, modality: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Set</label>
+                      <input
+                        type="text"
+                        value={itemFormData.set}
+                        onChange={(e) => setItemFormData({...itemFormData, set: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">BC</label>
+                      <input
+                        type="text"
+                        value={itemFormData.bc}
+                        onChange={(e) => setItemFormData({...itemFormData, bc: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">SphFR</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., +2.50, -1.75"
+                        value={itemFormData.sphFR}
+                        onChange={(e) => setItemFormData({...itemFormData, sphFR: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">SphTo</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., +4.00, -3.25"
+                        value={itemFormData.sphTo}
+                        onChange={(e) => setItemFormData({...itemFormData, sphTo: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">CylFr</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., +0.50, -1.25"
+                        value={itemFormData.cylFr}
+                        onChange={(e) => setItemFormData({...itemFormData, cylFr: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">CylTo</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., +2.00, -3.50"
+                        value={itemFormData.cylTo}
+                        onChange={(e) => setItemFormData({...itemFormData, cylTo: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">AddFr</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., +1.00, +2.50"
+                        value={itemFormData.addFr}
+                        onChange={(e) => setItemFormData({...itemFormData, addFr: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">AddTo</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., +3.00, +3.50"
+                        value={itemFormData.addTo}
+                        onChange={(e) => setItemFormData({...itemFormData, addTo: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {getFormType() === 'solution' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Volume</label>
+                    <input
+                      type="text"
+                      value={itemFormData.volume}
+                      onChange={(e) => setItemFormData({...itemFormData, volume: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                )}
+
+                {/* Price and Cost Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Price (₱) *</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="0.01"
+                      value={itemFormData.price}
+                      onChange={(e) => setItemFormData({...itemFormData, price: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Cost (₱)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={itemFormData.cost}
+                      onChange={(e) => setItemFormData({...itemFormData, cost: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Price (₱)</label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    step="0.01"
-                    value={itemFormData.price}
-                    onChange={(e) => setItemFormData({...itemFormData, price: e.target.value})}
-                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Cost (₱)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={itemFormData.cost}
-                    onChange={(e) => setItemFormData({...itemFormData, cost: e.target.value})}
-                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+
+                {/* Set Cost for Contact Lens */}
+                {getFormType() === 'contact' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Set Cost (₱)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={itemFormData.set_cost}
+                      onChange={(e) => setItemFormData({...itemFormData, set_cost: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                )}
+
+                {/* Service Checkbox */}
                 <div>
                   <label className="flex items-center">
                     <input
@@ -753,7 +1108,22 @@ function Pricelist() {
                       price: '', 
                       cost: '', 
                       subcategory_id: '', 
-                      supplier_id: null 
+                      supplier_id: null,
+                      index: '',
+                      diameter: '',
+                      sphFR: '',
+                      sphTo: '',
+                      cylFr: '',
+                      cylTo: '',
+                      tp: '',
+                      steps: '',
+                      addFr: '',
+                      addTo: '',
+                      modality: '',
+                      set: '',
+                      bc: '',
+                      volume: '',
+                      set_cost: ''
                     });
                   }}
                   className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200"

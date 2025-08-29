@@ -136,11 +136,28 @@ exports.deleteSubcategory = async (req, res) => {
 // Item functions
 
 exports.addItem = async (req, res) => {
-    const {description, code, service, price, cost, subcategory_id, supplier_id} = req.body;
+    const {
+        description, code, service, price, cost, subcategory_id, supplier_id,
+        index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
+        steps, addFr, addTo, modality, set, bc,
+        volume, set_cost
+    } = req.body;
+    
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
-        const [result] = await conn.query("INSERT INTO price_items (description, code, service, price, cost, subcategory_id, supplier_id) VALUES (?, ?, ?, ?, ?, ?, ?)", [description, code, service, price, cost, subcategory_id, supplier_id]);
+        
+        // Create attributes object with all the additional fields
+        const attributes = {
+            index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
+            steps, addFr, addTo, modality, set, bc,
+            volume, set_cost, service
+        };
+        
+        const [result] = await conn.query(
+            "INSERT INTO products (subcategory_id, supplier_id, code, description, pc_price, pc_cost, attributes) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+            [subcategory_id, supplier_id, code, description, price, cost, JSON.stringify(attributes)]
+        );
         await conn.commit();
         res.status(201).json({message: "Item added successfully", item: result});
     } catch (error) {
@@ -158,8 +175,15 @@ exports.getItems = async (req, res) => {
     let conn;
     try {
         conn = await db.getConnection();
-        const [result] = await conn.query("SELECT * FROM price_items WHERE subcategory_id = ? AND is_deleted = 0", [subcategoryId]);
-        res.status(200).json({items: result});
+        const [result] = await conn.query("SELECT * FROM products WHERE subcategory_id = ? AND is_deleted = 0", [subcategoryId]);
+        
+        // Parse attributes JSON for each item
+        const items = result.map(item => ({
+            ...item,
+            attributes: item.attributes ? JSON.parse(item.attributes) : {}
+        }));
+        
+        res.status(200).json({items: items});
     } catch (error) {
         res.status(500).json({message: "Failed to get items", error: error.message});
     } finally {
@@ -171,11 +195,28 @@ exports.getItems = async (req, res) => {
 
 exports.updateItem = async (req, res) => {
     const {id} = req.params;
-    const {description, code, service, price, cost, subcategory_id, supplier_id} = req.body;
+    const {
+        description, code, service, price, cost, subcategory_id, supplier_id,
+        index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
+        steps, addFr, addTo, modality, set, bc,
+        volume, set_cost
+    } = req.body;
+    
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
-        const [result] = await conn.query("UPDATE price_items SET description = ?, code = ?, service = ?, price = ?, cost = ?, subcategory_id = ?, supplier_id = ? WHERE id = ?", [description, code, service, price, cost, subcategory_id, supplier_id, id]);
+        
+        // Create attributes object with all the additional fields
+        const attributes = {
+            index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
+            steps, addFr, addTo, modality, set, bc,
+            volume, set_cost, service
+        };
+        
+        const [result] = await conn.query(
+            "UPDATE products SET description = ?, code = ?, pc_price = ?, pc_cost = ?, subcategory_id = ?, supplier_id = ?, attributes = ? WHERE id = ?", 
+            [description, code, price, cost, subcategory_id, supplier_id, JSON.stringify(attributes), id]
+        );
         await conn.commit();
         res.status(200).json({message: "Item updated successfully", item: result});
     } catch (error) {
@@ -193,7 +234,7 @@ exports.deleteItem = async (req, res) => {
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
-        const [result] = await conn.query("UPDATE price_items SET is_deleted = 1 WHERE id = ?", [id]);
+        const [result] = await conn.query("UPDATE products SET is_deleted = 1 WHERE id = ?", [id]);
         await conn.commit();
         res.status(200).json({message: "Item deleted successfully", item: result});
     } catch (error) {
