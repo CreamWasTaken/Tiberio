@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 29, 2025 at 04:46 AM
+-- Generation Time: Aug 29, 2025 at 07:00 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -173,34 +173,13 @@ CREATE TABLE `price_categories` (
 --
 
 INSERT INTO `price_categories` (`id`, `name`, `description`, `is_deleted`, `created_at`, `updated_at`) VALUES
-(1, 'Frames', 'Eyeglass frames', 0, '2025-08-19 06:16:19', '2025-08-19 06:16:19'),
-(2, 'Lenses', 'Prescription lenses', 1, '2025-08-19 06:16:19', '2025-08-29 02:37:42'),
-(3, 'Contact Lenses', 'Contact lens products', 0, '2025-08-19 06:16:19', '2025-08-29 02:38:09'),
-(4, 'Services', 'Eye examination services', 0, '2025-08-19 06:16:19', '2025-08-19 06:16:19'),
-(7, 'Accesories', '', 0, '2025-08-29 02:37:05', '2025-08-29 02:37:05'),
-(8, 'Sate', '', 0, '2025-08-29 02:37:11', '2025-08-29 02:37:11'),
-(9, 'Double Vision', '', 0, '2025-08-29 02:37:23', '2025-08-29 02:37:23'),
-(10, 'Single Vision', '', 0, '2025-08-29 02:38:44', '2025-08-29 02:38:44'),
-(11, 'Progressive', '', 0, '2025-08-29 02:39:18', '2025-08-29 02:39:18');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `price_items`
---
-
-CREATE TABLE `price_items` (
-  `id` int(11) NOT NULL,
-  `description` text NOT NULL,
-  `code` varchar(50) DEFAULT NULL,
-  `service` tinyint(1) DEFAULT 0,
-  `price` decimal(10,2) NOT NULL,
-  `cost` decimal(10,2) DEFAULT NULL,
-  `subcategory_id` int(11) DEFAULT NULL,
-  `supplier_id` int(11) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+(13, 'Single Vision', 'Single Vision Lenses', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12'),
+(14, 'Double Vision', 'Double Vision Lenses', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12'),
+(15, 'Progressive', 'Progressive Lenses', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12'),
+(16, 'Contact Lens', 'Contact lens products', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12'),
+(17, 'Solutions, Artificial Tears, Etc.', 'Solutions, artificial tears, and related products', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12'),
+(18, 'Accessories', 'Eyewear accessories', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12'),
+(19, 'Frames', 'Eyeglass frames', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12');
 
 -- --------------------------------------------------------
 
@@ -214,7 +193,8 @@ CREATE TABLE `price_subcategories` (
   `name` varchar(100) NOT NULL,
   `description` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -225,17 +205,15 @@ CREATE TABLE `price_subcategories` (
 
 CREATE TABLE `products` (
   `id` int(11) NOT NULL,
-  `price_item_id` int(11) NOT NULL,
+  `subcategory_id` int(11) DEFAULT NULL,
   `supplier_id` int(11) DEFAULT NULL,
-  `deleted` tinyint(1) DEFAULT 0,
-  `sph` decimal(5,2) DEFAULT NULL,
-  `cyl` decimal(5,2) DEFAULT NULL,
-  `add_val` decimal(5,2) DEFAULT NULL,
+  `code` varchar(50) DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `pc_price` decimal(10,2) DEFAULT NULL,
+  `pc_cost` decimal(10,2) DEFAULT NULL,
   `stock` int(11) DEFAULT 0,
-  `low_stock_threshold` int(11) DEFAULT 5,
-  `stock_status` tinyint(4) DEFAULT 0 COMMENT '0=normal,1=low,2=service',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `attributes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`attributes`)),
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -399,15 +377,6 @@ ALTER TABLE `price_categories`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `price_items`
---
-ALTER TABLE `price_items`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `supplier_id` (`supplier_id`),
-  ADD KEY `idx_code` (`code`),
-  ADD KEY `price_items_ibfk_1` (`subcategory_id`);
-
---
 -- Indexes for table `price_subcategories`
 --
 ALTER TABLE `price_subcategories`
@@ -419,8 +388,8 @@ ALTER TABLE `price_subcategories`
 --
 ALTER TABLE `products`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `price_item_id` (`price_item_id`),
-  ADD KEY `supplier_id` (`supplier_id`);
+  ADD KEY `products_subcategory_fk` (`subcategory_id`),
+  ADD KEY `products_supplier_fk` (`supplier_id`);
 
 --
 -- Indexes for table `spectacle_prescriptions`
@@ -499,19 +468,13 @@ ALTER TABLE `patients`
 -- AUTO_INCREMENT for table `price_categories`
 --
 ALTER TABLE `price_categories`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
-
---
--- AUTO_INCREMENT for table `price_items`
---
-ALTER TABLE `price_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `price_subcategories`
 --
 ALTER TABLE `price_subcategories`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `products`
@@ -586,13 +549,6 @@ ALTER TABLE `patients`
   ADD CONSTRAINT `patients_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
--- Constraints for table `price_items`
---
-ALTER TABLE `price_items`
-  ADD CONSTRAINT `price_items_ibfk_1` FOREIGN KEY (`subcategory_id`) REFERENCES `price_subcategories` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `price_items_ibfk_2` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL;
-
---
 -- Constraints for table `price_subcategories`
 --
 ALTER TABLE `price_subcategories`
@@ -602,8 +558,8 @@ ALTER TABLE `price_subcategories`
 -- Constraints for table `products`
 --
 ALTER TABLE `products`
-  ADD CONSTRAINT `products_ibfk_1` FOREIGN KEY (`price_item_id`) REFERENCES `price_items` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `products_ibfk_2` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `products_subcategory_fk` FOREIGN KEY (`subcategory_id`) REFERENCES `price_subcategories` (`id`),
+  ADD CONSTRAINT `products_supplier_fk` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`);
 
 --
 -- Constraints for table `spectacle_prescriptions`

@@ -60,18 +60,148 @@ exports.deleteCategory = async (req, res) => {
     }
 }
 
-// Sub Category
+// Subcategory functions
 
 exports.addSubcategory = async (req, res) => {
     const {name, description, category_id} = req.body;
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
-        const [result] = await conn.query("INSERT INTO price_categories (name, description, category_id) VALUES (?, ?, ?)", [name, description, category_id]);
+        const [result] = await conn.query("INSERT INTO price_subcategories (name, description, category_id) VALUES (?, ?, ?)", [name, description, category_id]);
         await conn.commit();
         res.status(201).json({message: "Subcategory added successfully", subcategory: result});
     } catch (error) {
         await conn.rollback();
         res.status(500).json({message: "Failed to add Subcategory", error: error.message});
+    } finally {
+        if (conn) {
+            conn.release();
+        }
+    }
+}
+
+exports.getSubcategories = async (req, res) => {
+    const {categoryId} = req.params;
+    let conn;
+    try {
+        conn = await db.getConnection();
+        const [result] = await conn.query("SELECT * FROM price_subcategories WHERE category_id = ? AND is_deleted = 0", [categoryId]);
+        res.status(200).json({subcategories: result});
+    } catch (error) {
+        res.status(500).json({message: "Failed to get subcategories", error: error.message});
+    } finally {
+        if (conn) {
+            conn.release();
+        }
+    }
+}
+
+exports.updateSubcategory = async (req, res) => {
+    const {id} = req.params;
+    const {name, description} = req.body;
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const [result] = await conn.query("UPDATE price_subcategories SET name = ?, description = ? WHERE id = ?", [name, description, id]);
+        await conn.commit();
+        res.status(200).json({message: "Subcategory updated successfully", subcategory: result});
+    } catch (error) {
+        await conn.rollback();
+        res.status(500).json({message: "Failed to update subcategory", error: error.message});
+    } finally {
+        if (conn) {
+            conn.release();
+        }
+    }
+}
+
+exports.deleteSubcategory = async (req, res) => {
+    const {id} = req.params;
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const [result] = await conn.query("UPDATE price_subcategories SET is_deleted = 1 WHERE id = ?", [id]);
+        await conn.commit();
+        res.status(200).json({message: "Subcategory deleted successfully", subcategory: result});
+    } catch (error) {
+        await conn.rollback();
+        res.status(500).json({message: "Failed to delete subcategory", error: error.message});
+    } finally {
+        if (conn) {
+            conn.release();
+        }
+    }
+}
+
+// Item functions
+
+exports.addItem = async (req, res) => {
+    const {description, code, service, price, cost, subcategory_id, supplier_id} = req.body;
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const [result] = await conn.query("INSERT INTO price_items (description, code, service, price, cost, subcategory_id, supplier_id) VALUES (?, ?, ?, ?, ?, ?, ?)", [description, code, service, price, cost, subcategory_id, supplier_id]);
+        await conn.commit();
+        res.status(201).json({message: "Item added successfully", item: result});
+    } catch (error) {
+        await conn.rollback();
+        res.status(500).json({message: "Failed to add item", error: error.message});
+    } finally {
+        if (conn) {
+            conn.release();
+        }
+    }
+}
+
+exports.getItems = async (req, res) => {
+    const {subcategoryId} = req.params;
+    let conn;
+    try {
+        conn = await db.getConnection();
+        const [result] = await conn.query("SELECT * FROM price_items WHERE subcategory_id = ? AND is_deleted = 0", [subcategoryId]);
+        res.status(200).json({items: result});
+    } catch (error) {
+        res.status(500).json({message: "Failed to get items", error: error.message});
+    } finally {
+        if (conn) {
+            conn.release();
+        }
+    }
+}
+
+exports.updateItem = async (req, res) => {
+    const {id} = req.params;
+    const {description, code, service, price, cost, subcategory_id, supplier_id} = req.body;
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const [result] = await conn.query("UPDATE price_items SET description = ?, code = ?, service = ?, price = ?, cost = ?, subcategory_id = ?, supplier_id = ? WHERE id = ?", [description, code, service, price, cost, subcategory_id, supplier_id, id]);
+        await conn.commit();
+        res.status(200).json({message: "Item updated successfully", item: result});
+    } catch (error) {
+        await conn.rollback();
+        res.status(500).json({message: "Failed to update item", error: error.message});
+    } finally {
+        if (conn) {
+            conn.release();
+        }
+    }
+}
+
+exports.deleteItem = async (req, res) => {
+    const {id} = req.params;
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const [result] = await conn.query("UPDATE price_items SET is_deleted = 1 WHERE id = ?", [id]);
+        await conn.commit();
+        res.status(200).json({message: "Item deleted successfully", item: result});
+    } catch (error) {
+        await conn.rollback();
+        res.status(500).json({message: "Failed to delete item", error: error.message});
+    } finally {
+        if (conn) {
+            conn.release();
+        }
     }
 }
