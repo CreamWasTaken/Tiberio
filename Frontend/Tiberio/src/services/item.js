@@ -43,6 +43,35 @@ export const getItems = async (subcategoryId, signal = null) => {
   }
 };
 
+export const getInventoryItems = async (signal = null) => {
+  try {
+    if (activeRequests.has('getInventoryItems')) {
+      activeRequests.get('getInventoryItems').abort();
+    }
+    const abortController = new AbortController();
+    activeRequests.set('getInventoryItems', abortController);
+
+    const token = localStorage.getItem('authToken');
+    const response = await axios.get(`${API_URL}/api/categories/get-inventory-items`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: signal || abortController.signal
+    });
+    activeRequests.delete('getInventoryItems');
+    return response.data.items;
+  } catch (error) {
+    activeRequests.delete('getInventoryItems');
+    if (error.name === 'AbortError') {
+      throw new Error('Request cancelled');
+    } else if (error.response) {
+      throw new Error(error.response.data.error);
+    } else if (error.request) {
+      throw new Error('No response from server');
+    } else {
+      throw new Error(error.message);
+    }
+  }
+};
+
 export const addItem = async (itemData) => {
   try {
     const token = localStorage.getItem('authToken');

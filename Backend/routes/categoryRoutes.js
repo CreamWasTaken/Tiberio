@@ -18,6 +18,7 @@ router.delete("/delete-subcategory/:id", authenticateToken, categoryController.d
 // Item routes
 router.post("/add-item", authenticateToken, categoryController.addItem);
 router.get("/get-items/:subcategoryId", authenticateToken, categoryController.getItems);
+router.get("/get-inventory-items", authenticateToken, categoryController.getInventoryItems);
 router.put("/update-item/:id", authenticateToken, categoryController.updateItem);
 router.delete("/delete-item/:id", authenticateToken, categoryController.deleteItem);
 

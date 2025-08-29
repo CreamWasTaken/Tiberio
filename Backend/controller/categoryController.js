@@ -140,7 +140,8 @@ exports.addItem = async (req, res) => {
         description, code, service, price, pc_price, pc_cost, cost, subcategory_id, supplier_id,
         index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
         steps, addFr, addTo, modality, set, bc,
-        volume, set_cost
+        volume, set_cost,
+        stock, low_stock_threshold
     } = req.body;
     
     const conn = await db.getConnection();
@@ -151,7 +152,9 @@ exports.addItem = async (req, res) => {
         const attributes = {
             index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
             steps, addFr, addTo, modality, set, bc,
-            volume, set_cost, service
+            volume, set_cost, service,
+            stock: stock ?? null,
+            low_stock_threshold: low_stock_threshold ?? null
         };
         
         const [result] = await conn.query(
@@ -193,13 +196,41 @@ exports.getItems = async (req, res) => {
     }
 }
 
+// Inventory: list products that are in inventory (supplier_id not null)
+exports.getInventoryItems = async (req, res) => {
+    let conn;
+    try {
+        conn = await db.getConnection();
+        const [result] = await conn.query(
+            `SELECT p.*, s.name AS supplier_name
+             FROM products p
+             LEFT JOIN suppliers s ON p.supplier_id = s.id
+             WHERE p.is_deleted = 0 AND p.supplier_id IS NOT NULL`
+        );
+
+        const items = result.map(item => ({
+            ...item,
+            attributes: item.attributes ? JSON.parse(item.attributes) : {}
+        }));
+
+        res.status(200).json({ items });
+    } catch (error) {
+        res.status(500).json({ message: "Failed to get inventory items", error: error.message });
+    } finally {
+        if (conn) {
+            conn.release();
+        }
+    }
+}
+
 exports.updateItem = async (req, res) => {
     const {id} = req.params;
     const {
         description, code, service, price, pc_price, pc_cost, cost, subcategory_id, supplier_id,
         index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
         steps, addFr, addTo, modality, set, bc,
-        volume, set_cost
+        volume, set_cost,
+        stock, low_stock_threshold
     } = req.body;
     
     const conn = await db.getConnection();
@@ -210,7 +241,9 @@ exports.updateItem = async (req, res) => {
         const attributes = {
             index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
             steps, addFr, addTo, modality, set, bc,
-            volume, set_cost, service
+            volume, set_cost, service,
+            stock: stock ?? null,
+            low_stock_threshold: low_stock_threshold ?? null
         };
         
         const [result] = await conn.query(
