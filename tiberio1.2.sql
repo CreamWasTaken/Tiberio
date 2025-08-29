@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 29, 2025 at 07:00 AM
+-- Generation Time: Aug 29, 2025 at 10:14 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -45,7 +45,8 @@ CREATE TABLE `checkups` (
 --
 
 INSERT INTO `checkups` (`id`, `user_id`, `patient_id`, `checkup_date`, `notes`, `diagnosis`, `binocular_pd`, `created_at`, `updated_at`, `is_deleted`) VALUES
-(7, 1, 7, '2025-08-28', 'Notes', 'Diag', NULL, '2025-08-27 16:51:35', '2025-08-28 06:07:44', 1);
+(7, 1, 7, '2025-08-28', 'Notes', 'Diag', NULL, '2025-08-27 16:51:35', '2025-08-28 06:07:44', 1),
+(8, 1, 7, '2025-08-29', 'test', 'test', '1', '2025-08-29 05:41:21', '2025-08-29 05:41:21', 0);
 
 -- --------------------------------------------------------
 
@@ -75,7 +76,8 @@ CREATE TABLE `contact_lens_prescriptions` (
 --
 
 INSERT INTO `contact_lens_prescriptions` (`contactId`, `checkupId`, `sphereRight`, `sphereLeft`, `cylinderRight`, `cylinderLeft`, `axisRight`, `axisLeft`, `additionRight`, `additionLeft`, `baseCurveRight`, `baseCurveLeft`, `diameterRight`, `diameterLeft`) VALUES
-(6, 7, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+(6, 7, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(7, 8, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -179,7 +181,9 @@ INSERT INTO `price_categories` (`id`, `name`, `description`, `is_deleted`, `crea
 (16, 'Contact Lens', 'Contact lens products', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12'),
 (17, 'Solutions, Artificial Tears, Etc.', 'Solutions, artificial tears, and related products', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12'),
 (18, 'Accessories', 'Eyewear accessories', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12'),
-(19, 'Frames', 'Eyeglass frames', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12');
+(19, 'Frames', 'Eyeglass frames', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12'),
+(20, 'Services', 'Checkups ETC', 0, '2025-08-29 05:16:40', '2025-08-29 05:16:48'),
+(21, 'test', '', 1, '2025-08-29 05:24:32', '2025-08-29 05:25:20');
 
 -- --------------------------------------------------------
 
@@ -197,6 +201,21 @@ CREATE TABLE `price_subcategories` (
   `is_deleted` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `price_subcategories`
+--
+
+INSERT INTO `price_subcategories` (`id`, `category_id`, `name`, `description`, `created_at`, `updated_at`, `is_deleted`) VALUES
+(3, 13, 'Test', 'Test', '2025-08-29 05:08:33', '2025-08-29 05:08:33', 0),
+(4, 13, 'Test 2', '', '2025-08-29 05:14:24', '2025-08-29 05:14:56', 1),
+(5, 14, 'Double Vision 1', '', '2025-08-29 05:15:15', '2025-08-29 05:15:15', 0),
+(6, 15, 'Progressive 1', '', '2025-08-29 05:15:28', '2025-08-29 05:15:28', 0),
+(7, 16, 'Contact Lens 1', '', '2025-08-29 05:15:36', '2025-08-29 05:15:36', 0),
+(8, 17, 'Solutions 1', '', '2025-08-29 05:15:51', '2025-08-29 05:15:51', 0),
+(9, 19, 'Frames 1', '', '2025-08-29 05:16:03', '2025-08-29 05:16:03', 0),
+(10, 13, 'Test', '', '2025-08-29 05:24:40', '2025-08-29 05:24:46', 1),
+(11, 21, 'Test', '', '2025-08-29 05:24:57', '2025-08-29 05:25:07', 1);
+
 -- --------------------------------------------------------
 
 --
@@ -212,9 +231,48 @@ CREATE TABLE `products` (
   `pc_price` decimal(10,2) DEFAULT NULL,
   `pc_cost` decimal(10,2) DEFAULT NULL,
   `stock` int(11) DEFAULT 0,
+  `low_stock_threshold` int(11) DEFAULT 5,
+  `stock_status` varchar(20) NOT NULL DEFAULT 'normal' COMMENT 'normal, low, out-of-stock',
   `attributes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`attributes`)),
   `is_deleted` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `products`
+--
+
+INSERT INTO `products` (`id`, `subcategory_id`, `supplier_id`, `code`, `description`, `pc_price`, `pc_cost`, `stock`, `low_stock_threshold`, `stock_status`, `attributes`, `is_deleted`) VALUES
+(4, 5, 4, '1', 'Test', 1.00, 1.00, 0, 5, 'out-of-stock', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0,\"stock\":\"6\",\"low_stock_threshold\":\"5\"}', 0),
+(5, 3, NULL, '1', 'Item 1', 1.00, 1.00, 0, 5, 'out-of-stock', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0),
+(6, 9, 4, '1', 'Frame 1', 10.00, 10.00, 0, 5, 'out-of-stock', '{\"index\":\"\",\"diameter\":\"\",\"sphFR\":\"\",\"sphTo\":\"\",\"cylFr\":\"\",\"cylTo\":\"\",\"tp\":\"\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0,\"stock\":\"10\",\"low_stock_threshold\":\"5\"}', 0);
+
+--
+-- Triggers `products`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_products_stock_status_insert` BEFORE INSERT ON `products` FOR EACH ROW BEGIN
+    IF NEW.stock <= 0 THEN
+        SET NEW.stock_status = 'out-of-stock';
+    ELSEIF NEW.stock <= NEW.low_stock_threshold THEN
+        SET NEW.stock_status = 'low';
+    ELSE
+        SET NEW.stock_status = 'normal';
+    END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_products_stock_status_update` BEFORE UPDATE ON `products` FOR EACH ROW BEGIN
+    IF NEW.stock <= 0 THEN
+        SET NEW.stock_status = 'out-of-stock';
+    ELSEIF NEW.stock <= NEW.low_stock_threshold THEN
+        SET NEW.stock_status = 'low';
+    ELSE
+        SET NEW.stock_status = 'normal';
+    END IF;
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -244,7 +302,8 @@ CREATE TABLE `spectacle_prescriptions` (
 --
 
 INSERT INTO `spectacle_prescriptions` (`spectacleId`, `checkupId`, `sphereRight`, `cylinderRight`, `axisRight`, `additionRight`, `visualAcuityRight`, `monocularPdRight`, `sphereLeft`, `cylinderLeft`, `axisLeft`, `additionLeft`, `visualAcuityLeft`, `monocularPdLeft`) VALUES
-(6, 7, '+1', '1', '1', '1', '1', '1', '1', '1', '+2', '1', '1', '1');
+(6, 7, '+1', '1', '1', '1', '1', '1', '1', '1', '+2', '1', '1', '1'),
+(7, 8, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1');
 
 -- --------------------------------------------------------
 
@@ -263,6 +322,13 @@ CREATE TABLE `suppliers` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `is_deleted` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `suppliers`
+--
+
+INSERT INTO `suppliers` (`id`, `name`, `contact_person`, `contact_number`, `email`, `address`, `created_at`, `updated_at`, `is_deleted`) VALUES
+(4, 'Source ', 'Barley France', '09', 'Secret@gmail.com', 'Secret ang address ni source', '2025-08-29 07:39:12', '2025-08-29 07:39:12', 0);
 
 -- --------------------------------------------------------
 
@@ -438,13 +504,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `checkups`
 --
 ALTER TABLE `checkups`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `contact_lens_prescriptions`
 --
 ALTER TABLE `contact_lens_prescriptions`
-  MODIFY `contactId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `contactId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `logs`
@@ -468,31 +534,31 @@ ALTER TABLE `patients`
 -- AUTO_INCREMENT for table `price_categories`
 --
 ALTER TABLE `price_categories`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `price_subcategories`
 --
 ALTER TABLE `price_subcategories`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `spectacle_prescriptions`
 --
 ALTER TABLE `spectacle_prescriptions`
-  MODIFY `spectacleId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `spectacleId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `suppliers`
 --
 ALTER TABLE `suppliers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `transactions`

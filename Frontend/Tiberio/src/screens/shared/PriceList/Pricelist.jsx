@@ -628,42 +628,42 @@ function Pricelist() {
                         }`}
                         onClick={() => handleSubcategorySelect(subcategory)}
                       >
-                        <div className="flex-1">
+                      <div className="flex-1">
                           <h4 className="text-white font-medium mb-2 text-sm leading-tight">{subcategory.name}</h4>
                           <p className="text-gray-400 text-xs line-clamp-2">{subcategory.description}</p>
-                        </div>
-                        {userRole === 'admin' && (
+                      </div>
+                      {userRole === 'admin' && (
                           <div className="flex gap-2 mt-3 pt-2 border-t border-gray-700">
-                            <button
+                          <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleEditSubcategory(subcategory);
                               }}
                               className="text-gray-400 hover:text-blue-400 transition-colors duration-200 p-1"
                               title="Edit Subcategory"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            </button>
-                            <button
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteSubcategory(subcategory.id);
                               }}
                               className="text-gray-400 hover:text-red-400 transition-colors duration-200 p-1"
                               title="Delete Subcategory"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     ))}
+                    </div>
                   </div>
-                </div>
 
                 {subcategories.length === 0 && (
                   <div className="text-center py-8">
@@ -805,17 +805,17 @@ function Pricelist() {
                       </tbody>
                     </table>
                     </div>
-                  </div>
+              </div>
 
                   {items.length === 0 && (
                     <div className="text-center py-8">
-                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.400a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.400a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
                       <h3 className="mt-2 text-sm font-medium text-gray-400">No items found in {selectedSubcategory.name}</h3>
                       <p className="mt-1 text-sm text-gray-500">Add items to this subcategory to get started.</p>
-                    </div>
-                  )}
+                </div>
+              )}
                 </div>
               )}
 
@@ -910,17 +910,17 @@ function Pricelist() {
                 </div>
                 {/* Common Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Description *</label>
-                    <input
-                      type="text"
-                      required
+                  <input
+                    type="text"
+                    required
                       value={itemFormData.description}
                       onChange={(e) => setItemFormData({...itemFormData, description: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Code</label>
                     <input
                       type="text"
@@ -1130,27 +1130,27 @@ function Pricelist() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">PC Price (₱) *</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      step="0.01"
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step="0.01"
                       value={itemFormData.pc_price}
                       onChange={(e) => setItemFormData({...itemFormData, pc_price: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">PC Cost (₱)</label>
-                    <input
+                  <input
                       type="number"
                       min="0"
                       step="0.01"
                       value={itemFormData.pc_cost}
                       onChange={(e) => setItemFormData({...itemFormData, pc_cost: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
                 </div>
 
                 {/* Inventory fields */}
@@ -1158,7 +1158,7 @@ function Pricelist() {
                   <>
                     <hr className="my-4 border-gray-700" />
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
+                <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">Stock {addToInventory && <span className="text-red-400">*</span>}</label>
                         <input
                           type="number"
@@ -1167,9 +1167,9 @@ function Pricelist() {
                           value={itemFormData.stock}
                           onChange={(e) => setItemFormData({ ...itemFormData, stock: e.target.value })}
                           required={addToInventory}
-                          className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">Low stock threshold {addToInventory && <span className="text-red-400">*</span>}</label>
                         <input
