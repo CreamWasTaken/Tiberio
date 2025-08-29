@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi, deleteCheckup as deleteCheckupApi, getTotalCheckupsCount } from '../../../services/patient';
+import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi, updateCheckup as updateCheckupApi, deleteCheckup as deleteCheckupApi, getTotalCheckupsCount } from '../../../services/patient';
 import Sidebar from '../../../components/Sidebar';
 import AddPatientModal from './components/AddPatientModal';
 import AddCheckupModal from './components/AddCheckupModal';
@@ -79,6 +79,8 @@ function Patients() {
   const [isAddCheckupOpen, setIsAddCheckupOpen] = useState(false);
   const [isSavingCheckup, setIsSavingCheckup] = useState(false);
   const [checkupFormError, setCheckupFormError] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingCheckupId, setEditingCheckupId] = useState(null);
   const initialCheckupForm = {
     checkup_date: '',
     notes: '',
@@ -449,10 +451,16 @@ function Patients() {
                     <div className="text-gray-200">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-lg font-semibold">Checkups</h3>
-                        {(userRole === 'admin' || userRole === 'employee') && (
+                        {userRole === 'admin' && (
                           <button
                             className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm"
-                            onClick={() => { setCheckupForm(initialCheckupForm); setCheckupFormError(null); setIsAddCheckupOpen(true); }}
+                            onClick={() => { 
+                              setCheckupForm(initialCheckupForm); 
+                              setCheckupFormError(null); 
+                              setIsEditMode(false);
+                              setEditingCheckupId(null);
+                              setIsAddCheckupOpen(true); 
+                            }}
                           >
                             Add Checkup
                           </button>
@@ -475,41 +483,98 @@ function Patients() {
                                   </div>
                                   <div className="text-gray-400 text-xs">By: {c.created_by_name || '—'}</div>
                                 </button>
-                                                                 <button
-                                   className="ml-2 p-1 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded"
-                                   onClick={async (e) => {
-                                     e.stopPropagation();
-                                     setAlertConfig({
-                                       isOpen: true,
-                                       title: 'Delete Checkup',
-                                       message: 'Are you sure you want to delete this checkup? This action cannot be undone.',
-                                       type: 'warning',
-                                       onConfirm: async () => {
-                                         try {
-                                           await deleteCheckupApi(c.id);
-                                           const data = await getPatientCheckups(selectedPatient.id);
-                                           setCheckups(Array.isArray(data) ? data : []);
-                                           setAlertConfig(prev => ({ ...prev, isOpen: false }));
-                                         } catch (err) {
-                                           setAlertConfig({
-                                             isOpen: true,
-                                             title: 'Error',
-                                             message: 'Failed to delete checkup: ' + err.message,
-                                             type: 'error',
-                                             onConfirm: () => setAlertConfig(prev => ({ ...prev, isOpen: false })),
-                                             onCancel: null
-                                           });
-                                         }
-                                       },
-                                       onCancel: () => setAlertConfig(prev => ({ ...prev, isOpen: false }))
-                                     });
-                                   }}
-                                   title="Delete checkup"
-                                 >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                </button>
+                                <div className="flex items-center gap-1">
+                                  {userRole === 'admin' && (
+                                    <>
+                                      <button
+                                        className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded"
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          // Prepare form data for editing
+                                          const editForm = {
+                                            checkup_date: c.checkup_date ? formatDateYMD(c.checkup_date) : '',
+                                            notes: c.notes || '',
+                                            diagnosis: c.diagnosis || '',
+                                            binocular_pd: c.binocular_pd || '',
+                                            spectacle: {
+                                              sphereRight: c.spectacle_prescription?.sphereRight || '',
+                                              cylinderRight: c.spectacle_prescription?.cylinderRight || '',
+                                              axisRight: c.spectacle_prescription?.axisRight || '',
+                                              additionRight: c.spectacle_prescription?.additionRight || '',
+                                              visualAcuityRight: c.spectacle_prescription?.visualAcuityRight || '',
+                                              monocularPdRight: c.spectacle_prescription?.monocularPdRight || '',
+                                              sphereLeft: c.spectacle_prescription?.sphereLeft || '',
+                                              cylinderLeft: c.spectacle_prescription?.cylinderLeft || '',
+                                              axisLeft: c.spectacle_prescription?.axisLeft || '',
+                                              additionLeft: c.spectacle_prescription?.additionLeft || '',
+                                              visualAcuityLeft: c.spectacle_prescription?.visualAcuityLeft || '',
+                                              monocularPdLeft: c.spectacle_prescription?.monocularPdLeft || ''
+                                            },
+                                            contact: {
+                                              sphereRight: c.contact_lens_prescription?.sphereRight || '',
+                                              sphereLeft: c.contact_lens_prescription?.sphereLeft || '',
+                                              cylinderRight: c.contact_lens_prescription?.cylinderRight || '',
+                                              cylinderLeft: c.contact_lens_prescription?.cylinderLeft || '',
+                                              axisRight: c.contact_lens_prescription?.axisRight || '',
+                                              axisLeft: c.contact_lens_prescription?.axisLeft || '',
+                                              additionRight: c.contact_lens_prescription?.additionRight || '',
+                                              additionLeft: c.contact_lens_prescription?.additionLeft || '',
+                                              baseCurveRight: c.contact_lens_prescription?.baseCurveRight || '',
+                                              baseCurveLeft: c.contact_lens_prescription?.baseCurveLeft || '',
+                                              diameterRight: c.contact_lens_prescription?.diameterRight || '',
+                                              diameterLeft: c.contact_lens_prescription?.diameterLeft || ''
+                                            }
+                                          };
+                                          setCheckupForm(editForm);
+                                          setEditingCheckupId(c.id);
+                                          setIsEditMode(true);
+                                          setCheckupFormError(null);
+                                          setIsAddCheckupOpen(true);
+                                        }}
+                                        title="Edit checkup"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                      </button>
+                                      <button
+                                       className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded"
+                                       onClick={async (e) => {
+                                         e.stopPropagation();
+                                         setAlertConfig({
+                                           isOpen: true,
+                                           title: 'Delete Checkup',
+                                           message: 'Are you sure you want to delete this checkup? This action cannot be undone.',
+                                           type: 'warning',
+                                           onConfirm: async () => {
+                                             try {
+                                               await deleteCheckupApi(c.id);
+                                               const data = await getPatientCheckups(selectedPatient.id);
+                                               setCheckups(Array.isArray(data) ? data : []);
+                                               setAlertConfig(prev => ({ ...prev, isOpen: false }));
+                                             } catch (err) {
+                                               setAlertConfig({
+                                                 isOpen: true,
+                                                 title: 'Error',
+                                                 message: 'Failed to delete checkup: ' + err.message,
+                                                 type: 'error',
+                                                 onConfirm: () => setAlertConfig(prev => ({ ...prev, isOpen: false })),
+                                                 onCancel: null
+                                               });
+                                             }
+                                           },
+                                           onCancel: () => setAlertConfig(prev => ({ ...prev, isOpen: false }))
+                                         });
+                                       }}
+                                       title="Delete checkup"
+                                     >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                    </button>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                               <div className={`${expandedCheckups[c.id] ? 'block' : 'hidden'} px-4 pb-4`}>
                                 <div className="mt-1 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
@@ -672,11 +737,17 @@ function Patients() {
           {/* Add Checkup Modal */}
           <AddCheckupModal
             isOpen={isAddCheckupOpen}
-            onClose={() => setIsAddCheckupOpen(false)}
+            onClose={() => { 
+              setIsAddCheckupOpen(false); 
+              setIsEditMode(false); 
+              setEditingCheckupId(null); 
+              setCheckupForm(initialCheckupForm); 
+            }}
             checkupForm={checkupForm}
             setCheckupForm={setCheckupForm}
             checkupFormError={checkupFormError}
             isSavingCheckup={isSavingCheckup}
+            mode={isEditMode ? 'edit' : 'add'}
             onSubmit={async (e) => {
               e.preventDefault();
               if (!selectedPatient) return;
@@ -717,12 +788,18 @@ function Patients() {
                     diameterLeft: checkupForm.contact.diameterLeft || null
                   }
                 };
-                await addCheckupApi(selectedPatient.id, payload);
+                if (isEditMode && editingCheckupId) {
+                  await updateCheckupApi(editingCheckupId, payload);
+                } else {
+                  await addCheckupApi(selectedPatient.id, payload);
+                }
                 const data = await getPatientCheckups(selectedPatient.id);
                 setCheckups(Array.isArray(data) ? data : []);
                 setIsAddCheckupOpen(false);
+                setIsEditMode(false);
+                setEditingCheckupId(null);
               } catch (err) {
-                setCheckupFormError(err.message || 'Failed to add checkup');
+                setCheckupFormError(err.message || (isEditMode ? 'Failed to update checkup' : 'Failed to add checkup'));
               } finally {
                 setIsSavingCheckup(false);
               }

@@ -4,8 +4,39 @@ import Sidebar from '../../../components/Sidebar';
 import { getCategories } from '../../../services/category';
 import { getSubcategories, addSubcategory, updateSubcategory, deleteSubcategory } from '../../../services/subcategory';
 import { getItems, addItem, updateItem, deleteItem } from '../../../services/item';
+import { getSuppliers } from '../../../services/supplier';
 
 function Pricelist() {
+  // Custom scrollbar styles
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #374151;
+        border-radius: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #6B7280;
+        border-radius: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #9CA3AF;
+      }
+      .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
+
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -21,6 +52,8 @@ function Pricelist() {
   const [selectedSubcategory, setSelectedSubcategory] = useState(null);
   const [isSubcategoryModalOpen, setIsSubcategoryModalOpen] = useState(false);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [addToInventory, setAddToInventory] = useState(false);
+  const [suppliers, setSuppliers] = useState([]);
   const [subcategoryFormData, setSubcategoryFormData] = useState({
     name: '',
     description: '',
@@ -30,10 +63,13 @@ function Pricelist() {
     description: '',
     code: '',
     service: 0,
-    price: '',
+    pc_price: '',
+    pc_cost: '',
     cost: '',
     subcategory_id: '',
     supplier_id: null,
+    stock: '',
+    low_stock_threshold: '',
     // Single Vision/Double Vision/Progressive fields
     index: '',
     diameter: '',
@@ -189,6 +225,18 @@ function Pricelist() {
     }
   }, []);
 
+  // Function to fetch suppliers (for inventory add)
+  const fetchSuppliers = useCallback(async () => {
+    try {
+      const fetchedSuppliers = await getSuppliers(abortControllerRef.current?.signal);
+      setSuppliers(fetchedSuppliers || []);
+    } catch (err) {
+      if (err.name !== 'AbortError' && err.message !== 'Request cancelled') {
+        console.error('Error fetching suppliers:', err);
+      }
+    }
+  }, []);
+
 
 
   // Memoized function to get current category name
@@ -258,10 +306,13 @@ function Pricelist() {
       description: '', 
       code: '', 
       service: 0, 
-      price: '', 
+      pc_price: '',
+      pc_cost: '',
       cost: '', 
       subcategory_id: selectedSubcategory?.id || '', 
       supplier_id: null,
+      stock: '',
+      low_stock_threshold: '',
       index: '',
       diameter: '',
       sphFR: '',
@@ -285,8 +336,9 @@ function Pricelist() {
     // Merge item data with attributes
     const formData = {
       ...item,
-      price: item.pc_price || item.price,
-      cost: item.pc_cost || item.cost,
+      pc_price: item.pc_price || '',
+      pc_cost: item.pc_cost || '',
+      cost: item.cost || '',
       // Extract attributes
       ...(item.attributes || {})
     };
@@ -311,6 +363,15 @@ function Pricelist() {
   const handleItemSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Require supplier if adding to inventory
+      if (addToInventory && !itemFormData.supplier_id) {
+        alert('Please select a supplier to add this item to inventory.');
+        return;
+      }
+      if (addToInventory && (itemFormData.stock === '' || itemFormData.low_stock_threshold === '')) {
+        alert('Please provide Stock and Low stock threshold to add this item to inventory.');
+        return;
+      }
       if (editingItem) {
         await updateItem(editingItem.id, itemFormData);
       } else {
@@ -318,14 +379,16 @@ function Pricelist() {
       }
       setIsItemModalOpen(false);
       setEditingItem(null);
+      setAddToInventory(false);
       setItemFormData({ 
         description: '', 
         code: '', 
         service: 0, 
-        price: '', 
         cost: '', 
         subcategory_id: '', 
-        supplier_id: null 
+        supplier_id: null,
+        stock: '',
+        low_stock_threshold: ''
       });
       if (selectedSubcategory) {
         fetchItems(selectedSubcategory.id);
@@ -553,30 +616,31 @@ function Pricelist() {
                   )}
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {subcategories.map((subcategory) => (
-                    <div 
-                      key={subcategory.id} 
-                      className={`bg-gray-900/60 border rounded-lg p-4 cursor-pointer transition-colors duration-200 ${
-                        selectedSubcategory?.id === subcategory.id 
-                          ? 'border-blue-500 bg-blue-900/20' 
-                          : 'border-gray-700 hover:border-gray-600'
-                      }`}
-                      onClick={() => handleSubcategorySelect(subcategory)}
-                    >
-                      <div className="flex justify-between items-start">
+                <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-1">
+                    {subcategories.map((subcategory) => (
+                      <div 
+                        key={subcategory.id} 
+                        className={`bg-gray-900/60 border rounded-lg p-4 cursor-pointer transition-colors duration-200 min-h-[120px] flex flex-col justify-between ${
+                          selectedSubcategory?.id === subcategory.id 
+                            ? 'border-blue-500 bg-blue-900/20' 
+                            : 'border-gray-700 hover:border-gray-600'
+                        }`}
+                        onClick={() => handleSubcategorySelect(subcategory)}
+                      >
                         <div className="flex-1">
-                          <h4 className="text-white font-medium mb-1">{subcategory.name}</h4>
-                          <p className="text-gray-400 text-sm">{subcategory.description}</p>
+                          <h4 className="text-white font-medium mb-2 text-sm leading-tight">{subcategory.name}</h4>
+                          <p className="text-gray-400 text-xs line-clamp-2">{subcategory.description}</p>
                         </div>
                         {userRole === 'admin' && (
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 mt-3 pt-2 border-t border-gray-700">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleEditSubcategory(subcategory);
                               }}
-                              className="text-gray-400 hover:text-blue-400 transition-colors duration-200"
+                              className="text-gray-400 hover:text-blue-400 transition-colors duration-200 p-1"
+                              title="Edit Subcategory"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -587,7 +651,8 @@ function Pricelist() {
                                 e.stopPropagation();
                                 handleDeleteSubcategory(subcategory.id);
                               }}
-                              className="text-gray-400 hover:text-red-400 transition-colors duration-200"
+                              className="text-gray-400 hover:text-red-400 transition-colors duration-200 p-1"
+                              title="Delete Subcategory"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -596,8 +661,8 @@ function Pricelist() {
                           </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
 
                 {subcategories.length === 0 && (
@@ -631,106 +696,107 @@ function Pricelist() {
                     )}
                   </div>
                   
-                  <div className="overflow-x-auto">
+                  <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                    <div className="overflow-x-auto">
                     <table className="min-w-full bg-gray-900/60 border border-gray-700 rounded-lg">
-                      <thead className="bg-gray-800/80">
+                      <thead className="bg-gray-800/80 sticky top-0 z-10">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Description</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Code</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Price</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Cost</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Description</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Code</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">PC Price</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">PC Cost</th>
                                                      {getFormType() === 'lens' && (
                              <>
-                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Index</th>
-                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Diameter</th>
-                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">SphFR</th>
-                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">SphTo</th>
-                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">CylFr</th>
-                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">CylTo</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Index</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Diameter</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">SphFR</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">SphTo</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">CylFr</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">CylTo</th>
                              </>
                            )}
                            {getFormType() === 'contact' && (
                              <>
-                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Steps</th>
-                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Diameter</th>
-                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Modality</th>
-                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">SphFR</th>
-                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">SphTo</th>
-                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">CylFr</th>
-                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">CylTo</th>
-                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">AddFr</th>
-                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">AddTo</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Steps</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Diameter</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Modality</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">SphFR</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">SphTo</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">CylFr</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">CylTo</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">AddFr</th>
+                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">AddTo</th>
                              </>
                            )}
                           {getFormType() === 'solution' && (
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Volume</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Volume</th>
                           )}
                           {userRole === 'admin' && (
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Actions</th>
                           )}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-700">
                         {items.map((item) => (
                           <tr key={item.id} className="hover:bg-gray-800/40 transition-colors duration-200">
-                            <td className="px-4 py-3 text-sm text-white font-medium">{item.description}</td>
-                            <td className="px-4 py-3 text-sm text-gray-300">{item.code || '-'}</td>
-                            <td className="px-4 py-3 text-sm text-green-400 font-semibold">₱{parseFloat(item.pc_price || item.price).toLocaleString()}</td>
-                            <td className="px-4 py-3 text-sm text-gray-300">₱{parseFloat(item.pc_cost || item.cost || 0).toLocaleString()}</td>
+                            <td className="px-4 py-3 text-sm text-white font-medium whitespace-nowrap">{item.description}</td>
+                            <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.code || '-'}</td>
+                            <td className="px-4 py-3 text-sm text-green-400 font-semibold whitespace-nowrap">₱{parseFloat(item.pc_price || 0).toLocaleString()}</td>
+                            <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">₱{parseFloat(item.pc_cost || 0).toLocaleString()}</td>
                             
                                                          {/* Lens specific columns */}
                              {getFormType() === 'lens' && (
                                <>
-                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.index || '-'}</td>
-                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.diameter || '-'}</td>
-                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.sphFR || '-'}</td>
-                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.sphTo || '-'}</td>
-                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.cylFr || '-'}</td>
-                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.cylTo || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.index || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.diameter || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.sphFR || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.sphTo || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.cylFr || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.cylTo || '-'}</td>
                                </>
                              )}
                              
                              {/* Contact lens specific columns */}
                              {getFormType() === 'contact' && (
                                <>
-                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.steps || '-'}</td>
-                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.diameter || '-'}</td>
-                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.modality || '-'}</td>
-                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.sphFR || '-'}</td>
-                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.sphTo || '-'}</td>
-                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.cylFr || '-'}</td>
-                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.cylTo || '-'}</td>
-                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.addFr || '-'}</td>
-                                 <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.addTo || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.steps || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-sm text-gray-300 whitespace-nowrap">{item.attributes?.diameter || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.modality || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.sphFR || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.sphTo || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.cylFr || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.cylTo || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.addFr || '-'}</td>
+                                 <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.addTo || '-'}</td>
                                </>
                              )}
                             
                             {/* Solution specific columns */}
                             {getFormType() === 'solution' && (
-                              <td className="px-4 py-3 text-sm text-gray-300">{item.attributes?.volume || '-'}</td>
+                              <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.volume || '-'}</td>
                             )}
                             
                             {userRole === 'admin' && (
-                              <td className="px-4 py-3 text-sm text-gray-300">
+                              <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">
                                 <div className="flex gap-2">
-                                  <button
-                                    onClick={() => handleEditPriceItem(item)}
-                                    className="text-gray-400 hover:text-blue-400 transition-colors duration-200"
-                                    title="Edit"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeletePriceItem(item.id)}
-                                    className="text-gray-400 hover:text-red-400 transition-colors duration-200"
-                                    title="Delete"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                  </button>
+                                                                      <button
+                                      onClick={() => handleEditPriceItem(item)}
+                                      className="text-gray-400 hover:text-blue-400 transition-colors duration-200 p-1"
+                                      title="Edit"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                      </svg>
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeletePriceItem(item.id)}
+                                      className="text-gray-400 hover:text-red-400 transition-colors duration-200 p-1"
+                                      title="Delete"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                    </button>
                                 </div>
                               </td>
                             )}
@@ -738,6 +804,7 @@ function Pricelist() {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
 
                   {items.length === 0 && (
@@ -822,6 +889,25 @@ function Pricelist() {
             </h3>
             <form onSubmit={handleItemSubmit}>
               <div className="space-y-4">
+                {/* Inventory toggle */}
+                <div className="flex items-center gap-3">
+                  <input
+                    id="addToInventory"
+                    type="checkbox"
+                    checked={addToInventory}
+                    onChange={async (e) => {
+                      const checked = e.target.checked;
+                      setAddToInventory(checked);
+                      if (checked && suppliers.length === 0) {
+                        await fetchSuppliers();
+                      }
+                    }}
+                    className="h-4 w-4 text-blue-600 bg-gray-900 border-gray-700 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="addToInventory" className="text-sm text-gray-300">
+                    Also add to inventory
+                  </label>
+                </div>
                 {/* Common Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -1043,29 +1129,76 @@ function Pricelist() {
                 {/* Price and Cost Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Price (₱) *</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">PC Price (₱) *</label>
                     <input
                       type="number"
                       required
                       min="0"
                       step="0.01"
-                      value={itemFormData.price}
-                      onChange={(e) => setItemFormData({...itemFormData, price: e.target.value})}
+                      value={itemFormData.pc_price}
+                      onChange={(e) => setItemFormData({...itemFormData, pc_price: e.target.value})}
                       className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Cost (₱)</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">PC Cost (₱)</label>
                     <input
                       type="number"
                       min="0"
                       step="0.01"
-                      value={itemFormData.cost}
-                      onChange={(e) => setItemFormData({...itemFormData, cost: e.target.value})}
+                      value={itemFormData.pc_cost}
+                      onChange={(e) => setItemFormData({...itemFormData, pc_cost: e.target.value})}
                       className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
+
+                {/* Inventory fields */}
+                {addToInventory && (
+                  <>
+                    <hr className="my-4 border-gray-700" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Stock {addToInventory && <span className="text-red-400">*</span>}</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={itemFormData.stock}
+                          onChange={(e) => setItemFormData({ ...itemFormData, stock: e.target.value })}
+                          required={addToInventory}
+                          className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Low stock threshold {addToInventory && <span className="text-red-400">*</span>}</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={itemFormData.low_stock_threshold}
+                          onChange={(e) => setItemFormData({ ...itemFormData, low_stock_threshold: e.target.value })}
+                          required={addToInventory}
+                          className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Supplier {addToInventory && <span className="text-red-400">*</span>}</label>
+                        <select
+                          value={itemFormData.supplier_id || ''}
+                          onChange={(e) => setItemFormData({ ...itemFormData, supplier_id: e.target.value })}
+                          required={addToInventory}
+                          className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select supplier</option>
+                          {suppliers.map((s) => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Set Cost for Contact Lens */}
                 {getFormType() === 'contact' && (
@@ -1082,18 +1215,6 @@ function Pricelist() {
                   </div>
                 )}
 
-                {/* Service Checkbox */}
-                <div>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={itemFormData.service === 1}
-                      onChange={(e) => setItemFormData({...itemFormData, service: e.target.checked ? 1 : 0})}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-300">Is Service</span>
-                  </label>
-                </div>
               </div>
               <div className="flex gap-3 mt-6">
                 <button
@@ -1101,14 +1222,18 @@ function Pricelist() {
                   onClick={() => {
                     setIsItemModalOpen(false);
                     setEditingItem(null);
+                    setAddToInventory(false);
                     setItemFormData({ 
                       description: '', 
                       code: '', 
                       service: 0, 
-                      price: '', 
+                      pc_price: '',
+                      pc_cost: '',
                       cost: '', 
                       subcategory_id: '', 
                       supplier_id: null,
+                      stock: '',
+                      low_stock_threshold: '',
                       index: '',
                       diameter: '',
                       sphFR: '',

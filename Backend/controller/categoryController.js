@@ -137,7 +137,7 @@ exports.deleteSubcategory = async (req, res) => {
 
 exports.addItem = async (req, res) => {
     const {
-        description, code, service, price, cost, subcategory_id, supplier_id,
+        description, code, service, price, pc_price, pc_cost, cost, subcategory_id, supplier_id,
         index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
         steps, addFr, addTo, modality, set, bc,
         volume, set_cost
@@ -156,7 +156,7 @@ exports.addItem = async (req, res) => {
         
         const [result] = await conn.query(
             "INSERT INTO products (subcategory_id, supplier_id, code, description, pc_price, pc_cost, attributes) VALUES (?, ?, ?, ?, ?, ?, ?)", 
-            [subcategory_id, supplier_id, code, description, price, cost, JSON.stringify(attributes)]
+            [subcategory_id, supplier_id, code, description, pc_price, pc_cost, JSON.stringify(attributes)]
         );
         await conn.commit();
         res.status(201).json({message: "Item added successfully", item: result});
@@ -196,7 +196,7 @@ exports.getItems = async (req, res) => {
 exports.updateItem = async (req, res) => {
     const {id} = req.params;
     const {
-        description, code, service, price, cost, subcategory_id, supplier_id,
+        description, code, service, price, pc_price, pc_cost, cost, subcategory_id, supplier_id,
         index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
         steps, addFr, addTo, modality, set, bc,
         volume, set_cost
@@ -215,7 +215,7 @@ exports.updateItem = async (req, res) => {
         
         const [result] = await conn.query(
             "UPDATE products SET description = ?, code = ?, pc_price = ?, pc_cost = ?, subcategory_id = ?, supplier_id = ?, attributes = ? WHERE id = ?", 
-            [description, code, price, cost, subcategory_id, supplier_id, JSON.stringify(attributes), id]
+            [description, code, pc_price, pc_cost, subcategory_id, supplier_id, JSON.stringify(attributes), id]
         );
         await conn.commit();
         res.status(200).json({message: "Item updated successfully", item: result});

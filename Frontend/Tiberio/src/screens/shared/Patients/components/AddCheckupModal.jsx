@@ -7,16 +7,20 @@ function AddCheckupModal({
   setCheckupForm,
   checkupFormError,
   isSavingCheckup,
-  onSubmit
+  onSubmit,
+  mode = 'add', // 'add' or 'edit'
+  title = null // custom title, defaults to mode-based title
 }) {
   if (!isOpen) return null;
+
+  const modalTitle = title || (mode === 'edit' ? 'Edit Checkup' : 'Add Checkup');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
       <div className="relative w-full max-w-4xl mx-4 shadow-2xl max-h-[90vh] flex flex-col">
         <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 rounded-t-xl border border-gray-700 p-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">Add Checkup</h2>
+          <h2 className="text-lg font-semibold text-white">{modalTitle}</h2>
           <button className="text-blue-100 hover:text-white" onClick={onClose} aria-label="Close add form">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -160,7 +164,7 @@ function AddCheckupModal({
 
             <div className="flex justify-end gap-2 mt-2">
               <button type="button" className="px-3 py-1.5 bg-gray-700 text-white rounded-lg text-sm" onClick={onClose} disabled={isSavingCheckup}>Cancel</button>
-              <button type="submit" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm" disabled={isSavingCheckup}>{isSavingCheckup ? 'Saving...' : 'Save'}</button>
+              <button type="submit" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm" disabled={isSavingCheckup}>{isSavingCheckup ? 'Saving...' : (mode === 'edit' ? 'Update' : 'Save')}</button>
             </div>
           </form>
         </div>

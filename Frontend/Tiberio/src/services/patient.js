@@ -74,6 +74,24 @@ export const addCheckup = async (patientId, payload) => {
   }
 };
 
+export const updateCheckup = async (checkupId, payload) => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.put(`${API_URL}/api/checkups/checkups/${checkupId}`, payload, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data.error || 'Failed to update checkup');
+    } else if (error.request) {
+      throw new Error('No response from server');
+    } else {
+      throw new Error(error.message);
+    }
+  }
+};
+
 export const deleteCheckup = async (checkupId) => {
   try {
     const token = localStorage.getItem('authToken');
