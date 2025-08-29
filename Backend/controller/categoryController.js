@@ -59,3 +59,19 @@ exports.deleteCategory = async (req, res) => {
         res.status(500).json({message: "Failed to delete category", error: error.message});
     }
 }
+
+// Sub Category
+
+exports.addSubcategory = async (req, res) => {
+    const {name, description, category_id} = req.body;
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const [result] = await conn.query("INSERT INTO price_categories (name, description, category_id) VALUES (?, ?, ?)", [name, description, category_id]);
+        await conn.commit();
+        res.status(201).json({message: "Subcategory added successfully", subcategory: result});
+    } catch (error) {
+        await conn.rollback();
+        res.status(500).json({message: "Failed to add Subcategory", error: error.message});
+    }
+}

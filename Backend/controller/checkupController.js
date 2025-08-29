@@ -157,7 +157,7 @@ exports.getPatientCheckups = async (req, res) => {
 // Total count of all checkups
 exports.getTotalCheckupsCount = async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT COUNT(*) AS count FROM checkups");
+    const [rows] = await db.query("SELECT COUNT(*) AS count FROM checkups WHERE is_deleted = 0");
     const count = rows?.[0]?.count ?? 0;
     res.status(200).json({ count });
   } catch (err) {

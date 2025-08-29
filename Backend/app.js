@@ -59,19 +59,12 @@ const PORT = process.env.PORT || 3000;
 
 //to do
 
-
-
-
-
-
-//make pricelist screen
-
 //product automatically adds to inventory when new items are added (form of inventory and adding price list is the same)
 
 //make description of the products unique(no the same, make it except for Frames)
 
 //Progression
-//1. fix sometimes backend only loading when changing page to Inventory Management
-//2 Edit Delete for Checkups
+
+//2 Edit for Checkups
 //3. price module
 //4. inventory module

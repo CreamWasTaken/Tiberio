@@ -1,15 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../components/Sidebar';
+import { getCategories } from '../../../services/category';
 
 function Pricelist() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('services');
+  const [categories, setCategories] = useState([]);
+  const [activeTab, setActiveTab] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
   
   // Get user role from localStorage
   const userRole = localStorage.getItem('userRole') || 'employee';
+
+  // Refs for caching and request management
+  const abortControllerRef = useRef(null);
+  const retryTimeoutRef = useRef(null);
+  const categoriesFetchedRef = useRef(false); // Track if categories have been fetched
+  const categoriesCacheRef = useRef([]); // Cache for categories
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -17,24 +28,97 @@ function Pricelist() {
     navigate('/');
   };
 
-  // Sample price data - in a real app, this would come from an API
-  const [prices, setPrices] = useState({
-    services: [
-      { id: 1, name: 'Eye Examination', price: 500, category: 'Consultation', description: 'Comprehensive eye examination including refraction' },
-      { id: 2, name: 'Contact Lens Fitting', price: 800, category: 'Fitting', description: 'Professional contact lens fitting and evaluation' },
-      { id: 3, name: 'Glasses Prescription', price: 300, category: 'Consultation', description: 'Prescription for eyeglasses' },
-      { id: 4, name: 'Eye Pressure Test', price: 200, category: 'Diagnostic', description: 'Intraocular pressure measurement' },
-      { id: 5, name: 'Color Vision Test', price: 150, category: 'Diagnostic', description: 'Color vision assessment' },
-    ],
-    products: [
-      { id: 1, name: 'Basic Eyeglasses Frame', price: 1200, category: 'Frames', description: 'Standard plastic frame' },
-      { id: 2, name: 'Premium Eyeglasses Frame', price: 2500, category: 'Frames', description: 'High-quality metal frame' },
-      { id: 3, name: 'Single Vision Lenses', price: 800, category: 'Lenses', description: 'Basic single vision prescription lenses' },
-      { id: 4, name: 'Progressive Lenses', price: 1500, category: 'Lenses', description: 'Multifocal progressive lenses' },
-      { id: 5, name: 'Contact Lens Solution', price: 300, category: 'Accessories', description: '120ml contact lens solution' },
-    ]
-  });
+  // Function to fetch categories - only called once or manually
+  const fetchCategories = useCallback(async (forceRefresh = false) => {
+    // If categories are already cached and not forcing refresh, use cached data
+    if (!forceRefresh && categoriesFetchedRef.current && categoriesCacheRef.current.length > 0) {
+      setCategories(categoriesCacheRef.current);
+      setLoading(false);
+      setError(null);
+      
+      // Set active tab if not already set
+      if (!activeTab && categoriesCacheRef.current.length > 0) {
+        setActiveTab(categoriesCacheRef.current[0].id.toString());
+      }
+      return;
+    }
 
+    try {
+      setLoading(true);
+      setError(null);
+      const fetchedCategories = await getCategories(abortControllerRef.current?.signal);
+      
+      // Cache the categories
+      categoriesCacheRef.current = fetchedCategories;
+      categoriesFetchedRef.current = true;
+      setCategories(fetchedCategories);
+      setRetryCount(0);
+      
+      // Set active tab only if it's not already set or if the current active tab doesn't exist
+      if (fetchedCategories.length > 0) {
+        if (!activeTab || !fetchedCategories.find(cat => cat.id.toString() === activeTab)) {
+          setActiveTab(fetchedCategories[0].id.toString());
+        }
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError' && err.message !== 'Request cancelled') {
+        setError(err.message);
+        console.error('Error fetching categories:', err);
+        
+        // Auto-retry logic (max 3 retries)
+        if (retryCount < 3) {
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+          retryTimeoutRef.current = setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            fetchCategories(forceRefresh);
+          }, delay);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTab, retryCount]);
+
+  // Fetch categories only once on component mount
+  useEffect(() => {
+    abortControllerRef.current = new AbortController();
+    
+    // Only fetch if not already cached
+    if (!categoriesFetchedRef.current) {
+      fetchCategories();
+    } else {
+      // Use cached data
+      setCategories(categoriesCacheRef.current);
+      setLoading(false);
+      
+      // Set active tab if not already set
+      if (!activeTab && categoriesCacheRef.current.length > 0) {
+        setActiveTab(categoriesCacheRef.current[0].id.toString());
+      }
+    }
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []); // Empty dependency array - only run once on mount
+
+  // Function to manually refresh categories
+  const handleRefreshCategories = useCallback(() => {
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+    }
+    setRetryCount(0);
+    setError(null);
+    fetchCategories(true); // Force refresh
+  }, [fetchCategories]);
+
+  // Sample price data - in a real app, this would come from an API
+  const [prices, setPrices] = useState({});
   const [editingItem, setEditingItem] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -45,8 +129,32 @@ function Pricelist() {
     description: ''
   });
 
+  // Memoized function to get current category name
+  const getCurrentCategoryName = useMemo(() => {
+    const category = categories.find(cat => cat.id.toString() === activeTab);
+    return category ? category.name : '';
+  }, [categories, activeTab]);
+
+  // Memoized function to get current category items
+  const getCurrentCategoryItems = useMemo(() => {
+    return prices[activeTab] || [];
+  }, [prices, activeTab]);
+
+  // Memoized filtered items
+  const filteredItems = useMemo(() => {
+    return getCurrentCategoryItems.filter(item =>
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [getCurrentCategoryItems, searchQuery]);
+
+  // Memoized total items count
+  const totalItems = useMemo(() => {
+    return Object.values(prices).reduce((total, items) => total + items.length, 0);
+  }, [prices]);
+
   const handleAddItem = () => {
-    setFormData({ name: '', price: '', category: '', description: '' });
+    setFormData({ name: '', price: '', category: getCurrentCategoryName, description: '' });
     setIsAddModalOpen(true);
   };
 
@@ -56,11 +164,11 @@ function Pricelist() {
     setIsEditModalOpen(true);
   };
 
-  const handleDeleteItem = (id, type) => {
+  const handleDeleteItem = (id, categoryId) => {
     if (window.confirm('Are you sure you want to delete this item?')) {
       setPrices(prev => ({
         ...prev,
-        [type]: prev[type].filter(item => item.id !== id)
+        [categoryId]: prev[categoryId].filter(item => item.id !== id)
       }));
     }
   };
@@ -75,13 +183,13 @@ function Pricelist() {
       };
       setPrices(prev => ({
         ...prev,
-        [activeTab]: [...prev[activeTab], newItem]
+        [activeTab]: [...(prev[activeTab] || []), newItem]
       }));
       setIsAddModalOpen(false);
     } else if (isEditModalOpen) {
       setPrices(prev => ({
         ...prev,
-        [activeTab]: prev[activeTab].map(item => 
+        [activeTab]: (prev[activeTab] || []).map(item => 
           item.id === editingItem.id 
             ? { ...item, ...formData, price: parseFloat(formData.price) }
             : item
@@ -93,10 +201,41 @@ function Pricelist() {
     setFormData({ name: '', price: '', category: '', description: '' });
   };
 
-  const filteredItems = prices[activeTab]?.filter(item =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  // Handle tab change with proper event handling
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setSearchQuery(''); // Clear search when changing tabs
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="text-white text-xl">
+            {retryCount > 0 ? `Retrying... (${retryCount}/3)` : 'Loading categories...'}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && retryCount >= 3) {
+    return (
+      <div className="flex h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-400 text-xl mb-4">Failed to load categories</div>
+          <div className="text-gray-400 text-sm mb-4">{error}</div>
+          <button 
+            onClick={handleRefreshCategories}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 overflow-hidden">
@@ -128,14 +267,25 @@ function Pricelist() {
                   {userRole === 'admin' ? 'Price List Management' : 'Price List'}
                 </h1>
               </div>
-              {userRole === 'admin' && (
+              <div className="flex gap-2">
                 <button 
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-                  onClick={handleAddItem}
+                  onClick={handleRefreshCategories}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
                 >
-                  Add New Item
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
                 </button>
-              )}
+                {userRole === 'admin' && (
+                  <button 
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                    onClick={handleAddItem}
+                  >
+                    Add New Item
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </header>
@@ -153,8 +303,8 @@ function Pricelist() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">Total Services</p>
-                  <p className="text-2xl font-bold text-white">{prices.services.length}</p>
+                  <p className="text-sm text-gray-400">Total Categories</p>
+                  <p className="text-2xl font-bold text-white">{categories.length}</p>
                 </div>
               </div>
             </div>
@@ -167,8 +317,8 @@ function Pricelist() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">Total Products</p>
-                  <p className="text-2xl font-bold text-white">{prices.products.length}</p>
+                  <p className="text-sm text-gray-400">Current Category</p>
+                  <p className="text-2xl font-bold text-white">{getCurrentCategoryName}</p>
                 </div>
               </div>
             </div>
@@ -182,7 +332,7 @@ function Pricelist() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-400">Total Items</p>
-                  <p className="text-2xl font-bold text-white">{prices.services.length + prices.products.length}</p>
+                  <p className="text-2xl font-bold text-white">{totalItems}</p>
                 </div>
               </div>
             </div>
@@ -192,17 +342,14 @@ function Pricelist() {
           <div className="bg-gray-800/80 backdrop-blur-xl border border-gray-700 rounded-xl">
             {/* Tabs */}
             <div className="border-b border-gray-700 px-4">
-              <nav className="-mb-px flex gap-6" aria-label="Tabs">
-                {[
-                  { key: 'services', label: 'Services' },
-                  { key: 'products', label: 'Products' }
-                ].map(tab => (
+              <nav className="-mb-px flex gap-6 overflow-x-auto" aria-label="Tabs">
+                {categories.map(category => (
                   <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`py-4 text-sm font-medium border-b-2 ${activeTab === tab.key ? 'text-blue-400 border-blue-500' : 'text-gray-400 border-transparent hover:text-gray-200 hover:border-gray-500'}`}
+                    key={category.id}
+                    onClick={() => handleTabChange(category.id.toString())}
+                    className={`py-4 text-sm font-medium border-b-2 whitespace-nowrap ${activeTab === category.id.toString() ? 'text-blue-400 border-blue-500' : 'text-gray-400 border-transparent hover:text-gray-200 hover:border-gray-500'}`}
                   >
-                    {tab.label}
+                    {category.name}
                   </button>
                 ))}
               </nav>
@@ -215,7 +362,7 @@ function Pricelist() {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder={`Search ${activeTab}...`}
+                    placeholder={`Search ${getCurrentCategoryName}...`}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full px-4 py-3 bg-gray-900/60 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -272,9 +419,9 @@ function Pricelist() {
               {filteredItems.length === 0 && (
                 <div className="text-center py-12">
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.400a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-400">No {activeTab} found</h3>
+                  <h3 className="mt-2 text-sm font-medium text-gray-400">No items found in {getCurrentCategoryName}</h3>
                   <p className="mt-1 text-sm text-gray-500">Try adjusting your search criteria.</p>
                 </div>
               )}
@@ -287,7 +434,7 @@ function Pricelist() {
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-white mb-4">Add New {activeTab.slice(0, -1)}</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">Add New Item to {getCurrentCategoryName}</h3>
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div>
@@ -356,7 +503,7 @@ function Pricelist() {
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-white mb-4">Edit {activeTab.slice(0, -1)}</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">Edit Item in {getCurrentCategoryName}</h3>
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div>
