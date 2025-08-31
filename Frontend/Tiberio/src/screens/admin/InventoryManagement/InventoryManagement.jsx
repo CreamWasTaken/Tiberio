@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getSuppliers, deleteSupplier } from '../../../services/supplier';
 import { getCategories, deleteCategory } from '../../../services/category';
 import AddSupplierModal from './components/AddSupplierModal';
@@ -10,7 +10,33 @@ import DeleteConfirmationModal from './components/DeleteConfirmationModal';
 import Sidebar from '../../../components/Sidebar';
 
 const InventoryManagement = () => {
+  // Custom scrollbar styles
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #374151;
+        border-radius: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #6B7280;
+        border-radius: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #9CA3AF;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
+
   const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState('suppliers');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +54,15 @@ const InventoryManagement = () => {
   const [categorySearchTerm, setCategorySearchTerm] = useState('');
 
   // Delete confirmation modal state
+
+  // Handle URL parameters
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam === 'categories') {
+      setActiveTab('categories');
+    }
+  }, [location.search]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteItem, setDeleteItem] = useState(null);
   const [deleteType, setDeleteType] = useState(''); // 'supplier' or 'category'
@@ -237,11 +272,40 @@ const InventoryManagement = () => {
         {/* Main Content - Scrollable */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-8 custom-scrollbar scroll-smooth">
           <div className="max-w-7xl mx-auto">
-            {/* Page Header */}
+            {/* Tab Navigation */}
             <div className="mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2">Manage Suppliers</h2>
-              <p className="text-gray-400">Add, edit, and manage your suppliers and their information</p>
+              <nav className="flex space-x-8 border-b border-gray-700">
+                <button
+                  onClick={() => setActiveTab('suppliers')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'suppliers'
+                      ? 'border-blue-500 text-blue-400'
+                      : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+                  }`}
+                >
+                  Suppliers
+                </button>
+                <button
+                  onClick={() => setActiveTab('categories')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'categories'
+                      ? 'border-blue-500 text-blue-400'
+                      : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+                  }`}
+                >
+                  Categories
+                </button>
+              </nav>
             </div>
+
+            {/* Suppliers Section */}
+            {activeTab === 'suppliers' && (
+              <>
+                {/* Page Header */}
+                <div className="mb-8">
+                  <h2 className="text-3xl font-bold text-white mb-2">Manage Suppliers</h2>
+                  <p className="text-gray-400">Add, edit, and manage your suppliers and their information</p>
+                </div>
 
             {/* Statistics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -430,11 +494,12 @@ const InventoryManagement = () => {
                 </table>
               </div>
             </div>
-
-            <hr className="my-8 border-gray-700" />
+          </>
+        )}
 
             {/* Categories Section */}
-            <div className="mt-16">
+            {activeTab === 'categories' && (
+              <div>
               {/* Page Header */}
               <div className="mb-8">
                 <h2 className="text-3xl font-bold text-white mb-2">Manage Categories</h2>
@@ -572,6 +637,7 @@ const InventoryManagement = () => {
                 </div>
               </div>
             </div>
+            )}
 
             {/* Modals */}
             {showAddModal && (

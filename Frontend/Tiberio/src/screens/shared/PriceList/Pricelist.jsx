@@ -508,7 +508,17 @@ function Pricelist() {
                   </svg>
                   Refresh
                 </button>
-
+                {userRole === 'admin' && (
+                  <button
+                    onClick={() => navigate('/admin/inventory-management?tab=categories')}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Manage Categories
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -889,25 +899,6 @@ function Pricelist() {
             </h3>
             <form onSubmit={handleItemSubmit}>
               <div className="space-y-4">
-                {/* Inventory toggle */}
-                <div className="flex items-center gap-3">
-                  <input
-                    id="addToInventory"
-                    type="checkbox"
-                    checked={addToInventory}
-                    onChange={async (e) => {
-                      const checked = e.target.checked;
-                      setAddToInventory(checked);
-                      if (checked && suppliers.length === 0) {
-                        await fetchSuppliers();
-                      }
-                    }}
-                    className="h-4 w-4 text-blue-600 bg-gray-900 border-gray-700 rounded focus:ring-blue-500"
-                  />
-                  <label htmlFor="addToInventory" className="text-sm text-gray-300">
-                    Also add to inventory
-                  </label>
-                </div>
                 {/* Common Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -1151,6 +1142,26 @@ function Pricelist() {
                     className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+                </div>
+
+                {/* Inventory toggle */}
+                <div className="flex items-center gap-3">
+                  <input
+                    id="addToInventory"
+                    type="checkbox"
+                    checked={addToInventory}
+                    onChange={async (e) => {
+                      const checked = e.target.checked;
+                      setAddToInventory(checked);
+                      if (checked && suppliers.length === 0) {
+                        await fetchSuppliers();
+                      }
+                    }}
+                    className="h-4 w-4 text-blue-600 bg-gray-900 border-gray-700 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="addToInventory" className="text-sm text-gray-300">
+                    Also add to inventory
+                  </label>
                 </div>
 
                 {/* Inventory fields */}

@@ -24,7 +24,7 @@ function App() {
             <AccountManagement />
           </ProtectedRoute>
         } />
-        <Route path="/suppliers" element={
+        <Route path="/admin/inventory-management" element={
           <ProtectedRoute requiredRole="admin">
             <InventoryManagement />
           </ProtectedRoute>

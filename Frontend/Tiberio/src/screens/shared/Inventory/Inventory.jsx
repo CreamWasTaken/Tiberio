@@ -80,11 +80,13 @@ function Inventory() {
                 </button>
                 <h1 className="text-2xl font-bold text-white">Inventory Management</h1>
               </div>
-              <div className="flex space-x-3">
+
+              {/* <div className="flex space-x-3">
                 <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
                   Add Item
                 </button>
-              </div>
+              </div> */}
+
             </div>
           </div>
         </header>
@@ -113,50 +115,50 @@ function Inventory() {
                     </div>
                   ) : (
                     <div className="max-h-[65vh] overflow-y-auto custom-scrollbar">
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full bg-gray-900/60 border border-gray-700 rounded-lg">
+            <div>
+              <table className="w-full bg-gray-900/60 border border-gray-700 rounded-lg table-fixed">
                           <thead className="bg-gray-800/80 sticky top-0 z-10">
                             <tr>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Description</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Code</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Supplier</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Index</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Diameter</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">SphFR</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">SphTo</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">CylFr</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">CylTo</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Steps</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Modality</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Set</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">BC</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">PC Price</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">PC Cost</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Stock</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Status</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Actions</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-32">Description</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Code</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-24">Supplier</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Index</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Diameter</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">SphFR</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">SphTo</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">CylFr</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">CylTo</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Steps</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">Modality</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Set</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">BC</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">PC Price</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">PC Cost</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Stock</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Status</th>
+                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-700">
                             {items.map((item) => (
                               <tr key={item.id} className="hover:bg-gray-800/40 transition-colors duration-200">
-                                <td className="px-4 py-3 text-sm text-white font-medium whitespace-nowrap">{item.description}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.code || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.supplier_name || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.index || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.diameter || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.sphFR || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.sphTo || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.cylFr || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.cylTo || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.steps || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.modality || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.set || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.bc || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-green-400 font-semibold whitespace-nowrap">₱{parseFloat(item.pc_price || 0).toLocaleString()}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">₱{parseFloat(item.pc_cost || 0).toLocaleString()}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.stock ?? '-'}</td>
-                                <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                <td className="px-2 py-2 text-[11px] text-white font-medium whitespace-nowrap">{item.description}</td>
+                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.code || '-'}</td>
+                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.supplier_name || '-'}</td>
+                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.index || '-'}</td>
+                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.diameter || '-'}</td>
+                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.sphFR || '-'}</td>
+                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.sphTo || '-'}</td>
+                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.cylFr || '-'}</td>
+                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.cylTo || '-'}</td>
+                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.steps || '-'}</td>
+                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.modality || '-'}</td>
+                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.set || '-'}</td>
+                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.bc || '-'}</td>
+                                <td className="px-2 py-2 text-[11px] text-green-400 font-semibold whitespace-nowrap">₱{parseFloat(item.pc_price || 0).toLocaleString()}</td>
+                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">₱{parseFloat(item.pc_cost || 0).toLocaleString()}</td>
+                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.stock ?? '-'}</td>
+                                <td className="px-2 py-2 text-[11px] whitespace-nowrap">
                                   {(() => {
                                     const stock = Number(item.attributes?.stock ?? 0);
                                     const low = Number(item.attributes?.low_stock_threshold ?? 0);
@@ -165,7 +167,7 @@ function Inventory() {
                                     return <span className={`${color} font-medium`}>{status}</span>;
                                   })()}
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">
+                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">
                                   <button
                                     onClick={() => {
                                       setEditingItem(item);
