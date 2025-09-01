@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../components/Sidebar';
 import { getInventoryItems, updateItem } from '../../../services/item';
@@ -12,6 +12,31 @@ function Inventory() {
   const [suppliers, setSuppliers] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
   const [editForm, setEditForm] = useState({ supplier_id: '', stock: '', low_stock_threshold: '' });
+  const [deleteItem, setDeleteItem] = useState(null);
+  
+  // Filtering and pagination state
+  const [filters, setFilters] = useState({
+    description: '',
+    code: '',
+    supplier: '',
+    index: '',
+    diameter: '',
+    sphFR: '',
+    sphTo: '',
+    cylFr: '',
+    cylTo: '',
+    steps: '',
+    modality: '',
+    set: '',
+    bc: '',
+    pcPrice: '',
+    pcCost: '',
+    stock: '',
+    status: ''
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  
   const abortRef = useRef(null);
   useEffect(() => {
     abortRef.current = new AbortController();
@@ -50,6 +75,101 @@ function Inventory() {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userRole');
     navigate('/');
+  };
+
+  // Handle delete item from local state (only for items with suppliers)
+  const handleDeleteItem = (item) => {
+    if (item.supplier_id && item.supplier_name) {
+      setDeleteItem(item);
+    }
+  };
+
+  // Confirm delete and remove from inventory by setting supplier to null
+  const confirmDelete = async () => {
+    if (deleteItem) {
+      try {
+        // Update the item to set supplier_id to null
+        await updateItem(deleteItem.id, {
+          ...deleteItem,
+          supplier_id: null
+        });
+        
+        // Remove from local state
+        setItems(prevItems => prevItems.filter(item => item.id !== deleteItem.id));
+        setDeleteItem(null);
+      } catch (error) {
+        console.error('Failed to remove item from inventory:', error);
+        // You could add a toast notification here to show the error
+      }
+    }
+  };
+
+  // Filtered and paginated items
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      return (
+        item.description?.toLowerCase().includes(filters.description.toLowerCase()) &&
+        (item.code || '').toLowerCase().includes(filters.code.toLowerCase()) &&
+        (item.supplier_name || '').toLowerCase().includes(filters.supplier.toLowerCase()) &&
+        (item.attributes?.index || '').toString().toLowerCase().includes(filters.index.toLowerCase()) &&
+        (item.attributes?.diameter || '').toString().toLowerCase().includes(filters.diameter.toLowerCase()) &&
+        (item.attributes?.sphFR || '').toString().toLowerCase().includes(filters.sphFR.toLowerCase()) &&
+        (item.attributes?.sphTo || '').toString().toLowerCase().includes(filters.sphTo.toLowerCase()) &&
+        (item.attributes?.cylFr || '').toString().toLowerCase().includes(filters.cylFr.toLowerCase()) &&
+        (item.attributes?.cylTo || '').toString().toLowerCase().includes(filters.cylTo.toLowerCase()) &&
+        (item.attributes?.steps || '').toString().toLowerCase().includes(filters.steps.toLowerCase()) &&
+        (item.attributes?.modality || '').toLowerCase().includes(filters.modality.toLowerCase()) &&
+        (item.attributes?.set || '').toString().toLowerCase().includes(filters.set.toLowerCase()) &&
+        (item.attributes?.bc || '').toString().toLowerCase().includes(filters.bc.toLowerCase()) &&
+        (item.pc_price || '').toString().includes(filters.pcPrice) &&
+        (item.pc_cost || '').toString().includes(filters.pcCost) &&
+        (item.attributes?.stock || '').toString().includes(filters.stock) &&
+        (() => {
+          const stock = Number(item.attributes?.stock ?? 0);
+          const low = Number(item.attributes?.low_stock_threshold ?? 0);
+          const status = stock <= 0 ? 'Out of stock' : stock <= low ? 'Low' : 'Normal';
+          return status.toLowerCase().includes(filters.status.toLowerCase());
+        })()
+      );
+    });
+  }, [items, filters]);
+
+  // Paginated items
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredItems.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredItems, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+
+  // Handle filter change
+  const handleFilterChange = (field, value) => {
+    setFilters(prev => ({ ...prev, [field]: value }));
+    setCurrentPage(1); // Reset to first page when filtering
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setFilters({
+      description: '',
+      code: '',
+      supplier: '',
+      index: '',
+      diameter: '',
+      sphFR: '',
+      sphTo: '',
+      cylFr: '',
+      cylTo: '',
+      steps: '',
+      modality: '',
+      set: '',
+      bc: '',
+      pcPrice: '',
+      pcCost: '',
+      stock: '',
+      status: ''
+    });
+    setCurrentPage(1);
   };
 
   return (
@@ -95,7 +215,20 @@ function Inventory() {
         <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-8 custom-scrollbar scroll-smooth">
           <div className="bg-gray-800/80 backdrop-blur-xl border border-gray-700 rounded-xl">
             <div className="px-6 py-4 border-b border-gray-700">
-              <h2 className="text-lg font-medium text-white">Inventory Items</h2>
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-medium text-white">Inventory Items</h2>
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-gray-400">
+                    {filteredItems.length} of {items.length} items
+                  </span>
+                  <button
+                    onClick={clearFilters}
+                    className="px-3 py-1 text-sm bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              </div>
             </div>
             
             <div className="p-6">
@@ -114,79 +247,271 @@ function Inventory() {
                       <p className="mt-1 text-sm text-gray-400">Items appear here after being added to inventory.</p>
                     </div>
                   ) : (
-                    <div className="max-h-[65vh] overflow-y-auto custom-scrollbar">
-            <div>
-              <table className="w-full bg-gray-900/60 border border-gray-700 rounded-lg table-fixed">
-                          <thead className="bg-gray-800/80 sticky top-0 z-10">
-                            <tr>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-32">Description</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Code</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-24">Supplier</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Index</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Diameter</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">SphFR</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">SphTo</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">CylFr</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">CylTo</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Steps</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">Modality</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Set</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">BC</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">PC Price</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">PC Cost</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Stock</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Status</th>
-                              <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-700">
-                            {items.map((item) => (
-                              <tr key={item.id} className="hover:bg-gray-800/40 transition-colors duration-200">
-                                <td className="px-2 py-2 text-[11px] text-white font-medium whitespace-nowrap">{item.description}</td>
-                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.code || '-'}</td>
-                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.supplier_name || '-'}</td>
-                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.index || '-'}</td>
-                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.diameter || '-'}</td>
-                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.sphFR || '-'}</td>
-                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.sphTo || '-'}</td>
-                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.cylFr || '-'}</td>
-                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.cylTo || '-'}</td>
-                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.steps || '-'}</td>
-                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.modality || '-'}</td>
-                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.set || '-'}</td>
-                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.bc || '-'}</td>
-                                <td className="px-2 py-2 text-[11px] text-green-400 font-semibold whitespace-nowrap">₱{parseFloat(item.pc_price || 0).toLocaleString()}</td>
-                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">₱{parseFloat(item.pc_cost || 0).toLocaleString()}</td>
-                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.stock ?? '-'}</td>
-                                <td className="px-2 py-2 text-[11px] whitespace-nowrap">
-                                  {(() => {
-                                    const stock = Number(item.attributes?.stock ?? 0);
-                                    const low = Number(item.attributes?.low_stock_threshold ?? 0);
-                                    const status = stock <= 0 ? 'Out of stock' : stock <= low ? 'Low' : 'Normal';
-                                    const color = stock <= 0 ? 'text-red-400' : stock <= low ? 'text-yellow-400' : 'text-green-400';
-                                    return <span className={`${color} font-medium`}>{status}</span>;
-                                  })()}
-                                </td>
-                                <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">
-                                  <button
-                                    onClick={() => {
-                                      setEditingItem(item);
-                                      setEditForm({
-                                        supplier_id: item.supplier_id || '',
-                                        stock: item.attributes?.stock ?? '',
-                                        low_stock_threshold: item.attributes?.low_stock_threshold ?? ''
-                                      });
-                                    }}
-                                    className="text-blue-400 hover:text-blue-300"
-                                  >
-                                    Edit
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                    <div>
+                      {/* Filter Row */}
+                      <div className="mb-4 grid gap-1 text-xs" style={{ gridTemplateColumns: 'repeat(18, minmax(0, 1fr))' }}>
+                        <input
+                          type="text"
+                          placeholder="description..."
+                          value={filters.description}
+                          onChange={(e) => handleFilterChange('description', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="code..."
+                          value={filters.code}
+                          onChange={(e) => handleFilterChange('code', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="supplier..."
+                          value={filters.supplier}
+                          onChange={(e) => handleFilterChange('supplier', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="index..."
+                          value={filters.index}
+                          onChange={(e) => handleFilterChange('index', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="diameter..."
+                          value={filters.diameter}
+                          onChange={(e) => handleFilterChange('diameter', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="sphFR..."
+                          value={filters.sphFR}
+                          onChange={(e) => handleFilterChange('sphFR', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="sphTo..."
+                          value={filters.sphTo}
+                          onChange={(e) => handleFilterChange('sphTo', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="cylFr..."
+                          value={filters.cylFr}
+                          onChange={(e) => handleFilterChange('cylFr', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="cylTo..."
+                          value={filters.cylTo}
+                          onChange={(e) => handleFilterChange('cylTo', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="steps..."
+                          value={filters.steps}
+                          onChange={(e) => handleFilterChange('steps', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="modality..."
+                          value={filters.modality}
+                          onChange={(e) => handleFilterChange('modality', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="set..."
+                          value={filters.set}
+                          onChange={(e) => handleFilterChange('set', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="BC..."
+                          value={filters.bc}
+                          onChange={(e) => handleFilterChange('bc', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="PC Price..."
+                          value={filters.pcPrice}
+                          onChange={(e) => handleFilterChange('pcPrice', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="PC Cost..."
+                          value={filters.pcCost}
+                          onChange={(e) => handleFilterChange('pcCost', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="stock..."
+                          value={filters.stock}
+                          onChange={(e) => handleFilterChange('stock', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="status..."
+                          value={filters.status}
+                          onChange={(e) => handleFilterChange('status', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <div></div> {/* Actions column - no filter */}
                       </div>
+
+                      <div className="max-h-[65vh] overflow-y-auto custom-scrollbar">
+                        <div>
+                          <table className="w-full bg-gray-900/60 border border-gray-700 rounded-lg table-fixed">
+                            <thead className="bg-gray-800/80 sticky top-0 z-10">
+                              <tr>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-32">Description</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Code</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-24">Supplier</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Index</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Diameter</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">SphFR</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">SphTo</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">CylFr</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">CylTo</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Steps</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">Modality</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Set</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">BC</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">PC Price</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">PC Cost</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Stock</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Status</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-700">
+                              {paginatedItems.map((item) => (
+                                <tr key={item.id} className="hover:bg-gray-800/40 transition-colors duration-200">
+                                  <td className="px-2 py-2 text-[11px] text-white font-medium whitespace-nowrap">{item.description}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.code || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.supplier_name || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.index || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.diameter || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.sphFR || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.sphTo || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.cylFr || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.cylTo || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.steps || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.modality || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.set || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.bc || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-green-400 font-semibold whitespace-nowrap">₱{parseFloat(item.pc_price || 0).toLocaleString()}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">₱{parseFloat(item.pc_cost || 0).toLocaleString()}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.stock ?? '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] whitespace-nowrap">
+                                    {(() => {
+                                      const stock = Number(item.attributes?.stock ?? 0);
+                                      const low = Number(item.attributes?.low_stock_threshold ?? 0);
+                                      const status = stock <= 0 ? 'Out of stock' : stock <= low ? 'Low' : 'Normal';
+                                      const color = stock <= 0 ? 'text-red-400' : stock <= low ? 'text-yellow-400' : 'text-green-400';
+                                      return <span className={`${color} font-medium`}>{status}</span>;
+                                    })()}
+                                  </td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">
+                                    <div className="flex space-x-2">
+                                      <button
+                                        onClick={() => {
+                                          setEditingItem(item);
+                                          setEditForm({
+                                            supplier_id: item.supplier_id || '',
+                                            stock: item.attributes?.stock ?? '',
+                                            low_stock_threshold: item.attributes?.low_stock_threshold ?? ''
+                                          });
+                                        }}
+                                        className="text-blue-400 hover:text-blue-300"
+                                      >
+                                        Edit
+                                      </button>
+                                      {item.supplier_id && item.supplier_name && (
+                                        <button
+                                          onClick={() => handleDeleteItem(item)}
+                                          className="text-red-400 hover:text-red-300"
+                                        >
+                                          Delete
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Pagination Controls */}
+                      {totalPages > 1 && (
+                        <div className="mt-4 flex items-center justify-between">
+                          <div className="text-sm text-gray-400">
+                            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredItems.length)} of {filteredItems.length} results
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                              disabled={currentPage === 1}
+                              className="px-3 py-1 text-sm bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-lg transition-colors duration-200"
+                            >
+                              Previous
+                            </button>
+                            
+                            {/* Page numbers */}
+                            <div className="flex items-center space-x-1">
+                              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) {
+                                  pageNum = i + 1;
+                                } else if (currentPage <= 3) {
+                                  pageNum = i + 1;
+                                } else if (currentPage >= totalPages - 2) {
+                                  pageNum = totalPages - 4 + i;
+                                } else {
+                                  pageNum = currentPage - 2 + i;
+                                }
+                                
+                                return (
+                                  <button
+                                    key={pageNum}
+                                    onClick={() => setCurrentPage(pageNum)}
+                                    className={`px-3 py-1 text-sm rounded-lg transition-colors duration-200 ${
+                                      currentPage === pageNum
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-gray-600 hover:bg-gray-700 text-gray-300'
+                                    }`}
+                                  >
+                                    {pageNum}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            
+                            <button
+                              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                              disabled={currentPage === totalPages}
+                              className="px-3 py-1 text-sm bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-lg transition-colors duration-200"
+                            >
+                              Next
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -267,6 +592,32 @@ function Inventory() {
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200"
                 >
                   Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Delete Confirmation Modal */}
+        {deleteItem && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold text-white mb-4">Confirm Delete</h3>
+              <p className="text-gray-300 mb-6">
+                Are you sure you want to remove "{deleteItem.description}" from the inventory list? 
+                This will clear the supplier assignment and remove it from the inventory display.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteItem(null)}
+                  className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200"
+                >
+                  Delete
                 </button>
               </div>
             </div>
