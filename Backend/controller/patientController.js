@@ -1,6 +1,14 @@
 require("dotenv").config();
 const db = require("../config/db");
 
+// Helper function to emit Socket.IO events
+const emitSocketEvent = (req, event, data) => {
+  const io = req.app.get('io');
+  if (io) {
+    io.to(event).emit(event, data);
+  }
+};
+
 exports.addPatient = async (req, res) => {
     const { first_name, last_name, middle_name, sex, birthdate, contact_number, telephone_number, senior_number,address } = req.body;
 
@@ -36,22 +44,27 @@ exports.addPatient = async (req, res) => {
         const query = "INSERT INTO patients (first_name, middle_name, last_name, sex, birthdate, age, contact_number, telephone_number, senior_number,address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         const [result] = await db.query(query, [first_name, middle_name, last_name, sex, birthdate, age, contact_number, telephone_number, senior_number, address, userId]);
 
+        const newPatient = {
+            id: result.insertId,
+            first_name,
+            middle_name,
+            last_name,
+            sex,
+            birthdate,
+            age,
+            contact_number,
+            telephone_number,
+            senior_number,
+            address,
+            user_id: userId
+        };
+
+        // Emit Socket.IO event for patient update
+        emitSocketEvent(req, 'patient-updated', { type: 'added', patient: newPatient });
+
         res.status(201).json({
             message: "Patient created successfully",
-            patient: {
-                id: result.insertId,
-                first_name,
-                middle_name,
-                last_name,
-                sex,
-                birthdate,
-                age,
-                contact_number,
-                telephone_number,
-                senior_number,
-                address,
-                user_id: userId
-            }
+            patient: newPatient
         });
     } catch (err) {
         console.error("Error inserting patient:", err);

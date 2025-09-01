@@ -1,6 +1,14 @@
 require("dotenv").config();
 const db = require("../config/db");
 
+// Helper function to emit Socket.IO events
+const emitSocketEvent = (req, event, data) => {
+  const io = req.app.get('io');
+  if (io) {
+    io.to(event).emit(event, data);
+  }
+};
+
 exports.addCheckup = async (req, res) => {
   const userId = req.user?.id;
   const {
@@ -81,17 +89,23 @@ exports.addCheckup = async (req, res) => {
     }
 
     await conn.commit();
+    
+    const newCheckup = {
+      id: checkupId,
+      user_id: userId,
+      patient_id,
+      checkup_date: checkup_date || null,
+      notes: notes || null,
+      diagnosis: diagnosis || null,
+      binocular_pd: binocular_pd || null
+    };
+
+    // Emit Socket.IO event for checkup update
+    emitSocketEvent(req, 'checkup-updated', { type: 'added', checkup: newCheckup });
+
     res.status(201).json({
       message: "Checkup created",
-      checkup: {
-        id: checkupId,
-        user_id: userId,
-        patient_id,
-        checkup_date: checkup_date || null,
-        notes: notes || null,
-        diagnosis: diagnosis || null,
-        binocular_pd: binocular_pd || null
-      }
+      checkup: newCheckup
     });
   } catch (err) {
     await conn.rollback();
@@ -183,6 +197,9 @@ exports.deleteCheckup = async (req, res) => {
       "UPDATE checkups SET is_deleted = 1 WHERE id = ?",
       [checkupId]
     );
+
+    // Emit Socket.IO event for checkup update
+    emitSocketEvent(req, 'checkup-updated', { type: 'deleted', checkupId: checkupId });
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "Checkup not found" });

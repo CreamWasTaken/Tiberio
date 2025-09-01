@@ -5,6 +5,7 @@ import { getCategories } from '../../../services/category';
 import { getSubcategories, addSubcategory, updateSubcategory, deleteSubcategory } from '../../../services/subcategory';
 import { getItems, addItem, updateItem, deleteItem } from '../../../services/item';
 import { getSuppliers } from '../../../services/supplier';
+import socketService from '../../../services/socket';
 
 function Pricelist() {
   // Custom scrollbar styles
@@ -186,6 +187,42 @@ function Pricelist() {
       }
     };
   }, []); // Empty dependency array - only run once on mount
+
+  // Socket.IO real-time updates for items
+  useEffect(() => {
+    const setupSocketIO = async () => {
+      try {
+        // Wait for Socket.IO connection to be established
+        const socket = await socketService.waitForConnection();
+        
+        // Join item update room
+        socketService.joinRoom('item-updated');
+        
+        // Listen for item updates
+        const handleItemUpdate = (data) => {
+          console.log('🔌 Real-time item update received:', data);
+          
+          if (data.type === 'added' || data.type === 'updated' || data.type === 'deleted') {
+            // Refresh items for the currently selected subcategory
+            if (selectedSubcategory) {
+              getItems(selectedSubcategory.id).then(setItems).catch(console.error);
+            }
+          }
+        };
+
+        socket.on('item-updated', handleItemUpdate);
+
+        return () => {
+          socket.off('item-updated', handleItemUpdate);
+          socketService.leaveRoom('item-updated');
+        };
+      } catch (error) {
+        console.error('Failed to setup Socket.IO:', error);
+      }
+    };
+
+    setupSocketIO();
+  }, [selectedSubcategory]);
 
   // Function to manually refresh categories
   const handleRefreshCategories = useCallback(() => {
@@ -530,6 +567,10 @@ function Pricelist() {
                 <h1 className="text-2xl font-bold text-white">
                   {userRole === 'admin' ? 'Price List Management' : 'Price List'}
                 </h1>
+                <div className="ml-3 flex items-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
+                  <span className="text-xs text-green-400">Live Updates</span>
+                </div>
               </div>
               <div className="flex gap-2">
                 <button 

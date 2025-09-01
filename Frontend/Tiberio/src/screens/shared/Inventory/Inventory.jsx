@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../components/Sidebar';
 import { getInventoryItems, updateItem } from '../../../services/item';
 import { getSuppliers } from '../../../services/supplier';
+import socketService from '../../../services/socket';
 
 function Inventory() {
   const navigate = useNavigate();
@@ -66,6 +67,54 @@ function Inventory() {
     return () => {
       if (abortRef.current) abortRef.current.abort();
     };
+  }, []);
+
+  // Socket.IO real-time updates
+  useEffect(() => {
+    const setupSocketIO = async () => {
+      try {
+        console.log('🔌 Setting up Socket.IO for Inventory...');
+        console.log('🔌 Connection status:', socketService.getConnectionStatus());
+        
+        // Wait for Socket.IO connection to be established
+        const socket = await socketService.waitForConnection();
+        console.log('🔌 Socket.IO connection established for Inventory');
+        
+        // Join inventory room
+        socketService.joinRoom('inventory-updated');
+        
+        // Listen for inventory updates
+        const handleInventoryUpdate = (data) => {
+          console.log('🔌 Real-time inventory update received:', data);
+          
+          if (data.type === 'added' || data.type === 'updated') {
+            console.log('🔌 Refreshing inventory list...');
+            // Refresh the entire list for new/updated items
+            getInventoryItems().then(setItems).catch(console.error);
+          } else if (data.type === 'deleted') {
+            console.log('🔌 Removing deleted item from local state...');
+            // Remove the deleted item from local state
+            setItems(prevItems => prevItems.filter(item => item.id !== data.itemId));
+          } else if (data.type === 'test') {
+            console.log('🔌 Test event received:', data.message);
+            // For test events, just log them
+          }
+        };
+
+        socket.on('inventory-updated', handleInventoryUpdate);
+        console.log('🔌 Inventory update listener registered');
+
+        return () => {
+          console.log('🔌 Cleaning up Socket.IO for Inventory...');
+          socket.off('inventory-updated', handleInventoryUpdate);
+          socketService.leaveRoom('inventory-updated');
+        };
+      } catch (error) {
+        console.error('Failed to setup Socket.IO:', error);
+      }
+    };
+
+    setupSocketIO();
   }, []);
   
   // Get user role from localStorage
@@ -199,13 +248,27 @@ function Inventory() {
                   </svg>
                 </button>
                 <h1 className="text-2xl font-bold text-white">Inventory Management</h1>
+                <div className="ml-3 flex items-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
+                  <span className="text-xs text-green-400">Live Updates</span>
+                </div>
               </div>
 
-              {/* <div className="flex space-x-3">
-                <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
-                  Add Item
+              <div className="flex space-x-3">
+                <button 
+                  onClick={() => {
+                    console.log('🔌 Testing Socket.IO connection...');
+                    console.log('🔌 Connection status:', socketService.getConnectionStatus());
+                    fetch('http://localhost:3000/api/test-socket')
+                      .then(response => response.json())
+                      .then(data => console.log('🔌 Test endpoint response:', data))
+                      .catch(error => console.error('🔌 Test endpoint error:', error));
+                  }}
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 text-sm"
+                >
+                  Test Socket
                 </button>
-              </div> */}
+              </div>
 
             </div>
           </div>

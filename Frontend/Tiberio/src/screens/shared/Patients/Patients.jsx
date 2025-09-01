@@ -4,6 +4,7 @@ import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatien
 import Sidebar from '../../../components/Sidebar';
 import AddPatientModal from './components/AddPatientModal';
 import AddCheckupModal from './components/AddCheckupModal';
+import socketService from '../../../services/socket';
 
 function Patients() {
   const navigate = useNavigate();
@@ -34,6 +35,52 @@ function Patients() {
       }
     };
     fetchPatients();
+  }, []);
+
+  // Socket.IO real-time updates for patients
+  useEffect(() => {
+    const setupSocketIO = async () => {
+      try {
+        // Wait for Socket.IO connection to be established
+        const socket = await socketService.waitForConnection();
+        
+        // Join patient update room
+        socketService.joinRoom('patient-updated');
+        
+        // Listen for patient updates
+        const handlePatientUpdate = (data) => {
+          console.log('🔌 Real-time patient update received:', data);
+          
+          if (data.type === 'added') {
+            // Add new patient to the list
+            setPatients(prevPatients => [...prevPatients, data.patient]);
+          } else if (data.type === 'updated') {
+            // Update existing patient in the list
+            setPatients(prevPatients => 
+              prevPatients.map(patient => 
+                patient.id === data.patient.id ? data.patient : patient
+              )
+            );
+          } else if (data.type === 'deleted') {
+            // Remove deleted patient from the list
+            setPatients(prevPatients => 
+              prevPatients.filter(patient => patient.id !== data.patientId)
+            );
+          }
+        };
+
+        socket.on('patient-updated', handlePatientUpdate);
+
+        return () => {
+          socket.off('patient-updated', handlePatientUpdate);
+          socketService.leaveRoom('patient-updated');
+        };
+      } catch (error) {
+        console.error('Failed to setup Socket.IO:', error);
+      }
+    };
+
+    setupSocketIO();
   }, []);
 
   // Load total checkups count
@@ -194,6 +241,60 @@ function Patients() {
     load();
   }, [selectedPatient, activeTab]);
 
+  // Socket.IO real-time updates for checkups
+  useEffect(() => {
+    const setupSocketIO = async () => {
+      try {
+        // Wait for Socket.IO connection to be established
+        const socket = await socketService.waitForConnection();
+        
+        // Join checkup update room
+        socketService.joinRoom('checkup-updated');
+        
+        // Listen for checkup updates
+        const handleCheckupUpdate = (data) => {
+          console.log('🔌 Real-time checkup update received:', data);
+          
+          if (data.type === 'added') {
+            // Add new checkup to the list if it belongs to the currently selected patient
+            if (selectedPatient && data.checkup.patient_id === selectedPatient.id) {
+              setCheckups(prevCheckups => [...prevCheckups, data.checkup]);
+              // Update total checkups count
+              setTotalCheckups(prev => prev + 1);
+            }
+          } else if (data.type === 'updated') {
+            // Update existing checkup in the list
+            if (selectedPatient && data.checkup.patient_id === selectedPatient.id) {
+              setCheckups(prevCheckups => 
+                prevCheckups.map(checkup => 
+                  checkup.id === data.checkup.id ? data.checkup : checkup
+                )
+              );
+            }
+          } else if (data.type === 'deleted') {
+            // Remove deleted checkup from the list
+            setCheckups(prevCheckups => 
+              prevCheckups.filter(checkup => checkup.id !== data.checkupId)
+            );
+            // Update total checkups count
+            setTotalCheckups(prev => Math.max(0, prev - 1));
+          }
+        };
+
+        socket.on('checkup-updated', handleCheckupUpdate);
+
+        return () => {
+          socket.off('checkup-updated', handleCheckupUpdate);
+          socketService.leaveRoom('checkup-updated');
+        };
+      } catch (error) {
+        console.error('Failed to setup Socket.IO:', error);
+      }
+    };
+
+    setupSocketIO();
+  }, [selectedPatient]);
+
 
 
   const normalizedQuery = (searchQuery || '').trim().toLowerCase();
@@ -256,6 +357,10 @@ function Patients() {
                 <h1 className="text-2xl font-bold text-white">
                   {userRole === 'admin' ? 'Patient Management' : 'Patient Records'}
                 </h1>
+                <div className="ml-3 flex items-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
+                  <span className="text-xs text-green-400">Live Updates</span>
+                </div>
               </div>
               {(userRole === 'admin' || userRole === 'employee') && (
                 <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200" onClick={() => { setForm({ first_name: '', middle_name: '', last_name: '', sex: '', birthdate: '', address: '', contact_number: '', telephone_number: '', senior_number: '' }); setFormError(null); setIsAddOpen(true); }}>

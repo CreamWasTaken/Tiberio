@@ -1,6 +1,17 @@
 require("dotenv").config();
 const db = require("../config/db");
 
+// Helper function to emit Socket.IO events
+const emitSocketEvent = (req, event, data) => {
+  const io = req.app.get('io');
+  if (io) {
+    console.log(`🔌 Emitting Socket.IO event: ${event}`, data);
+    io.to(event).emit(event, data);
+  } else {
+    console.log(`❌ Socket.IO not available for event: ${event}`);
+  }
+};
+
 
 exports.addCategory = async (req, res) => {
     const {name, description} = req.body;
@@ -162,6 +173,13 @@ exports.addItem = async (req, res) => {
             [subcategory_id, supplier_id, code, description, pc_price, pc_cost, JSON.stringify(attributes)]
         );
         await conn.commit();
+        
+        // Emit Socket.IO events for item and inventory updates
+        emitSocketEvent(req, 'item-updated', { type: 'added', itemId: result.insertId });
+        if (supplier_id) {
+          emitSocketEvent(req, 'inventory-updated', { type: 'added', itemId: result.insertId });
+        }
+        
         res.status(201).json({message: "Item added successfully", item: result});
     } catch (error) {
         await conn.rollback();
@@ -279,6 +297,13 @@ exports.updateItem = async (req, res) => {
             [description, code, pc_price, pc_cost, subcategory_id, supplier_id, JSON.stringify(attributes), id]
         );
         await conn.commit();
+        
+        // Emit Socket.IO events for item and inventory updates
+        emitSocketEvent(req, 'item-updated', { type: 'updated', itemId: id });
+        if (supplier_id) {
+          emitSocketEvent(req, 'inventory-updated', { type: 'updated', itemId: id });
+        }
+        
         res.status(200).json({message: "Item updated successfully", item: result});
     } catch (error) {
         await conn.rollback();
@@ -297,6 +322,11 @@ exports.deleteItem = async (req, res) => {
         await conn.beginTransaction();
         const [result] = await conn.query("UPDATE products SET is_deleted = 1 WHERE id = ?", [id]);
         await conn.commit();
+        
+        // Emit Socket.IO events for item and inventory updates
+        emitSocketEvent(req, 'item-updated', { type: 'deleted', itemId: id });
+        emitSocketEvent(req, 'inventory-updated', { type: 'deleted', itemId: id });
+        
         res.status(200).json({message: "Item deleted successfully", item: result});
     } catch (error) {
         await conn.rollback();
