@@ -86,18 +86,19 @@ function Inventory() {
         // Listen for inventory updates
         const handleInventoryUpdate = (data) => {
           console.log('🔌 Real-time inventory update received:', data);
-          
-          if (data.type === 'added' || data.type === 'updated') {
-            console.log('🔌 Refreshing inventory list...');
-            // Refresh the entire list for new/updated items
-            getInventoryItems().then(setItems).catch(console.error);
+          if (data.type === 'added' && data.item) {
+            setItems(prevItems => {
+              // Add new item if not already present
+              const exists = prevItems.some(item => item.id === data.item.id);
+              if (exists) return prevItems;
+              return [...prevItems, data.item];
+            });
+          } else if (data.type === 'updated' && data.item) {
+            setItems(prevItems => prevItems.map(item => item.id === data.item.id ? data.item : item));
           } else if (data.type === 'deleted') {
-            console.log('🔌 Removing deleted item from local state...');
-            // Remove the deleted item from local state
             setItems(prevItems => prevItems.filter(item => item.id !== data.itemId));
           } else if (data.type === 'test') {
             console.log('🔌 Test event received:', data.message);
-            // For test events, just log them
           }
         };
 
