@@ -50,6 +50,7 @@ io.on("connection", (socket) => {
   socket.on("join-room", (room) => {
     socket.join(room);
     console.log(`🔌 Client ${socket.id} joined room: ${room}`);
+    console.log(`🔌 Total clients in room ${room}:`, io.sockets.adapter.rooms.get(room)?.size || 0);
   });
 
   // Leave room
@@ -58,14 +59,14 @@ io.on("connection", (socket) => {
     console.log(`🔌 Client ${socket.id} left room: ${room}`);
   });
 
-        socket.on("disconnect", () => {
-        console.log("🔌 Client disconnected:", socket.id);
-      });
-      
-      socket.on("test-connection", (data) => {
-        console.log("🔌 Test connection received from client:", socket.id, data);
-      });
-    });
+  socket.on("disconnect", () => {
+    console.log("🔌 Client disconnected:", socket.id);
+  });
+  
+  socket.on("test-connection", (data) => {
+    console.log("🔌 Test connection received from client:", socket.id, data);
+  });
+});
 
 // Make io available globally for use in routes
 app.set("io", io);

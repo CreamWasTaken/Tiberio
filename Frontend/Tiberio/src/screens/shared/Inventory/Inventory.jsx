@@ -58,7 +58,7 @@ function Inventory() {
       try {
         const s = await getSuppliers(abortRef.current.signal);
         setSuppliers(s);
-      } catch (e) {
+      } catch {
         // ignore
       }
     };
@@ -81,24 +81,45 @@ function Inventory() {
         console.log('🔌 Socket.IO connection established for Inventory');
         
         // Join inventory room
+        console.log('🔌 Joining inventory-updated room...');
         socketService.joinRoom('inventory-updated');
+        console.log('🔌 Room join request sent');
         
         // Listen for inventory updates
         const handleInventoryUpdate = (data) => {
           console.log('🔌 Real-time inventory update received:', data);
+          console.log('🔌 Current items count before update:', items.length);
+          
           if (data.type === 'added' && data.item) {
+            console.log('🔌 Processing ADD event for item:', data.item.id);
             setItems(prevItems => {
               // Add new item if not already present
               const exists = prevItems.some(item => item.id === data.item.id);
-              if (exists) return prevItems;
+              if (exists) {
+                console.log('🔌 Item already exists, skipping add');
+                return prevItems;
+              }
+              console.log('🔌 Adding new item to inventory');
               return [...prevItems, data.item];
             });
           } else if (data.type === 'updated' && data.item) {
-            setItems(prevItems => prevItems.map(item => item.id === data.item.id ? data.item : item));
-          } else if (data.type === 'deleted') {
-            setItems(prevItems => prevItems.filter(item => item.id !== data.itemId));
+            console.log('🔌 Processing UPDATE event for item:', data.item.id);
+            setItems(prevItems => {
+              const updated = prevItems.map(item => item.id === data.item.id ? data.item : item);
+              console.log('🔌 Updated items count:', updated.length);
+              return updated;
+            });
+          } else if (data.type === 'deleted' && data.item) {
+            console.log('🔌 Processing DELETE event for item:', data.item.id);
+            setItems(prevItems => {
+              const filtered = prevItems.filter(item => item.id !== data.item.id);
+              console.log('🔌 Filtered items count:', filtered.length);
+              return filtered;
+            });
           } else if (data.type === 'test') {
             console.log('🔌 Test event received:', data.message);
+          } else {
+            console.log('🔌 Unknown event type:', data.type);
           }
         };
 
@@ -144,8 +165,7 @@ function Inventory() {
           supplier_id: null
         });
         
-        // Remove from local state
-        setItems(prevItems => prevItems.filter(item => item.id !== deleteItem.id));
+        // Socket.IO will automatically update the UI in real-time
         setDeleteItem(null);
       } catch (error) {
         console.error('Failed to remove item from inventory:', error);
@@ -255,21 +275,7 @@ function Inventory() {
                 </div>
               </div>
 
-              <div className="flex space-x-3">
-                <button 
-                  onClick={() => {
-                    console.log('🔌 Testing Socket.IO connection...');
-                    console.log('🔌 Connection status:', socketService.getConnectionStatus());
-                    fetch('http://localhost:3000/api/test-socket')
-                      .then(response => response.json())
-                      .then(data => console.log('🔌 Test endpoint response:', data))
-                      .catch(error => console.error('🔌 Test endpoint error:', error));
-                  }}
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 text-sm"
-                >
-                  Test Socket
-                </button>
-              </div>
+        
 
             </div>
           </div>
@@ -644,11 +650,7 @@ function Inventory() {
                       };
                       await updateItem(editingItem.id, payload);
                       setEditingItem(null);
-                      // refresh list
-                      setIsLoading(true);
-                      const data = await getInventoryItems();
-                      setItems(data);
-                      setIsLoading(false);
+                      // Socket.IO will automatically update the UI in real-time
                     } catch (e) {
                       console.error('Failed to update item', e);
                     }

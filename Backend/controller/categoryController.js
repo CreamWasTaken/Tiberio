@@ -6,7 +6,9 @@ const emitSocketEvent = (req, event, data) => {
   const io = req.app.get('io');
   if (io) {
     console.log(`🔌 Emitting Socket.IO event: ${event}`, data);
+    console.log(`🔌 Emitting to room: ${event}`);
     io.to(event).emit(event, data);
+    console.log(`🔌 Event emitted successfully`);
   } else {
     console.log(`❌ Socket.IO not available for event: ${event}`);
   }
@@ -174,10 +176,30 @@ exports.addItem = async (req, res) => {
         );
         await conn.commit();
         
-        // Emit Socket.IO events for item and inventory updates
-        emitSocketEvent(req, 'item-updated', { type: 'added', itemId: result.insertId });
-        if (supplier_id) {
-          emitSocketEvent(req, 'inventory-updated', { type: 'added', itemId: result.insertId });
+        // Fetch the newly created item data for socket emission
+        const [newItemResult] = await conn.query(`
+            SELECT p.*, s.name as supplier_name, 
+                   JSON_UNQUOTE(p.attributes) as attributes_json
+            FROM products p
+            LEFT JOIN suppliers s ON p.supplier_id = s.id
+            WHERE p.id = ? AND p.is_deleted = 0
+        `, [result.insertId]);
+        
+        if (newItemResult.length > 0) {
+            const newItem = newItemResult[0];
+            // Parse attributes JSON
+            if (newItem.attributes_json) {
+                newItem.attributes = JSON.parse(newItem.attributes_json);
+            }
+            delete newItem.attributes_json;
+            
+            // Emit Socket.IO events with complete item data
+            emitSocketEvent(req, 'item-updated', { type: 'added', item: newItem });
+            
+            // If item has a supplier (meaning it's added to inventory), emit inventory event
+            if (supplier_id) {
+                emitSocketEvent(req, 'inventory-updated', { type: 'added', item: newItem });
+            }
         }
         
         res.status(201).json({message: "Item added successfully", item: result});
@@ -298,10 +320,36 @@ exports.updateItem = async (req, res) => {
         );
         await conn.commit();
         
-        // Emit Socket.IO events for item and inventory updates
-        emitSocketEvent(req, 'item-updated', { type: 'updated', itemId: id });
-        if (supplier_id) {
-          emitSocketEvent(req, 'inventory-updated', { type: 'updated', itemId: id });
+        // Fetch the updated item data for socket emission
+        const [updatedItemResult] = await conn.query(`
+            SELECT p.*, s.name as supplier_name, 
+                   JSON_UNQUOTE(p.attributes) as attributes_json
+            FROM products p
+            LEFT JOIN suppliers s ON p.supplier_id = s.id
+            WHERE p.id = ? AND p.is_deleted = 0
+        `, [id]);
+        
+        if (updatedItemResult.length > 0) {
+            const updatedItem = updatedItemResult[0];
+            // Parse attributes JSON
+            if (updatedItem.attributes_json) {
+                updatedItem.attributes = JSON.parse(updatedItem.attributes_json);
+            }
+            delete updatedItem.attributes_json;
+            
+            // Emit Socket.IO events with complete item data
+            emitSocketEvent(req, 'item-updated', { type: 'updated', item: updatedItem });
+            
+            // Always emit inventory event for updates, with appropriate type
+            if (supplier_id) {
+                // Item is being added/kept in inventory
+                console.log(`🔌 Emitting inventory-updated event: type=updated, item=${updatedItem.id}, supplier_id=${supplier_id}`);
+                emitSocketEvent(req, 'inventory-updated', { type: 'updated', item: updatedItem });
+            } else {
+                // Item is being removed from inventory (supplier_id set to null)
+                console.log(`🔌 Emitting inventory-updated event: type=deleted, item=${updatedItem.id}, supplier_id=${supplier_id}`);
+                emitSocketEvent(req, 'inventory-updated', { type: 'deleted', item: updatedItem });
+            }
         }
         
         res.status(200).json({message: "Item updated successfully", item: result});
@@ -320,12 +368,35 @@ exports.deleteItem = async (req, res) => {
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
+        
+        // Fetch the item data before deletion for socket emission
+        const [itemToDelete] = await conn.query(`
+            SELECT p.*, s.name as supplier_name, 
+                   JSON_UNQUOTE(p.attributes) as attributes_json
+            FROM products p
+            LEFT JOIN suppliers s ON p.supplier_id = s.id
+            WHERE p.id = ? AND p.is_deleted = 0
+        `, [id]);
+        
         const [result] = await conn.query("UPDATE products SET is_deleted = 1 WHERE id = ?", [id]);
         await conn.commit();
         
-        // Emit Socket.IO events for item and inventory updates
-        emitSocketEvent(req, 'item-updated', { type: 'deleted', itemId: id });
-        emitSocketEvent(req, 'inventory-updated', { type: 'deleted', itemId: id });
+        if (itemToDelete.length > 0) {
+            const deletedItem = itemToDelete[0];
+            // Parse attributes JSON
+            if (deletedItem.attributes_json) {
+                deletedItem.attributes = JSON.parse(deletedItem.attributes_json);
+            }
+            delete deletedItem.attributes_json;
+            
+            // Emit Socket.IO events with complete item data
+            emitSocketEvent(req, 'item-updated', { type: 'deleted', item: deletedItem });
+            
+            // If item had a supplier (meaning it was in inventory), emit inventory event
+            if (deletedItem.supplier_id) {
+                emitSocketEvent(req, 'inventory-updated', { type: 'deleted', item: deletedItem });
+            }
+        }
         
         res.status(200).json({message: "Item deleted successfully", item: result});
     } catch (error) {
