@@ -88,3 +88,51 @@ exports.getPatients = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
+exports.deletePatient = async (req, res) => {
+    const { patientId } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    if (!patientId) {
+        return res.status(400).json({ error: "patientId is required" });
+    }
+
+    try {
+        // Check if patient exists and belongs to the user (optional security check)
+        const [existingPatient] = await db.query(
+            "SELECT * FROM patients WHERE id = ?",
+            [patientId]
+        );
+
+        if (existingPatient.length === 0) {
+            return res.status(404).json({ error: "Patient not found" });
+        }
+
+        // Soft delete the patient (set is_deleted to 1)
+        const [result] = await db.query(
+            "UPDATE patients SET is_deleted = 1 WHERE id = ?",
+            [patientId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Patient not found" });
+        }
+
+        // Emit Socket.IO event for patient deletion
+        emitSocketEvent(req, 'patient-updated', { 
+            type: 'deleted', 
+            patientId: patientId 
+        });
+
+        res.status(200).json({ 
+            message: "Patient deleted successfully",
+            patientId: patientId
+        });
+    } catch (err) {
+        console.error("Error deleting patient:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};

@@ -12,6 +12,9 @@ router.post("/patients/:patientId/checkups", authenticateToken, (req, res, next)
 // Get all checkups for a specific patient
 router.get("/patients/:patientId/checkups", authenticateToken, checkupController.getPatientCheckups);
 
+// Update a specific checkup
+router.put("/checkups/:checkupId", authenticateToken, checkupController.updateCheckup);
+
 // Get total count of all checkups
 router.get("/count", authenticateToken, checkupController.getTotalCheckupsCount);
 

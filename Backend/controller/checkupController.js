@@ -90,22 +90,41 @@ exports.addCheckup = async (req, res) => {
 
     await conn.commit();
     
-    const newCheckup = {
-      id: checkupId,
-      user_id: userId,
-      patient_id,
-      checkup_date: checkup_date || null,
-      notes: notes || null,
-      diagnosis: diagnosis || null,
-      binocular_pd: binocular_pd || null
+    // Fetch the complete checkup data including prescriptions
+    const [completeCheckup] = await conn.query(`
+      SELECT c.*, CONCAT(u.first_name,' ',u.last_name) AS created_by_name
+      FROM checkups c
+      LEFT JOIN users u ON u.id = c.user_id
+      WHERE c.id = ?
+    `, [checkupId]);
+
+    // Fetch prescription data
+    const [spectacleData] = await conn.query(
+      'SELECT * FROM spectacle_prescriptions WHERE checkupId = ?',
+      [checkupId]
+    );
+
+    const [contactData] = await conn.query(
+      'SELECT * FROM contact_lens_prescriptions WHERE checkupId = ?',
+      [checkupId]
+    );
+
+    // Create enriched checkup object
+    const enrichedCheckup = {
+      ...completeCheckup[0],
+      spectacle_prescription: spectacleData[0] || null,
+      contact_lens_prescription: contactData[0] || null
     };
 
-    // Emit Socket.IO event for checkup update
-    emitSocketEvent(req, 'checkup-updated', { type: 'added', checkup: newCheckup });
+    // Emit Socket.IO event with complete data
+    emitSocketEvent(req, 'checkup-updated', { 
+      type: 'added', 
+      checkup: enrichedCheckup 
+    });
 
     res.status(201).json({
       message: "Checkup created",
-      checkup: newCheckup
+      checkup: enrichedCheckup
     });
   } catch (err) {
     await conn.rollback();
@@ -168,6 +187,170 @@ exports.getPatientCheckups = async (req, res) => {
   }
 };
 
+// Update an existing checkup
+exports.updateCheckup = async (req, res) => {
+  const userId = req.user?.id;
+  const { checkupId } = req.params;
+  const {
+    checkup_date,
+    notes,
+    diagnosis,
+    binocular_pd,
+    spectacle_prescription,
+    contact_lens_prescription
+  } = req.body || {};
+
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  if (!checkupId) {
+    return res.status(400).json({ error: "checkupId is required" });
+  }
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // Check if checkup exists and belongs to the user
+    const [existingCheckup] = await conn.query(
+      "SELECT * FROM checkups WHERE id = ? AND user_id = ? AND (is_deleted = 0 OR is_deleted IS NULL)",
+      [checkupId, userId]
+    );
+
+    if (existingCheckup.length === 0) {
+      return res.status(404).json({ error: "Checkup not found or access denied" });
+    }
+
+    // Update main checkup data
+    await conn.query(
+      "UPDATE checkups SET checkup_date = ?, notes = ?, diagnosis = ?, binocular_pd = ? WHERE id = ?",
+      [checkup_date || null, notes || null, diagnosis || null, binocular_pd || null, checkupId]
+    );
+
+    // Update spectacle prescription if provided
+    if (spectacle_prescription && typeof spectacle_prescription === "object") {
+      const sp = spectacle_prescription;
+      
+      // Check if spectacle prescription exists
+      const [existingSP] = await conn.query(
+        "SELECT * FROM spectacle_prescriptions WHERE checkupId = ?",
+        [checkupId]
+      );
+
+      if (existingSP.length > 0) {
+        // Update existing spectacle prescription
+        await conn.query(
+          `UPDATE spectacle_prescriptions SET 
+            sphereRight = ?, cylinderRight = ?, axisRight = ?, additionRight = ?, visualAcuityRight = ?, monocularPdRight = ?,
+            sphereLeft = ?, cylinderLeft = ?, axisLeft = ?, additionLeft = ?, visualAcuityLeft = ?, monocularPdLeft = ?
+           WHERE checkupId = ?`,
+          [
+            sp.sphereRight ?? null, sp.cylinderRight ?? null, sp.axisRight ?? null, sp.additionRight ?? null, sp.visualAcuityRight ?? null, sp.monocularPdRight ?? null,
+            sp.sphereLeft ?? null, sp.cylinderLeft ?? null, sp.axisLeft ?? null, sp.additionLeft ?? null, sp.visualAcuityLeft ?? null, sp.monocularPdLeft ?? null,
+            checkupId
+          ]
+        );
+      } else {
+        // Insert new spectacle prescription
+        await conn.query(
+          `INSERT INTO spectacle_prescriptions 
+            (checkupId, sphereRight, cylinderRight, axisRight, additionRight, visualAcuityRight, monocularPdRight,
+             sphereLeft, cylinderLeft, axisLeft, additionLeft, visualAcuityLeft, monocularPdLeft)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [
+            checkupId,
+            sp.sphereRight ?? null, sp.cylinderRight ?? null, sp.axisRight ?? null, sp.additionRight ?? null, sp.visualAcuityRight ?? null, sp.monocularPdRight ?? null,
+            sp.sphereLeft ?? null, sp.cylinderLeft ?? null, sp.axisLeft ?? null, sp.additionLeft ?? null, sp.visualAcuityLeft ?? null, sp.monocularPdLeft ?? null
+          ]
+        );
+      }
+    }
+
+    // Update contact lens prescription if provided
+    if (contact_lens_prescription && typeof contact_lens_prescription === "object") {
+      const cp = contact_lens_prescription;
+      
+      // Check if contact lens prescription exists
+      const [existingCP] = await conn.query(
+        "SELECT * FROM contact_lens_prescriptions WHERE checkupId = ?",
+        [checkupId]
+      );
+
+      if (existingCP.length > 0) {
+        // Update existing contact lens prescription
+        await conn.query(
+          `UPDATE contact_lens_prescriptions SET 
+            sphereRight = ?, sphereLeft = ?, cylinderRight = ?, cylinderLeft = ?, axisRight = ?, axisLeft = ?, 
+            additionRight = ?, additionLeft = ?, baseCurveRight = ?, baseCurveLeft = ?, diameterRight = ?, diameterLeft = ?
+           WHERE checkupId = ?`,
+          [
+            cp.sphereRight ?? null, cp.sphereLeft ?? null, cp.cylinderRight ?? null, cp.cylinderLeft ?? null, cp.axisRight ?? null, cp.axisLeft ?? null,
+            cp.additionRight ?? null, cp.additionLeft ?? null, cp.baseCurveRight ?? null, cp.baseCurveLeft ?? null, cp.diameterRight ?? null, cp.diameterLeft ?? null,
+            checkupId
+          ]
+        );
+      } else {
+        // Insert new contact lens prescription
+        await conn.query(
+          `INSERT INTO contact_lens_prescriptions 
+            (checkupId, sphereRight, sphereLeft, cylinderRight, cylinderLeft, axisRight, axisLeft, additionRight, additionLeft, baseCurveRight, baseCurveLeft, diameterRight, diameterLeft)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [
+            checkupId,
+            cp.sphereRight ?? null, cp.sphereLeft ?? null, cp.cylinderRight ?? null, cp.cylinderLeft ?? null, cp.axisRight ?? null, cp.axisLeft ?? null,
+            cp.additionRight ?? null, cp.additionLeft ?? null, cp.baseCurveRight ?? null, cp.baseCurveLeft ?? null, cp.diameterRight ?? null, cp.diameterLeft ?? null
+          ]
+        );
+      }
+    }
+
+    await conn.commit();
+
+    // Fetch the complete updated checkup data
+    const [updatedCheckup] = await conn.query(`
+      SELECT c.*, CONCAT(u.first_name,' ',u.last_name) AS created_by_name
+      FROM checkups c
+      LEFT JOIN users u ON u.id = c.user_id
+      WHERE c.id = ?
+    `, [checkupId]);
+
+    // Fetch prescription data
+    const [spectacleData] = await conn.query(
+      'SELECT * FROM spectacle_prescriptions WHERE checkupId = ?',
+      [checkupId]
+    );
+
+    const [contactData] = await conn.query(
+      'SELECT * FROM contact_lens_prescriptions WHERE checkupId = ?',
+      [checkupId]
+    );
+
+    // Create enriched checkup object
+    const enrichedCheckup = {
+      ...updatedCheckup[0],
+      spectacle_prescription: spectacleData[0] || null,
+      contact_lens_prescription: contactData[0] || null
+    };
+
+    // Emit Socket.IO event with complete data
+    emitSocketEvent(req, 'checkup-updated', { 
+      type: 'updated', 
+      checkup: enrichedCheckup  // Send complete checkup data
+    });
+
+    res.status(200).json({
+      message: "Checkup updated successfully",
+      checkupId: checkupId
+    });
+  } catch (err) {
+    await conn.rollback();
+    console.error("Error updating checkup:", err);
+    res.status(500).json({ error: "Internal server error" });
+  } finally {
+    conn.release();
+  }
+};
+
 // Total count of all checkups
 exports.getTotalCheckupsCount = async (req, res) => {
   try {
@@ -193,13 +376,22 @@ exports.deleteCheckup = async (req, res) => {
   }
 
   try {
+    const [checkupToDelete] = await db.query(
+      "SELECT * FROM checkups WHERE id = ?",
+      [checkupId]
+    );
+
     const [result] = await db.query(
       "UPDATE checkups SET is_deleted = 1 WHERE id = ?",
       [checkupId]
     );
 
-    // Emit Socket.IO event for checkup update
-    emitSocketEvent(req, 'checkup-updated', { type: 'deleted', checkupId: checkupId });
+    // Emit Socket.IO event with checkup data
+    emitSocketEvent(req, 'checkup-updated', { 
+      type: 'deleted', 
+      checkupId: checkupId,
+      checkup: checkupToDelete[0]  // Send the deleted checkup data
+    });
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "Checkup not found" });

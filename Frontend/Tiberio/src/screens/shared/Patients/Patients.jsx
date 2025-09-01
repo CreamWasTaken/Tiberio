@@ -273,8 +273,9 @@ function Patients() {
             }
           } else if (data.type === 'deleted') {
             // Remove deleted checkup from the list
+            // Use data.checkup.id since backend now sends complete checkup data
             setCheckups(prevCheckups => 
-              prevCheckups.filter(checkup => checkup.id !== data.checkupId)
+              prevCheckups.filter(checkup => checkup.id !== data.checkup.id)
             );
             // Update total checkups count
             setTotalCheckups(prev => Math.max(0, prev - 1));
@@ -654,8 +655,7 @@ function Patients() {
                                            onConfirm: async () => {
                                              try {
                                                await deleteCheckupApi(c.id);
-                                               const data = await getPatientCheckups(selectedPatient.id);
-                                               setCheckups(Array.isArray(data) ? data : []);
+                                               // Remove this manual refresh - Socket.IO will handle it
                                                setAlertConfig(prev => ({ ...prev, isOpen: false }));
                                              } catch (err) {
                                                setAlertConfig({
@@ -898,8 +898,9 @@ function Patients() {
                 } else {
                   await addCheckupApi(selectedPatient.id, payload);
                 }
-                const data = await getPatientCheckups(selectedPatient.id);
-                setCheckups(Array.isArray(data) ? data : []);
+                // Remove this manual refresh - Socket.IO will handle it
+                // const data = await getPatientCheckups(selectedPatient.id);
+                // setCheckups(Array.isArray(data) ? data : []);
                 setIsAddCheckupOpen(false);
                 setIsEditMode(false);
                 setEditingCheckupId(null);
