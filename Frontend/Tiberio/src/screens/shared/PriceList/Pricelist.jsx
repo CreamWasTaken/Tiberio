@@ -360,8 +360,35 @@ function Pricelist() {
     }
   };
 
+  // Function to check for duplicate descriptions
+  const checkDuplicateDescription = (description, excludeId = null) => {
+    if (!description.trim()) return false;
+    
+    const category = categories.find(cat => cat.id.toString() === activeTab);
+    if (!category) return false;
+    
+    const categoryName = category.name.toLowerCase();
+    const isFrameCategory = categoryName.includes('frame');
+    
+    // Frames can have duplicate descriptions
+    if (isFrameCategory) return false;
+    
+    // Check if description already exists in current items
+    return items.some(item => 
+      item.description.toLowerCase() === description.toLowerCase() && 
+      (!excludeId || item.id !== excludeId)
+    );
+  };
+
   const handleItemSubmit = async (e) => {
     e.preventDefault();
+    
+    // Check for duplicate description
+    if (checkDuplicateDescription(itemFormData.description, editingItem?.id)) {
+      alert('An item with this description already exists. Please use a different description.');
+      return;
+    }
+    
     try {
       // Require supplier if adding to inventory
       if (addToInventory && !itemFormData.supplier_id) {
@@ -395,6 +422,12 @@ function Pricelist() {
       }
     } catch (error) {
       console.error('Error saving item:', error);
+      // Handle specific error for duplicate description
+      if (error.message && error.message.includes('DUPLICATE_DESCRIPTION')) {
+        alert('An item with this description already exists. Please use a different description.');
+      } else {
+        alert('Error saving item. Please try again.');
+      }
     }
   };
 
@@ -908,8 +941,17 @@ function Pricelist() {
                     required
                       value={itemFormData.description}
                       onChange={(e) => setItemFormData({...itemFormData, description: e.target.value})}
-                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-2 bg-gray-900 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      itemFormData.description && checkDuplicateDescription(itemFormData.description, editingItem?.id)
+                        ? 'border-red-500 focus:ring-red-500'
+                        : 'border-gray-700 focus:ring-blue-500'
+                    }`}
                   />
+                  {itemFormData.description && checkDuplicateDescription(itemFormData.description, editingItem?.id) && (
+                    <p className="text-red-400 text-sm mt-1">
+                      ⚠️ An item with this description already exists
+                    </p>
+                  )}
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Code</label>

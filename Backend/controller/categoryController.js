@@ -237,6 +237,34 @@ exports.updateItem = async (req, res) => {
     try {
         await conn.beginTransaction();
         
+        // Check if this is a frame category (frames can have duplicate descriptions)
+        const [categoryResult] = await conn.query(
+            `SELECT pc.name as category_name 
+             FROM price_subcategories ps 
+             JOIN price_categories pc ON ps.category_id = pc.id 
+             WHERE ps.id = ?`, 
+            [subcategory_id]
+        );
+        
+        const categoryName = categoryResult[0]?.category_name?.toLowerCase() || '';
+        const isFrameCategory = categoryName.includes('frame');
+        
+        // If not a frame category, check for duplicate descriptions (excluding current item)
+        if (!isFrameCategory) {
+            const [duplicateResult] = await conn.query(
+                "SELECT id FROM products WHERE description = ? AND id != ? AND is_deleted = 0",
+                [description, id]
+            );
+            
+            if (duplicateResult.length > 0) {
+                await conn.rollback();
+                return res.status(400).json({
+                    message: "An item with this description already exists. Please use a different description.",
+                    error: "DUPLICATE_DESCRIPTION"
+                });
+            }
+        }
+        
         // Create attributes object with all the additional fields
         const attributes = {
             index, diameter, sphFR, sphTo, cylFr, cylTo, tp,

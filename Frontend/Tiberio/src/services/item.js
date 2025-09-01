@@ -83,7 +83,13 @@ export const addItem = async (itemData) => {
     return response.data;
   } catch (error) {
     if (error.response) {
-      throw new Error(error.response.data.error);
+      const errorMessage = error.response.data.message || error.response.data.error || 'Server error';
+      const errorCode = error.response.data.error;
+      const errorWithCode = new Error(errorMessage);
+      if (errorCode) {
+        errorWithCode.message = errorMessage + (errorCode === 'DUPLICATE_DESCRIPTION' ? ' DUPLICATE_DESCRIPTION' : '');
+      }
+      throw errorWithCode;
     } else if (error.request) {
       throw new Error("No response from server");
     } else {
@@ -103,7 +109,13 @@ export const updateItem = async (id, itemData) => {
     return response.data;
   } catch (error) {
     if (error.response) {
-      throw new Error(error.response.data.error);
+      const errorMessage = error.response.data.message || error.response.data.error || 'Server error';
+      const errorCode = error.response.data.error;
+      const errorWithCode = new Error(errorMessage);
+      if (errorCode) {
+        errorWithCode.message = errorMessage + (errorCode === 'DUPLICATE_DESCRIPTION' ? ' DUPLICATE_DESCRIPTION' : '');
+      }
+      throw errorWithCode;
     } else if (error.request) {
       throw new Error("No response from server");
     } else {
