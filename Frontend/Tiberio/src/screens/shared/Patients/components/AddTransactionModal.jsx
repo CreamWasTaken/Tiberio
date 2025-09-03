@@ -12,7 +12,6 @@ function AddTransactionModal({
   const [cart, setCart] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [receiptNumber, setReceiptNumber] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('');
   const [customerName, setCustomerName] = useState('');
   
   // Dynamic data states
@@ -139,11 +138,6 @@ function AddTransactionModal({
       return;
     }
 
-    if (!paymentMethod) {
-      alert('Please select a payment method');
-      return;
-    }
-
     if (!receiptNumber.trim()) {
       alert('Please enter a receipt number');
       return;
@@ -154,7 +148,6 @@ function AddTransactionModal({
       receipt_number: receiptNumber,
       transaction_date: new Date().toISOString().split('T')[0],
       amount: total,
-      payment_method: paymentMethod,
       transaction_type: 'pos_sale',
       description: 'POS Transaction',
       items: cart,
@@ -393,26 +386,6 @@ function AddTransactionModal({
                 </div>
               </div>
 
-              {/* Payment Method */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Payment Method *
-                </label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-                  required
-                >
-                  <option value="">Select payment method</option>
-                  <option value="cash">Cash</option>
-                  <option value="card">Card</option>
-                  <option value="gcash">GCash</option>
-                  <option value="maya">Maya</option>
-                  <option value="bank_transfer">Bank Transfer</option>
-                </select>
-              </div>
-
               {/* Action Buttons */}
               <div className="flex gap-4">
                 <button
@@ -420,7 +393,6 @@ function AddTransactionModal({
                   onClick={() => {
                     setCart([]);
                     setCustomerName('');
-                    setPaymentMethod('');
                   }}
                   className="flex-1 px-6 py-4 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors text-lg font-medium"
                 >
@@ -428,7 +400,7 @@ function AddTransactionModal({
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={cart.length === 0 || !paymentMethod || isSavingTransaction}
+                  disabled={cart.length === 0 || isSavingTransaction}
                   className="flex-1 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-lg font-medium"
                 >
                   {isSavingTransaction ? 'Processing...' : 'Complete Sale'}
