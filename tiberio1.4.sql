@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 29, 2025 at 10:14 AM
+-- Generation Time: Sep 03, 2025 at 07:20 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -45,8 +45,15 @@ CREATE TABLE `checkups` (
 --
 
 INSERT INTO `checkups` (`id`, `user_id`, `patient_id`, `checkup_date`, `notes`, `diagnosis`, `binocular_pd`, `created_at`, `updated_at`, `is_deleted`) VALUES
-(7, 1, 7, '2025-08-28', 'Notes', 'Diag', NULL, '2025-08-27 16:51:35', '2025-08-28 06:07:44', 1),
-(8, 1, 7, '2025-08-29', 'test', 'test', '1', '2025-08-29 05:41:21', '2025-08-29 05:41:21', 0);
+(7, 1, 7, '2025-08-28', 'Notes', 'Diagnosis 2', NULL, '2025-08-27 16:51:35', '2025-09-01 06:01:28', 1),
+(8, 1, 7, '2025-08-29', 'test', 'test', '1', '2025-08-29 05:41:21', '2025-09-01 05:36:04', 1),
+(9, 1, 7, '2025-09-01', 'test', 'test', '1', '2025-09-01 04:43:03', '2025-09-01 05:02:56', 1),
+(10, 1, 7, '2025-09-01', 'tes', 'test', NULL, '2025-09-01 04:45:28', '2025-09-01 04:48:33', 1),
+(11, 1, 7, '2025-09-01', 'test', 'Update', '11', '2025-09-01 05:03:37', '2025-09-01 05:21:47', 1),
+(12, 1, 7, '2025-09-01', 'test 2', 'test 2', '1', '2025-09-01 05:20:50', '2025-09-01 05:23:17', 1),
+(13, 1, 7, '2025-09-01', '12', '12', '11', '2025-09-01 05:27:58', '2025-09-01 05:28:32', 1),
+(14, 1, 7, '2025-09-01', '1', '1', NULL, '2025-09-01 05:29:47', '2025-09-01 05:33:25', 1),
+(15, 1, 7, '2025-09-02', '1', 'Diagnosis Update', '1', '2025-09-02 06:52:27', '2025-09-02 06:53:23', 1);
 
 -- --------------------------------------------------------
 
@@ -77,7 +84,14 @@ CREATE TABLE `contact_lens_prescriptions` (
 
 INSERT INTO `contact_lens_prescriptions` (`contactId`, `checkupId`, `sphereRight`, `sphereLeft`, `cylinderRight`, `cylinderLeft`, `axisRight`, `axisLeft`, `additionRight`, `additionLeft`, `baseCurveRight`, `baseCurveLeft`, `diameterRight`, `diameterLeft`) VALUES
 (6, 7, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(7, 8, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+(7, 8, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(8, 9, '1', '1', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(9, 10, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(10, 11, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(11, 12, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(12, 13, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(13, 14, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(14, 15, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -182,8 +196,7 @@ INSERT INTO `price_categories` (`id`, `name`, `description`, `is_deleted`, `crea
 (17, 'Solutions, Artificial Tears, Etc.', 'Solutions, artificial tears, and related products', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12'),
 (18, 'Accessories', 'Eyewear accessories', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12'),
 (19, 'Frames', 'Eyeglass frames', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12'),
-(20, 'Services', 'Checkups ETC', 0, '2025-08-29 05:16:40', '2025-08-29 05:16:48'),
-(21, 'test', '', 1, '2025-08-29 05:24:32', '2025-08-29 05:25:20');
+(20, 'Services', 'Checkups ETC', 0, '2025-08-29 05:16:40', '2025-08-29 05:16:48');
 
 -- --------------------------------------------------------
 
@@ -206,15 +219,7 @@ CREATE TABLE `price_subcategories` (
 --
 
 INSERT INTO `price_subcategories` (`id`, `category_id`, `name`, `description`, `created_at`, `updated_at`, `is_deleted`) VALUES
-(3, 13, 'Test', 'Test', '2025-08-29 05:08:33', '2025-08-29 05:08:33', 0),
-(4, 13, 'Test 2', '', '2025-08-29 05:14:24', '2025-08-29 05:14:56', 1),
-(5, 14, 'Double Vision 1', '', '2025-08-29 05:15:15', '2025-08-29 05:15:15', 0),
-(6, 15, 'Progressive 1', '', '2025-08-29 05:15:28', '2025-08-29 05:15:28', 0),
-(7, 16, 'Contact Lens 1', '', '2025-08-29 05:15:36', '2025-08-29 05:15:36', 0),
-(8, 17, 'Solutions 1', '', '2025-08-29 05:15:51', '2025-08-29 05:15:51', 0),
-(9, 19, 'Frames 1', '', '2025-08-29 05:16:03', '2025-08-29 05:16:03', 0),
-(10, 13, 'Test', '', '2025-08-29 05:24:40', '2025-08-29 05:24:46', 1),
-(11, 21, 'Test', '', '2025-08-29 05:24:57', '2025-08-29 05:25:07', 1);
+(13, 13, 'SV Uncoated', '', '2025-09-03 01:53:55', '2025-09-03 01:53:55', 0);
 
 -- --------------------------------------------------------
 
@@ -242,9 +247,7 @@ CREATE TABLE `products` (
 --
 
 INSERT INTO `products` (`id`, `subcategory_id`, `supplier_id`, `code`, `description`, `pc_price`, `pc_cost`, `stock`, `low_stock_threshold`, `stock_status`, `attributes`, `is_deleted`) VALUES
-(4, 5, 4, '1', 'Test', 1.00, 1.00, 0, 5, 'out-of-stock', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0,\"stock\":\"6\",\"low_stock_threshold\":\"5\"}', 0),
-(5, 3, NULL, '1', 'Item 1', 1.00, 1.00, 0, 5, 'out-of-stock', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0),
-(6, 9, 4, '1', 'Frame 1', 10.00, 10.00, 0, 5, 'out-of-stock', '{\"index\":\"\",\"diameter\":\"\",\"sphFR\":\"\",\"sphTo\":\"\",\"cylFr\":\"\",\"cylTo\":\"\",\"tp\":\"\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0,\"stock\":\"10\",\"low_stock_threshold\":\"5\"}', 0);
+(15, 13, 4, '1', 'SV 1', 1.00, 1.00, 10, 5, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0);
 
 --
 -- Triggers `products`
@@ -303,7 +306,14 @@ CREATE TABLE `spectacle_prescriptions` (
 
 INSERT INTO `spectacle_prescriptions` (`spectacleId`, `checkupId`, `sphereRight`, `cylinderRight`, `axisRight`, `additionRight`, `visualAcuityRight`, `monocularPdRight`, `sphereLeft`, `cylinderLeft`, `axisLeft`, `additionLeft`, `visualAcuityLeft`, `monocularPdLeft`) VALUES
 (6, 7, '+1', '1', '1', '1', '1', '1', '1', '1', '+2', '1', '1', '1'),
-(7, 8, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1');
+(7, 8, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(8, 9, '1', '1', NULL, NULL, NULL, NULL, '1', NULL, NULL, NULL, NULL, NULL),
+(9, 10, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(10, 11, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(11, 12, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(12, 13, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(13, 14, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(14, 15, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1');
 
 -- --------------------------------------------------------
 
@@ -328,7 +338,8 @@ CREATE TABLE `suppliers` (
 --
 
 INSERT INTO `suppliers` (`id`, `name`, `contact_person`, `contact_number`, `email`, `address`, `created_at`, `updated_at`, `is_deleted`) VALUES
-(4, 'Source ', 'Barley France', '09', 'Secret@gmail.com', 'Secret ang address ni source', '2025-08-29 07:39:12', '2025-08-29 07:39:12', 0);
+(4, 'Source ', 'Barley France', '09', 'Secret@gmail.com', 'Secret ang address ni source', '2025-08-29 07:39:12', '2025-08-29 07:39:12', 0),
+(5, 'Supplier 2', '', '', '', '', '2025-09-02 06:55:16', '2025-09-02 06:55:16', 0);
 
 -- --------------------------------------------------------
 
@@ -339,11 +350,14 @@ INSERT INTO `suppliers` (`id`, `name`, `contact_person`, `contact_number`, `emai
 CREATE TABLE `transactions` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `patient_id` int(11) NOT NULL,
+  `patient_id` int(11) DEFAULT NULL,
   `receipt_number` varchar(100) NOT NULL,
-  `total` decimal(10,2) DEFAULT NULL,
-  `total_discount` decimal(10,2) DEFAULT NULL,
-  `paid` tinyint(1) DEFAULT 0,
+  `subtotal_price` decimal(10,2) NOT NULL,
+  `total_discount` decimal(10,2) DEFAULT 0.00,
+  `final_price` decimal(10,2) NOT NULL,
+  `discount_percent` decimal(5,2) DEFAULT 0.00,
+  `status` enum('pending','fulfilled','cancelled','refunded') DEFAULT 'pending',
+  `deleted_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -358,8 +372,12 @@ CREATE TABLE `transaction_items` (
   `id` int(11) NOT NULL,
   `transaction_id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
+  `status` enum('fulfilled','pending','refunded') DEFAULT 'fulfilled',
   `quantity` int(11) NOT NULL,
+  `unit_price` decimal(10,2) NOT NULL,
   `discount` decimal(10,2) DEFAULT 0.00,
+  `refunded_quantity` int(11) DEFAULT 0,
+  `refunded_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -477,16 +495,16 @@ ALTER TABLE `suppliers`
 ALTER TABLE `transactions`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `receipt_number` (`receipt_number`),
-  ADD KEY `user_id` (`user_id`),
-  ADD KEY `patient_id` (`patient_id`);
+  ADD KEY `fk_transactions_user` (`user_id`),
+  ADD KEY `fk_transactions_patient` (`patient_id`);
 
 --
 -- Indexes for table `transaction_items`
 --
 ALTER TABLE `transaction_items`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `transaction_id` (`transaction_id`),
-  ADD KEY `product_id` (`product_id`);
+  ADD KEY `fk_transaction_items_tx` (`transaction_id`),
+  ADD KEY `fk_transaction_items_product` (`product_id`);
 
 --
 -- Indexes for table `users`
@@ -504,13 +522,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `checkups`
 --
 ALTER TABLE `checkups`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `contact_lens_prescriptions`
 --
 ALTER TABLE `contact_lens_prescriptions`
-  MODIFY `contactId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `contactId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `logs`
@@ -534,31 +552,31 @@ ALTER TABLE `patients`
 -- AUTO_INCREMENT for table `price_categories`
 --
 ALTER TABLE `price_categories`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `price_subcategories`
 --
 ALTER TABLE `price_subcategories`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `spectacle_prescriptions`
 --
 ALTER TABLE `spectacle_prescriptions`
-  MODIFY `spectacleId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `spectacleId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `suppliers`
 --
 ALTER TABLE `suppliers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `transactions`
@@ -637,15 +655,15 @@ ALTER TABLE `spectacle_prescriptions`
 -- Constraints for table `transactions`
 --
 ALTER TABLE `transactions`
-  ADD CONSTRAINT `transactions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `transactions_ibfk_2` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_transactions_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_transactions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `transaction_items`
 --
 ALTER TABLE `transaction_items`
-  ADD CONSTRAINT `transaction_items_ibfk_1` FOREIGN KEY (`transaction_id`) REFERENCES `transactions` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `transaction_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_transaction_items_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`),
+  ADD CONSTRAINT `fk_transaction_items_tx` FOREIGN KEY (`transaction_id`) REFERENCES `transactions` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
