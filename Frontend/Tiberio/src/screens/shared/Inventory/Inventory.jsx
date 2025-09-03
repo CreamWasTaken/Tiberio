@@ -442,13 +442,16 @@ function Inventory() {
                           onChange={(e) => handleFilterChange('lowStockThreshold', e.target.value)}
                           className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
-                        <input
-                          type="text"
-                          placeholder="status..."
+                        <select
                           value={filters.status}
                           onChange={(e) => handleFilterChange('status', e.target.value)}
-                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="">All Status</option>
+                          <option value="Normal">Normal</option>
+                          <option value="Low">Low</option>
+                          <option value="Out of stock">Out of Stock</option>
+                        </select>
                         <div></div> {/* Actions column - no filter */}
                       </div>
 
