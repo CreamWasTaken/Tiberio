@@ -161,18 +161,16 @@ exports.addItem = async (req, res) => {
     try {
         await conn.beginTransaction();
         
-        // Create attributes object with all the additional fields
+        // Create attributes object with all the additional fields (excluding stock and low_stock_threshold)
         const attributes = {
             index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
             steps, addFr, addTo, modality, set, bc,
-            volume, set_cost, service,
-            stock: stock ?? null,
-            low_stock_threshold: low_stock_threshold ?? null
+            volume, set_cost, service
         };
         
         const [result] = await conn.query(
-            "INSERT INTO products (subcategory_id, supplier_id, code, description, pc_price, pc_cost, attributes) VALUES (?, ?, ?, ?, ?, ?, ?)", 
-            [subcategory_id, supplier_id, code, description, pc_price, pc_cost, JSON.stringify(attributes)]
+            "INSERT INTO products (subcategory_id, supplier_id, code, description, pc_price, pc_cost, attributes, stock, low_stock_threshold) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+            [subcategory_id, supplier_id, code, description, pc_price, pc_cost, JSON.stringify(attributes), stock ?? 0, low_stock_threshold ?? 5]
         );
         await conn.commit();
         
@@ -220,11 +218,18 @@ exports.getItems = async (req, res) => {
         conn = await db.getConnection();
         const [result] = await conn.query("SELECT * FROM products WHERE subcategory_id = ? AND is_deleted = 0", [subcategoryId]);
         
-        // Parse attributes JSON for each item
-        const items = result.map(item => ({
-            ...item,
-            attributes: item.attributes ? JSON.parse(item.attributes) : {}
-        }));
+        // Parse attributes JSON for each item and include stock from actual columns
+        const items = result.map(item => {
+            const attributes = item.attributes ? JSON.parse(item.attributes) : {};
+            return {
+                ...item,
+                attributes: {
+                    ...attributes,
+                    stock: item.stock, // Use the actual stock column
+                    low_stock_threshold: item.low_stock_threshold // Use the actual low_stock_threshold column
+                }
+            };
+        });
         
         res.status(200).json({items: items});
     } catch (error) {
@@ -248,10 +253,17 @@ exports.getInventoryItems = async (req, res) => {
              WHERE p.is_deleted = 0 AND p.supplier_id IS NOT NULL`
         );
 
-        const items = result.map(item => ({
-            ...item,
-            attributes: item.attributes ? JSON.parse(item.attributes) : {}
-        }));
+        const items = result.map(item => {
+            const attributes = item.attributes ? JSON.parse(item.attributes) : {};
+            return {
+                ...item,
+                attributes: {
+                    ...attributes,
+                    stock: item.stock, // Use the actual stock column
+                    low_stock_threshold: item.low_stock_threshold // Use the actual low_stock_threshold column
+                }
+            };
+        });
 
         res.status(200).json({ items });
     } catch (error) {
@@ -305,18 +317,16 @@ exports.updateItem = async (req, res) => {
             }
         }
         
-        // Create attributes object with all the additional fields
+        // Create attributes object with all the additional fields (excluding stock and low_stock_threshold)
         const attributes = {
             index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
             steps, addFr, addTo, modality, set, bc,
-            volume, set_cost, service,
-            stock: stock ?? null,
-            low_stock_threshold: low_stock_threshold ?? null
+            volume, set_cost, service
         };
         
         const [result] = await conn.query(
-            "UPDATE products SET description = ?, code = ?, pc_price = ?, pc_cost = ?, subcategory_id = ?, supplier_id = ?, attributes = ? WHERE id = ?", 
-            [description, code, pc_price, pc_cost, subcategory_id, supplier_id, JSON.stringify(attributes), id]
+            "UPDATE products SET description = ?, code = ?, pc_price = ?, pc_cost = ?, subcategory_id = ?, supplier_id = ?, attributes = ?, stock = ?, low_stock_threshold = ? WHERE id = ?", 
+            [description, code, pc_price, pc_cost, subcategory_id, supplier_id, JSON.stringify(attributes), stock ?? 0, low_stock_threshold ?? 5, id]
         );
         await conn.commit();
         
