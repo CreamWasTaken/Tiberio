@@ -9,6 +9,7 @@ const patientRoutes = require("./routes/patientRoutes");
 const checkUpRoutes = require("./routes/checkUpRoutes");
 const supplierRoutes = require("./routes/supplierRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
+const transactionRoutes = require("./routes/transactionRoutes");
 const { testSocketEvent } = require("./test-socket-endpoint");
 
 const app = express();
@@ -38,6 +39,7 @@ app.use("/api/patients", patientRoutes);
 app.use("/api/checkups", checkUpRoutes);
 app.use("/api/suppliers", supplierRoutes);
 app.use("/api/categories", categoryRoutes);
+app.use("/api/transactions", transactionRoutes);
 
 // Test endpoint for Socket.IO
 app.get("/api/test-socket", testSocketEvent);
