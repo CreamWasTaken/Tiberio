@@ -63,7 +63,9 @@ function AdminDashboard() {
                 <h3 className="text-xl font-semibold text-white">User Management</h3>
               </div>
               <p className="text-gray-300 mb-4">Manage users, roles, and permissions</p>
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-200">
+              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-200"
+              onClick={() => navigate('/account')}
+              >
                 Manage Users
               </button>
             </div>
@@ -80,7 +82,7 @@ function AdminDashboard() {
               </div>
               <p className="text-gray-300 mb-4">Manage suppliers and their information</p>
               <button 
-                onClick={() => navigate('/suppliers')}
+                onClick={() => navigate('/admin/inventory-management')}
                 className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 px-4 rounded-lg transition-colors duration-200"
               >
                 Manage Inventory

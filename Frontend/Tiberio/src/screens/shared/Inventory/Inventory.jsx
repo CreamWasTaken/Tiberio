@@ -33,6 +33,7 @@ function Inventory() {
     pcPrice: '',
     pcCost: '',
     stock: '',
+    lowStockThreshold: '',
     status: ''
   });
   const [currentPage, setCurrentPage] = useState(1);
@@ -194,6 +195,7 @@ function Inventory() {
         (item.pc_price || '').toString().includes(filters.pcPrice) &&
         (item.pc_cost || '').toString().includes(filters.pcCost) &&
         (item.attributes?.stock || '').toString().includes(filters.stock) &&
+        (item.attributes?.low_stock_threshold || '').toString().includes(filters.lowStockThreshold) &&
         (() => {
           const stock = Number(item.attributes?.stock ?? 0);
           const low = Number(item.attributes?.low_stock_threshold ?? 0);
@@ -237,6 +239,7 @@ function Inventory() {
       pcPrice: '',
       pcCost: '',
       stock: '',
+      lowStockThreshold: '',
       status: ''
     });
     setCurrentPage(1);
@@ -319,7 +322,7 @@ function Inventory() {
                   ) : (
                     <div>
                       {/* Filter Row */}
-                      <div className="mb-4 grid gap-1 text-xs" style={{ gridTemplateColumns: 'repeat(18, minmax(0, 1fr))' }}>
+                      <div className="mb-4 grid gap-1 text-xs" style={{ gridTemplateColumns: 'repeat(19, minmax(0, 1fr))' }}>
                         <input
                           type="text"
                           placeholder="description..."
@@ -434,6 +437,13 @@ function Inventory() {
                         />
                         <input
                           type="text"
+                          placeholder="threshold..."
+                          value={filters.lowStockThreshold}
+                          onChange={(e) => handleFilterChange('lowStockThreshold', e.target.value)}
+                          className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
                           placeholder="status..."
                           value={filters.status}
                           onChange={(e) => handleFilterChange('status', e.target.value)}
@@ -463,6 +473,7 @@ function Inventory() {
                                 <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">PC Price</th>
                                 <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">PC Cost</th>
                                 <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Stock</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Threshold</th>
                                 <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Status</th>
                                 <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Actions</th>
                               </tr>
@@ -486,6 +497,7 @@ function Inventory() {
                                   <td className="px-2 py-2 text-[11px] text-green-400 font-semibold whitespace-nowrap">₱{parseFloat(item.pc_price || 0).toLocaleString()}</td>
                                   <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">₱{parseFloat(item.pc_cost || 0).toLocaleString()}</td>
                                   <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.stock ?? '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.low_stock_threshold ?? '-'}</td>
                                   <td className="px-2 py-2 text-[11px] whitespace-nowrap">
                                     {(() => {
                                       const stock = Number(item.attributes?.stock ?? 0);
