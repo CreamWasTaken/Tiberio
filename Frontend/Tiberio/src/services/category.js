@@ -102,3 +102,26 @@ export const deleteCategory = async (id) => {
     }
   }
 };
+
+export const getAllCategories = async (signal = null) => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.get(`${API_URL}/api/categories/get-category`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      signal: signal
+    });
+    return response.data.categories;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Request cancelled');
+    } else if (error.response) {
+      throw new Error(error.response.data.error);
+    } else if (error.request) {
+      throw new Error("No response from server");
+    } else {
+      throw new Error(error.message);
+    }
+  }
+};

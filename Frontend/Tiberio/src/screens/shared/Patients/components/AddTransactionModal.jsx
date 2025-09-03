@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { getInventoryItems } from '../../../../services/item';
 
 function AddTransactionModal({ 
   isOpen, 
   onClose, 
-  transactionForm, 
-  setTransactionForm, 
-  transactionFormError, 
   isSavingTransaction, 
   mode = 'add',
   onSubmit 
@@ -16,31 +14,48 @@ function AddTransactionModal({
   const [receiptNumber, setReceiptNumber] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [customerName, setCustomerName] = useState('');
-  const [overallDiscount, setOverallDiscount] = useState(0);
+  
+  // Dynamic data states
+  const [inventory, setInventory] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Mock inventory data - in real app this would come from API
-  const [inventory] = useState([
-    { id: 1, name: 'Eye Exam', category: 'services', price: 500.00, stock: 999 },
-    { id: 2, name: 'Consultation', category: 'services', price: 300.00, stock: 999 },
-    { id: 3, name: 'Eyeglasses Frame', category: 'frames', price: 1500.00, stock: 50 },
-    { id: 4, name: 'Eyeglasses Lens', category: 'lenses', price: 800.00, stock: 100 },
-    { id: 5, name: 'Contact Lenses (Monthly)', category: 'contacts', price: 1200.00, stock: 200 },
-    { id: 6, name: 'Contact Lenses (Daily)', category: 'contacts', price: 2500.00, stock: 150 },
-    { id: 7, name: 'Eye Drops', category: 'medications', price: 150.00, stock: 75 },
-    { id: 8, name: 'Contact Solution', category: 'accessories', price: 200.00, stock: 60 },
-    { id: 9, name: 'Eyeglasses Case', category: 'accessories', price: 100.00, stock: 80 },
-    { id: 10, name: 'Lens Cleaning Kit', category: 'accessories', price: 120.00, stock: 45 }
-  ]);
+  // Load inventory and categories when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      loadData();
+    }
+  }, [isOpen]);
 
-  const categories = [
-    { key: 'all', label: 'All Items' },
-    { key: 'services', label: 'Services' },
-    { key: 'frames', label: 'Frames' },
-    { key: 'lenses', label: 'Lenses' },
-    { key: 'contacts', label: 'Contact Lenses' },
-    { key: 'medications', label: 'Medications' },
-    { key: 'accessories', label: 'Accessories' }
-  ];
+  const loadData = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const inventoryData = await getInventoryItems();
+      
+      // Transform inventory data to match the expected format
+      const transformedInventory = inventoryData.map(item => ({
+        id: item.id,
+        name: item.description || 'Unnamed Product',
+        category: item.category_name || 'uncategorized',
+        subcategory: item.subcategory_name || 'No Subcategory',
+        price: parseFloat(item.pc_price) || 0,
+        stock: item.stock || 0,
+        code: item.code,
+        supplier: item.supplier_name,
+        subcategory_id: item.subcategory_id,
+        attributes: item.attributes
+      }));
+      
+      setInventory(transformedInventory);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error loading data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Generate receipt number on component mount
   useEffect(() => {
@@ -53,10 +68,19 @@ function AddTransactionModal({
 
   // Filter inventory based on search and category
   const filteredInventory = inventory.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (item.code && item.code.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  // Get unique categories from inventory for filtering
+  const availableCategories = [
+    { key: 'all', label: 'All Items' },
+    ...Array.from(new Set(inventory.map(item => item.category || 'uncategorized')))
+      .filter(cat => cat !== 'uncategorized')
+      .map(cat => ({ key: cat, label: cat.charAt(0).toUpperCase() + cat.slice(1) }))
+  ];
 
   // Add item to cart
   const addToCart = (item) => {
@@ -186,36 +210,62 @@ function AddTransactionModal({
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="px-6 py-4 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg min-w-[200px]"
                 >
-                  {categories.map(category => (
+                  {availableCategories.map(category => (
                     <option key={category.key} value={category.key}>
                       {category.label}
                     </option>
                   ))}
                 </select>
+                <button
+                  onClick={loadData}
+                  disabled={isLoading}
+                  className="px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-lg font-medium"
+                >
+                  {isLoading ? 'Loading...' : 'Refresh'}
+                </button>
               </div>
             </div>
 
             {/* Inventory Grid */}
             <div className="grid grid-cols-3 gap-6 overflow-y-auto max-h-[calc(95vh-400px)] custom-scrollbar">
-              {filteredInventory.map(item => (
-                <div
-                  key={item.id}
-                  className="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:border-blue-500 transition-colors cursor-pointer"
-                  onClick={() => addToCart(item)}
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-white font-medium text-base">{item.name}</h3>
-                    <span className="text-sm text-gray-400 capitalize">{item.category}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-green-400 font-bold text-xl">₱{item.price.toLocaleString()}</span>
-                    <span className="text-gray-400 text-sm">Stock: {item.stock}</span>
-                  </div>
-                  <div className="mt-3 text-center">
-                    <span className="text-blue-400 text-sm">Click to add to cart</span>
-                  </div>
+              {isLoading ? (
+                <div className="col-span-full text-center py-10 text-gray-400">
+                  <p>Loading inventory...</p>
                 </div>
-              ))}
+              ) : error ? (
+                <div className="col-span-full text-center py-10 text-red-400">
+                  <p>{error}</p>
+                </div>
+              ) : filteredInventory.length === 0 ? (
+                <div className="col-span-full text-center py-10 text-gray-400">
+                  <p>No items found matching your criteria.</p>
+                </div>
+              ) : (
+                filteredInventory.map(item => (
+                                     <div
+                     key={item.id}
+                     className="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:border-blue-500 transition-colors cursor-pointer"
+                     onClick={() => addToCart(item)}
+                   >
+                     <div className="flex justify-between items-start mb-3">
+                       <h3 className="text-white font-medium text-base">{item.name}</h3>
+                       <span className="text-sm text-gray-400 capitalize">{item.category}</span>
+                     </div>
+                     <div className="mb-2">
+                       <span className="text-xs text-gray-500 bg-gray-700 px-2 py-1 rounded">
+                         {item.subcategory}
+                       </span>
+                     </div>
+                     <div className="flex justify-between items-center">
+                       <span className="text-green-400 font-bold text-xl">₱{item.price.toLocaleString()}</span>
+                       <span className="text-gray-400 text-sm">Stock: {item.stock}</span>
+                     </div>
+                     <div className="mt-3 text-center">
+                       <span className="text-blue-400 text-sm">Click to add to cart</span>
+                     </div>
+                   </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -343,7 +393,25 @@ function AddTransactionModal({
                 </div>
               </div>
 
-    
+              {/* Payment Method */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Payment Method *
+                </label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                  required
+                >
+                  <option value="">Select payment method</option>
+                  <option value="cash">Cash</option>
+                  <option value="card">Card</option>
+                  <option value="gcash">GCash</option>
+                  <option value="maya">Maya</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                </select>
+              </div>
 
               {/* Action Buttons */}
               <div className="flex gap-4">

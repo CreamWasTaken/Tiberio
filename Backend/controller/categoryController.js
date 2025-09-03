@@ -247,9 +247,11 @@ exports.getInventoryItems = async (req, res) => {
     try {
         conn = await db.getConnection();
         const [result] = await conn.query(
-            `SELECT p.*, s.name AS supplier_name
+            `SELECT p.*, s.name AS supplier_name, pc.name AS category_name, ps.name AS subcategory_name
              FROM products p
              LEFT JOIN suppliers s ON p.supplier_id = s.id
+             LEFT JOIN price_subcategories ps ON p.subcategory_id = ps.id
+             LEFT JOIN price_categories pc ON ps.category_id = pc.id
              WHERE p.is_deleted = 0 AND p.supplier_id IS NOT NULL`
         );
 
