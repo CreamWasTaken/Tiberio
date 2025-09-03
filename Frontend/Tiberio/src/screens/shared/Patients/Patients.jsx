@@ -5,6 +5,7 @@ import Sidebar from '../../../components/Sidebar';
 import AddPatientModal from './components/AddPatientModal';
 import AddCheckupModal from './components/AddCheckupModal';
 import socketService from '../../../services/socket';
+import AddTransactionModal from './components/AddTransactionModal';
 
 function Patients() {
   const navigate = useNavigate();
@@ -329,6 +330,55 @@ function Patients() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Add transaction state variables
+  const [transactions, setTransactions] = useState([]);
+  const [expandedTransactions, setExpandedTransactions] = useState({});
+  const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
+  const [isSavingTransaction, setIsSavingTransaction] = useState(false);
+  const [transactionFormError, setTransactionFormError] = useState(null);
+  const [isEditTransactionMode, setIsEditTransactionMode] = useState(false);
+  const [editingTransactionId, setEditingTransactionId] = useState(null);
+  
+  const initialTransactionForm = {
+    receipt_number: '',
+    transaction_date: '',
+    amount: '',
+    payment_method: '',
+    transaction_type: '',
+    description: ''
+  };
+  const [transactionForm, setTransactionForm] = useState(initialTransactionForm);
+
+  // Load transactions when a patient is selected and transactions tab is active
+  useEffect(() => {
+    if (selectedPatient && activeTab === 'transactions') {
+      // For now, we'll use mock data. In the future, this would call an API
+      const mockTransactions = [
+        {
+          id: 1,
+          receipt_number: 'RCP-001',
+          transaction_date: '2024-01-15',
+          amount: 1500.00,
+          payment_method: 'cash',
+          transaction_type: 'consultation',
+          description: 'Initial consultation fee',
+          created_by_name: 'Dr. Smith'
+        },
+        {
+          id: 2,
+          receipt_number: 'RCP-002',
+          transaction_date: '2024-01-20',
+          amount: 2500.00,
+          payment_method: 'credit_card',
+          transaction_type: 'eyeglasses',
+          description: 'Eyeglasses purchase',
+          created_by_name: 'Dr. Johnson'
+        }
+      ];
+      setTransactions(mockTransactions);
+    }
+  }, [selectedPatient, activeTab]);
+
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 overflow-hidden">
       {/* Sidebar */}
@@ -536,8 +586,7 @@ function Patients() {
                   <nav className="-mb-px flex gap-6" aria-label="Tabs">
                     {[
                       { key: 'checkups', label: 'Checkups' },
-                      { key: 'transactions', label: 'Transactions' },
-                      { key: 'orders', label: 'Orders' }
+                      { key: 'transactions', label: 'Transactions' }
                     ].map(tab => (
                       <button
                         key={tab.key}
@@ -793,14 +842,116 @@ function Patients() {
                   )}
                   {selectedPatient && activeTab === 'transactions' && (
                     <div className="text-gray-200">
-                      <h3 className="text-lg font-semibold mb-3">Transactions</h3>
-                      <p className="text-gray-400 text-sm">No transactions to display yet. This is a placeholder.</p>
-                    </div>
-                  )}
-                  {selectedPatient && activeTab === 'orders' && (
-                    <div className="text-gray-200">
-                      <h3 className="text-lg font-semibold mb-3">Orders</h3>
-                      <p className="text-gray-400 text-sm">No orders to display yet. This is a placeholder.</p>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-lg font-semibold">Transactions</h3>
+                        {userRole === 'admin' && (
+                          <button
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm"
+                            onClick={() => { 
+                              setTransactionForm(initialTransactionForm); 
+                              setTransactionFormError(null); 
+                              setIsEditTransactionMode(false);
+                              setEditingTransactionId(null);
+                              setIsAddTransactionOpen(true); 
+                            }}
+                          >
+                            Add Transaction
+                          </button>
+                        )}
+                      </div>
+                      {(!transactions || transactions.length === 0) ? (
+                        <p className="text-gray-400 text-sm">No transactions yet.</p>
+                      ) : (
+                        <div className="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1">
+                          {transactions.map(t => (
+                            <div key={t.id} className="bg-gray-900/60 border border-gray-700 rounded-lg">
+                              <div className="flex items-center justify-between px-4 py-3">
+                                <button
+                                  className="flex-1 flex items-center justify-between text-left hover:bg-gray-800/60"
+                                  onClick={() => setExpandedTransactions(prev => ({ ...prev, [t.id]: !prev[t.id] }))}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <span className={'inline-block w-4 h-4 text-gray-300 transform transition-transform ' + (expandedTransactions[t.id] ? 'rotate-90' : '')}>▶</span>
+                                    <div className="flex flex-col items-start">
+                                      <div className="text-white font-medium text-sm">{t.receipt_number}</div>
+                                      <div className="text-gray-400 text-xs">{formatDateYMDSlash(t.transaction_date)}</div>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col items-end">
+                                    <div className="text-green-400 font-semibold text-sm">₱{Number(t.amount).toLocaleString()}</div>
+                                    <div className="text-gray-400 text-xs">By: {t.created_by_name || '—'}</div>
+                                  </div>
+                                </button>
+                                <div className="flex items-center gap-1">
+                                  {userRole === 'admin' && (
+                                    <>
+                                      <button
+                                        className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded"
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          // Prepare form data for editing
+                                          const editForm = {
+                                            receipt_number: t.receipt_number || '',
+                                            transaction_date: t.transaction_date ? formatDateYMD(t.transaction_date) : '',
+                                            amount: t.amount || '',
+                                            payment_method: t.payment_method || '',
+                                            transaction_type: t.transaction_type || '',
+                                            description: t.description || ''
+                                          };
+                                          setTransactionForm(editForm);
+                                          setEditingTransactionId(t.id);
+                                          setIsEditTransactionMode(true);
+                                          setIsAddTransactionOpen(true);
+                                        }}
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                      </button>
+                                      <button
+                                        className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded"
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          if (window.confirm('Are you sure you want to delete this transaction?')) {
+                                            // For now, just remove from local state. In the future, this would call an API
+                                            setTransactions(prev => prev.filter(transaction => transaction.id !== t.id));
+                                          }
+                                        }}
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              {expandedTransactions[t.id] && (
+                                <div className="px-4 pb-3 border-t border-gray-700">
+                                  <div className="pt-3 space-y-2 text-sm">
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div>
+                                        <span className="text-gray-400">Payment Method:</span>
+                                        <span className="ml-2 text-white capitalize">{t.payment_method || '—'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-400">Transaction Type:</span>
+                                        <span className="ml-2 text-white capitalize">{t.transaction_type?.replace('_', ' ') || '—'}</span>
+                                      </div>
+                                    </div>
+                                    {t.description && (
+                                      <div>
+                                        <span className="text-gray-400">Description:</span>
+                                        <span className="ml-2 text-white">{t.description}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -911,6 +1062,53 @@ function Patients() {
               }
             }}
                      />
+
+          {/* Add Transaction Modal */}
+          <AddTransactionModal
+            isOpen={isAddTransactionOpen}
+            onClose={() => { 
+              setIsAddTransactionOpen(false); 
+              setIsEditTransactionMode(false); 
+              setEditingTransactionId(null); 
+              setTransactionForm(initialTransactionForm); 
+            }}
+            transactionForm={transactionForm}
+            setTransactionForm={setTransactionForm}
+            transactionFormError={transactionFormError}
+            isSavingTransaction={isSavingTransaction}
+            mode={isEditTransactionMode ? 'edit' : 'add'}
+            onSubmit={async (e, transactionData) => {
+              e.preventDefault();
+              if (!selectedPatient) return;
+              setTransactionFormError(null);
+              setIsSavingTransaction(true);
+              try {
+                // For now, we'll just add to local state. In the future, this would call an API
+                if (isEditTransactionMode && editingTransactionId) {
+                  // Update existing transaction
+                  setTransactions(prev => prev.map(transaction => 
+                    transaction.id === editingTransactionId 
+                      ? { ...transaction, ...transactionData }
+                      : transaction
+                  ));
+                } else {
+                  // Add new transaction
+                  const newTransaction = {
+                    id: Date.now(), // Temporary ID for demo
+                    ...transactionData,
+                    created_by_name: 'Current User' // This would come from user context in real app
+                  };
+                  setTransactions(prev => [newTransaction, ...prev]);
+                }
+                setIsAddTransactionOpen(false);
+                setTransactionForm(initialTransactionForm);
+              } catch (err) {
+                setTransactionFormError(err.message || 'Failed to save transaction');
+              } finally {
+                setIsSavingTransaction(false);
+              }
+            }}
+          />
 
           {/* Custom Alert Modal */}
           {alertConfig.isOpen && (
