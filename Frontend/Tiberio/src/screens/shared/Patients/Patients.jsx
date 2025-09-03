@@ -1077,6 +1077,7 @@ function Patients() {
             transactionFormError={transactionFormError}
             isSavingTransaction={isSavingTransaction}
             mode={isEditTransactionMode ? 'edit' : 'add'}
+            selectedPatient={selectedPatient}
             onSubmit={async (e, transactionData) => {
               e.preventDefault();
               if (!selectedPatient) return;

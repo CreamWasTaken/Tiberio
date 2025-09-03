@@ -6,7 +6,8 @@ function AddTransactionModal({
   onClose, 
   isSavingTransaction, 
   mode = 'add',
-  onSubmit 
+  onSubmit,
+  selectedPatient = null
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState([]);
@@ -25,6 +26,15 @@ function AddTransactionModal({
       loadData();
     }
   }, [isOpen]);
+
+  // Set customer name when selectedPatient changes or modal opens
+  useEffect(() => {
+    if (isOpen && selectedPatient && selectedPatient.displayName) {
+      setCustomerName(selectedPatient.displayName);
+    } else if (!selectedPatient || !selectedPatient.displayName) {
+      setCustomerName('');
+    }
+  }, [selectedPatient, isOpen]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -55,15 +65,6 @@ function AddTransactionModal({
       setIsLoading(false);
     }
   };
-
-  // Generate receipt number on component mount
-  useEffect(() => {
-    if (isOpen) {
-      const timestamp = new Date().getTime();
-      const random = Math.floor(Math.random() * 1000);
-      setReceiptNumber(`RCP-${timestamp}-${random}`);
-    }
-  }, [isOpen]);
 
   // Filter inventory based on search and category
   const filteredInventory = inventory.filter(item => {
@@ -280,13 +281,21 @@ function AddTransactionModal({
                   required
                 />
               </div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Customer Name
+              </label>
               <input
                 type="text"
-                placeholder="Customer Name (Optional)"
+                placeholder={selectedPatient ? "Selected patient name" : "Customer Name (Optional)"}
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
               />
+              {selectedPatient && (
+                <p className="text-xs text-blue-400 mt-1">
+                  ✓ Auto-filled with selected patient: {selectedPatient.displayName}
+                </p>
+              )}
             </div>
 
             {/* Cart Items */}
@@ -392,7 +401,12 @@ function AddTransactionModal({
                   type="button"
                   onClick={() => {
                     setCart([]);
-                    setCustomerName('');
+                    // Reset customer name to selected patient's name if available
+                    if (selectedPatient && selectedPatient.displayName) {
+                      setCustomerName(selectedPatient.displayName);
+                    } else {
+                      setCustomerName('');
+                    }
                   }}
                   className="flex-1 px-6 py-4 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors text-lg font-medium"
                 >
