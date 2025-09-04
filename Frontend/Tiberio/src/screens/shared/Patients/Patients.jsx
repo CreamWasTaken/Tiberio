@@ -695,9 +695,9 @@ function Patients() {
                                         </svg>
                                       </button>
                                       <button
-                                       className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded"
-                                       onClick={async (e) => {
-                                         e.stopPropagation();
+                                        className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded"
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
                                          setAlertConfig({
                                            isOpen: true,
                                            title: 'Delete Checkup',
@@ -723,11 +723,11 @@ function Patients() {
                                          });
                                        }}
                                        title="Delete checkup"
-                                     >
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                      </svg>
-                                    </button>
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      </button>
                                     </>
                                   )}
                                 </div>
@@ -737,16 +737,16 @@ function Patients() {
                                   <div>
                                     <div className="text-gray-400 text-xs uppercase">Diagnosis</div>
                                     <div className="text-white">{c.diagnosis || '—'}</div>
-                                  </div>
+                                        </div>
                                   <div>
                                     <div className="text-gray-400 text-xs uppercase">Notes</div>
                                     <div className="text-white">{c.notes || '—'}</div>
-                                  </div>
+                                        </div>
                                   <div>
                                     <div className="text-gray-400 text-xs uppercase">Binocular PD</div>
                                     <div className="text-white">{c.binocular_pd || '—'}</div>
-                                  </div>
-                                </div>
+                                      </div>
+                                    </div>
 
                               {/* Spectacle Prescription Table */}
                               {c.spectacle_prescription && (
@@ -790,9 +790,9 @@ function Patients() {
                                         </tr>
                                       </tbody>
                                     </table>
-                                  </div>
-                                </div>
-                              )}
+                                        </div>
+                                          </div>
+                                        )}
 
                               {/* Contact Lens Prescription Table */}
                               {c.contact_lens_prescription && (
@@ -832,16 +832,17 @@ function Patients() {
                                         </tr>
                                       </tbody>
                                     </table>
-                                  </div>
-                                </div>
-                              )}
-                              </div>
+                                                    </div>
+                                                    </div>
+                                                      )}
+                                                    </div>
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
                   )}
+
                   {selectedPatient && activeTab === 'transactions' && (
                     <div className="text-gray-200">
                       <div className="flex items-center justify-between mb-3">
@@ -880,46 +881,47 @@ function Patients() {
                                   className="flex-1 flex items-center justify-between text-left hover:bg-gray-800/60"
                                   onClick={() => setExpandedTransactions(prev => ({ ...prev, [t.id]: !prev[t.id] }))}
                                 >
-                               <div className="flex items-center gap-3">
-                                  <span
-                                    className={
-                                      'inline-block w-4 h-4 text-gray-300 transform transition-transform ' +
-                                      (expandedTransactions[t.id] ? 'rotate-90' : '')
-                                    }
-                                  >
-                                    ▶
-                                  </span>
+                                  <div className="flex items-center gap-3">
+                                    <span
+                                      className={
+                                        'inline-block w-4 h-4 text-gray-300 transform transition-transform ' +
+                                        (expandedTransactions[t.id] ? 'rotate-90' : '')
+                                      }
+                                    >
+                                      ▶
+                                    </span>
 
-                                  <div className="flex flex-row items-center gap-6">
-                                    {/* Receipt number */}
-                                    <div className="text-white font-medium text-sm">
-                                      <span className="text-gray-400 mr-1">Receipt:</span>
-                                      {t.receipt_number}
-                                    </div>
-
-                                    {/* Dates */}
-                                    <div className="text-white font-medium text-sm">
-                                      <span className="text-gray-400 mr-1">Date:</span>
-                                      {t.transaction_date && formatDateYMDSlash(t.transaction_date)}
-                                      {t.created_at && (
-                                        <span className="ml-2 text-gray-500 text-xs font-normal">
-                                          (Created: {new Date(t.created_at).toLocaleDateString()})
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  </div>
-
-
-                                                                                                                                              <div className="flex flex-col items-end">
-                                      <div className="text-green-400 font-semibold text-sm">₱{Number(t.final_price || 0).toLocaleString()}</div>
-                                      {t.discount_percent && t.discount_percent > 0 && (
-                                        <div className="text-orange-400 text-xs">
-                                          {t.discount_percent}% discount
+                                    <div className="flex items-center justify-between w-full">
+                                      {/* Left side - Receipt number and date */}
+                                      <div className="flex flex-col">
+                                        <div className="flex items-center gap-3 mb-1">
+                                          <div className="text-white font-medium text-sm">
+                                            Receipt #{t.receipt_number}
+                                          </div>
+                                          <div className="text-gray-400 text-sm">
+                                            {(t.transaction_date && formatDateYMDSlash(t.transaction_date)) || (t.created_at && formatDateYMDSlash(t.created_at)) || '—'}
+                                          </div>
                                         </div>
-                                      )}
-                                      <div className="text-gray-400 text-xs">By: {t.user_first_name && t.user_last_name ? `${t.user_first_name} ${t.user_last_name}` : '—'}</div>
+                                        {t.discount_percent && t.discount_percent > 0 && (
+                                          <div>
+                                            <span className="text-orange-400 bg-orange-400/10 px-2 py-0.5 rounded text-xs">
+                                              {t.discount_percent}% OFF
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      {/* Right side - Price and added by */}
+                                      <div className="flex flex-col items-end">
+                                        <div className="text-green-400 font-semibold text-lg mb-1">
+                                          ₱{Number(t.final_price || 0).toLocaleString()}
+                                        </div>
+                                        <div className="text-gray-500 text-xs">
+                                          Added by: {t.user_first_name && t.user_last_name ? `${t.user_first_name} ${t.user_last_name}` : 'Unknown'}
+                                        </div>
+                                      </div>
                                     </div>
+                                  </div>
                                 </button>
                                 <div className="flex items-center gap-1">
                                   {userRole === 'admin' && (
@@ -967,72 +969,92 @@ function Patients() {
                               </div>
                               {expandedTransactions[t.id] && (
                                 <div className="px-4 pb-3 border-t border-gray-700">
-                                  <div className="pt-3 space-y-2 text-sm">
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div>
-                                        <span className="text-gray-400">Subtotal:</span>
-                                        <span className="ml-2 text-white">₱{Number(t.subtotal_price || 0).toLocaleString()}</span>
-                                      </div>
-                                      <div>
-                                        <span className="text-gray-400">Discount Amount:</span>
-                                        <span className="ml-2 text-white">₱{Number(t.total_discount || 0).toLocaleString()}</span>
-                                      </div>
-                                      <div>
-                                        <span className="text-gray-400">Discount %:</span>
-                                        <span className="ml-2 text-orange-400 font-semibold">
-                                          {t.discount_percent ? `${t.discount_percent}%` : '0%'}
-                                        </span>
-                                      </div>
-                                      <div>
-                                        <span className="text-gray-400">Final Price:</span>
-                                        <span className="ml-2 text-white font-semibold">₱{Number(t.final_price || 0).toLocaleString()}</span>
-                                      </div>
-                                      <div>
-                                        <span className="text-gray-400">Status:</span>
-                                        <span className="ml-2 text-white capitalize">{t.status || '—'}</span>
+                                  <div className="pt-4 space-y-4 text-sm">
+                                    {/* Financial Summary */}
+                                    <div className="bg-gray-800/40 rounded-lg p-4">
+                                      <h4 className="text-white font-medium mb-3">Financial Summary</h4>
+                                      <div className="grid grid-cols-2 gap-3">
+                                        <div className="flex justify-between">
+                                          <span className="text-gray-400">Subtotal:</span>
+                                          <span className="text-white font-medium">₱{Number(t.subtotal_price || 0).toLocaleString()}</span>
+                                        </div>
+                                        {t.discount_percent && t.discount_percent > 0 && (
+                                          <>
+                                            <div className="flex justify-between">
+                                              <span className="text-gray-400">Discount ({t.discount_percent}%):</span>
+                                              <span className="text-orange-400 font-medium">-₱{Number(t.total_discount || 0).toLocaleString()}</span>
+                                            </div>
+                                          </>
+                                        )}
+                                        <div className="flex justify-between border-t border-gray-600 pt-2 col-span-2">
+                                          <span className="text-gray-300 font-medium">Total Amount:</span>
+                                          <span className="text-green-400 font-bold text-lg">₱{Number(t.final_price || 0).toLocaleString()}</span>
+                                        </div>
                                       </div>
                                     </div>
-                                    {t.patient_first_name && t.patient_last_name && (
-                                      <div>
-                                        <span className="text-gray-400">Patient:</span>
-                                        <span className="ml-2 text-white">{t.patient_first_name} {t.patient_last_name}</span>
+
+                                    {/* Transaction Details */}
+                                    <div className="bg-gray-800/40 rounded-lg p-4">
+                                      <h4 className="text-white font-medium mb-3">Transaction Details</h4>
+                                      <div className="space-y-2">
+                                        {t.patient_first_name && t.patient_last_name && (
+                                          <div className="flex justify-between">
+                                            <span className="text-gray-400">Patient:</span>
+                                            <span className="text-white">{t.patient_first_name} {t.patient_last_name}</span>
+                                          </div>
+                                        )}
+                                        <div className="flex justify-between">
+                                          <span className="text-gray-400">Status:</span>
+                                          <span className="text-white capitalize">{t.status || 'Completed'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-gray-400">Receipt Number:</span>
+                                          <span className="text-white font-mono">#{t.receipt_number}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-gray-400">Transaction Date:</span>
+                                          <span className="text-white">{(t.transaction_date && formatDateYMDSlash(t.transaction_date)) || (t.created_at && formatDateYMDSlash(t.created_at)) || '—'}</span>
+                                        </div>
                                       </div>
-                                    )}
+                                    </div>
+                                    {/* Items List */}
                                     {t.items && t.items.length > 0 && (
-                                      <div className="mt-3">
-                                        <div className="text-gray-400 text-sm font-medium mb-2">Items ({t.items.length}):</div>
-                                        <div className="bg-gray-800/40 rounded-lg p-3 space-y-2">
+                                      <div className="bg-gray-800/40 rounded-lg p-4">
+                                        <h4 className="text-white font-medium mb-3">Items Purchased ({t.items.length})</h4>
+                                        <div className="space-y-3">
                                           {t.items.map((item, index) => {
                                             const basePrice = (item.quantity || 0) * (item.unit_price || 0);
                                             const itemDiscount = item.discount || 0;
                                             const itemTotal = basePrice - itemDiscount;
                                             
                                             return (
-                                              <div key={index} className="flex justify-between items-center bg-gray-700/30 rounded-md p-2">
-                                                <div className="flex-1">
-                                                  <div className="text-white text-sm font-medium">
-                                                    {item.product_description || item.product_code || 'Unknown Product'}
-                                                  </div>
-                                                  <div className="text-gray-400 text-xs">
-                                                    Code: {item.product_code || 'N/A'}
-                                                  </div>
-                                                  {itemDiscount > 0 && (
-                                                    <div className="text-orange-400 text-xs">
-                                                      Item discount: ₱{Number(itemDiscount).toLocaleString()}
+                                              <div key={index} className="bg-gray-700/40 rounded-md p-3 border-l-4 border-blue-500">
+                                                <div className="flex justify-between items-start">
+                                                  <div className="flex-1">
+                                                    <div className="text-white font-medium mb-1">
+                                                      {item.product_description || item.product_code || 'Unknown Product'}
                                                     </div>
-                                                  )}
-                                                </div>
-                                                <div className="text-right">
-                                                  <div className="text-white text-sm">
-                                                    {item.quantity || 0} × ₱{Number(item.unit_price || 0).toLocaleString()}
-                                                  </div>
-                                                  {itemDiscount > 0 && (
-                                                    <div className="text-gray-400 text-xs line-through">
-                                                      ₱{Number(basePrice).toLocaleString()}
+                                                    <div className="text-gray-400 text-xs mb-1">
+                                                      Product Code: {item.product_code || 'N/A'}
                                                     </div>
-                                                  )}
-                                                  <div className="text-green-400 text-sm font-semibold">
-                                                    ₱{Number(itemTotal).toLocaleString()}
+                                                    <div className="text-gray-300 text-sm">
+                                                      Quantity: {item.quantity || 0} × ₱{Number(item.unit_price || 0).toLocaleString()} each
+                                                    </div>
+                                                  </div>
+                                                  <div className="text-right ml-4">
+                                                    {itemDiscount > 0 && (
+                                                      <div className="text-gray-400 text-xs line-through mb-1">
+                                                        ₱{Number(basePrice).toLocaleString()}
+                                                      </div>
+                                                    )}
+                                                    <div className="text-green-400 font-semibold text-lg">
+                                                      ₱{Number(itemTotal).toLocaleString()}
+                                                    </div>
+                                                    {itemDiscount > 0 && (
+                                                      <div className="text-orange-400 text-xs">
+                                                        Saved: ₱{Number(itemDiscount).toLocaleString()}
+                                                      </div>
+                                                    )}
                                                   </div>
                                                 </div>
                                               </div>
@@ -1050,12 +1072,13 @@ function Patients() {
                       )}
                     </div>
                   )}
+                  
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Profile modal removed in favor of persistent left profile panel */}
+         
 
           {/* Add Patient Modal */}
           <AddPatientModal
@@ -1280,9 +1303,9 @@ function Patients() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     )}
-                  </div>
+        </div>
                   <h3 className="text-lg font-semibold text-white">{alertConfig.title}</h3>
-                </div>
+      </div>
                 <div className="bg-gray-800 border-x border-b border-gray-700 rounded-b-xl p-6">
                   <p className="text-gray-300 mb-6">{alertConfig.message}</p>
                   <div className="flex justify-end gap-3">
@@ -1305,7 +1328,7 @@ function Patients() {
                     >
                       {alertConfig.type === 'error' ? 'OK' : 'Confirm'}
                     </button>
-                  </div>
+    </div>
                 </div>
               </div>
             </div>
