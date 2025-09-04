@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi, updateCheckup as updateCheckupApi, deleteCheckup as deleteCheckupApi, getTotalCheckupsCount } from '../../../services/patient';
+import { createTransaction, getTransactions } from '../../../services/transaction';
 import Sidebar from '../../../components/Sidebar';
 import AddPatientModal from './components/AddPatientModal';
 import AddCheckupModal from './components/AddCheckupModal';
@@ -332,6 +333,8 @@ function Patients() {
 
   // Add transaction state variables
   const [transactions, setTransactions] = useState([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [transactionsError, setTransactionsError] = useState(null);
   const [expandedTransactions, setExpandedTransactions] = useState({});
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [isSavingTransaction, setIsSavingTransaction] = useState(false);
@@ -351,32 +354,25 @@ function Patients() {
 
   // Load transactions when a patient is selected and transactions tab is active
   useEffect(() => {
-    if (selectedPatient && activeTab === 'transactions') {
-      // For now, we'll use mock data. In the future, this would call an API
-      const mockTransactions = [
-        {
-          id: 1,
-          receipt_number: 'RCP-001',
-          transaction_date: '2024-01-15',
-          amount: 1500.00,
-          payment_method: 'cash',
-          transaction_type: 'consultation',
-          description: 'Initial consultation fee',
-          created_by_name: 'Dr. Smith'
-        },
-        {
-          id: 2,
-          receipt_number: 'RCP-002',
-          transaction_date: '2024-01-20',
-          amount: 2500.00,
-          payment_method: 'credit_card',
-          transaction_type: 'eyeglasses',
-          description: 'Eyeglasses purchase',
-          created_by_name: 'Dr. Johnson'
+    const fetchTransactions = async () => {
+      if (selectedPatient && activeTab === 'transactions') {
+        setTransactionsLoading(true);
+        setTransactionsError(null);
+        try {
+          const data = await getTransactions();
+          // Filter transactions for the selected patient if needed
+          // For now, we'll show all transactions since the backend doesn't have patient-specific filtering
+          setTransactions(data || []);
+        } catch (err) {
+          setTransactionsError(err.message || 'Failed to load transactions');
+          console.error('Error fetching transactions:', err);
+        } finally {
+          setTransactionsLoading(false);
         }
-      ];
-      setTransactions(mockTransactions);
-    }
+      }
+    };
+    
+    fetchTransactions();
   }, [selectedPatient, activeTab]);
 
   return (
@@ -859,7 +855,15 @@ function Patients() {
                           </button>
                         )}
                       </div>
-                      {(!transactions || transactions.length === 0) ? (
+                      {transactionsLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="text-gray-400 text-sm">Loading transactions...</div>
+                        </div>
+                      ) : transactionsError ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="text-red-400 text-sm">Error: {transactionsError}</div>
+                        </div>
+                      ) : (!transactions || transactions.length === 0) ? (
                         <p className="text-gray-400 text-sm">No transactions yet.</p>
                       ) : (
                         <div className="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1">
@@ -877,9 +881,9 @@ function Patients() {
                                       <div className="text-gray-400 text-xs">{formatDateYMDSlash(t.transaction_date)}</div>
                                     </div>
                                   </div>
-                                  <div className="flex flex-col items-end">
-                                    <div className="text-green-400 font-semibold text-sm">₱{Number(t.amount).toLocaleString()}</div>
-                                    <div className="text-gray-400 text-xs">By: {t.created_by_name || '—'}</div>
+                                                                      <div className="flex flex-col items-end">
+                                    <div className="text-green-400 font-semibold text-sm">₱{Number(t.final_price || 0).toLocaleString()}</div>
+                                    <div className="text-gray-400 text-xs">By: {t.user_first_name && t.user_last_name ? `${t.user_first_name} ${t.user_last_name}` : '—'}</div>
                                   </div>
                                 </button>
                                 <div className="flex items-center gap-1">
@@ -931,18 +935,38 @@ function Patients() {
                                   <div className="pt-3 space-y-2 text-sm">
                                     <div className="grid grid-cols-2 gap-4">
                                       <div>
-                                        <span className="text-gray-400">Payment Method:</span>
-                                        <span className="ml-2 text-white capitalize">{t.payment_method || '—'}</span>
+                                        <span className="text-gray-400">Subtotal:</span>
+                                        <span className="ml-2 text-white">₱{Number(t.subtotal_price || 0).toLocaleString()}</span>
                                       </div>
                                       <div>
-                                        <span className="text-gray-400">Transaction Type:</span>
-                                        <span className="ml-2 text-white capitalize">{t.transaction_type?.replace('_', ' ') || '—'}</span>
+                                        <span className="text-gray-400">Discount:</span>
+                                        <span className="ml-2 text-white">₱{Number(t.total_discount || 0).toLocaleString()}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-400">Final Price:</span>
+                                        <span className="ml-2 text-white font-semibold">₱{Number(t.final_price || 0).toLocaleString()}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-400">Status:</span>
+                                        <span className="ml-2 text-white capitalize">{t.status || '—'}</span>
                                       </div>
                                     </div>
-                                    {t.description && (
+                                    {t.patient_first_name && t.patient_last_name && (
                                       <div>
-                                        <span className="text-gray-400">Description:</span>
-                                        <span className="ml-2 text-white">{t.description}</span>
+                                        <span className="text-gray-400">Patient:</span>
+                                        <span className="ml-2 text-white">{t.patient_first_name} {t.patient_last_name}</span>
+                                      </div>
+                                    )}
+                                    {t.items && t.items.length > 0 && (
+                                      <div>
+                                        <span className="text-gray-400">Items:</span>
+                                        <div className="ml-2 mt-1 space-y-1">
+                                          {t.items.map((item, index) => (
+                                            <div key={index} className="text-white text-xs">
+                                              {item.product_description || item.product_code} - Qty: {item.quantity} - ₱{Number(item.unit_price || 0).toLocaleString()}
+                                            </div>
+                                          ))}
+                                        </div>
                                       </div>
                                     )}
                                   </div>
@@ -1084,27 +1108,63 @@ function Patients() {
               setTransactionFormError(null);
               setIsSavingTransaction(true);
               try {
-                // For now, we'll just add to local state. In the future, this would call an API
+                // Get user ID from localStorage (assuming it's stored there)
+                const userId = localStorage.getItem('userId');
+                if (!userId) {
+                  throw new Error('User not authenticated');
+                }
+
+                // Prepare transaction data for API
+                const apiTransactionData = {
+                  user_id: parseInt(userId),
+                  patient_id: selectedPatient.id,
+                  receipt_number: transactionData.receipt_number,
+                  items: transactionData.items.map(item => ({
+                    product_id: item.id,
+                    quantity: item.quantity,
+                    discount: item.discount || 0
+                  })),
+                  discount_percent: transactionData.overall_discount || 0
+                };
+
                 if (isEditTransactionMode && editingTransactionId) {
-                  // Update existing transaction
+                  // Update existing transaction - you'll need to implement updateTransaction API
+                  // For now, we'll keep the local state update
                   setTransactions(prev => prev.map(transaction => 
                     transaction.id === editingTransactionId 
                       ? { ...transaction, ...transactionData }
                       : transaction
                   ));
                 } else {
-                  // Add new transaction
+                  // Create new transaction via API
+                  const response = await createTransaction(apiTransactionData);
+                  
+                  // Add the new transaction to local state with the response data
                   const newTransaction = {
-                    id: Date.now(), // Temporary ID for demo
-                    ...transactionData,
+                    id: response.transaction_id,
+                    receipt_number: response.receipt_number,
+                    subtotal_price: response.subtotal_price,
+                    total_discount: response.total_discount,
+                    final_price: response.final_price,
+                    discount_percent: transactionData.overall_discount || 0,
+                    transaction_date: new Date().toISOString().split('T')[0],
+                    transaction_type: 'pos_sale',
+                    description: 'POS Transaction',
+                    items: transactionData.items,
+                    customer_name: transactionData.customer_name,
                     created_by_name: 'Current User' // This would come from user context in real app
                   };
                   setTransactions(prev => [newTransaction, ...prev]);
                 }
+                
                 setIsAddTransactionOpen(false);
                 setTransactionForm(initialTransactionForm);
+                
+                // Show success message
+                alert('Transaction created successfully!');
               } catch (err) {
                 setTransactionFormError(err.message || 'Failed to save transaction');
+                console.error('Transaction error:', err);
               } finally {
                 setIsSavingTransaction(false);
               }

@@ -1,0 +1,67 @@
+import { apiClient } from './apiUtils';
+
+// Create a new transaction
+export const createTransaction = async (transactionData) => {
+  try {
+    const response = await apiClient.post('/api/transactions/add-transaction', transactionData);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating transaction:', error);
+    throw new Error(error.response?.data?.error || 'Failed to create transaction');
+  }
+};
+
+// Get all transactions
+export const getTransactions = async () => {
+  try {
+    const response = await apiClient.get('/api/transactions/get-transactions');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    throw new Error(error.response?.data?.error || 'Failed to fetch transactions');
+  }
+};
+
+// Get transaction by ID
+export const getTransactionById = async (transactionId) => {
+  try {
+    const response = await apiClient.get(`/api/transactions/get-transaction/${transactionId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching transaction:', error);
+    throw new Error(error.response?.data?.error || 'Failed to fetch transaction');
+  }
+};
+
+// Update transaction
+export const updateTransaction = async (transactionId, transactionData) => {
+  try {
+    const response = await apiClient.put(`/api/transactions/update-transaction/${transactionId}`, transactionData);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating transaction:', error);
+    throw new Error(error.response?.data?.error || 'Failed to update transaction');
+  }
+};
+
+// Delete transaction
+export const deleteTransaction = async (transactionId) => {
+  try {
+    const response = await apiClient.delete(`/api/transactions/delete-transaction/${transactionId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting transaction:', error);
+    throw new Error(error.response?.data?.error || 'Failed to delete transaction');
+  }
+};
+
+// Get transactions by patient ID - NOT IMPLEMENTED IN BACKEND
+// export const getTransactionsByPatient = async (patientId) => {
+//   try {
+//     const response = await apiClient.get(`/api/transactions/patient/${patientId}`);
+//     return response.data;
+//   } catch (error) {
+//     console.error('Error fetching patient transactions:', error);
+//     throw new Error(error.response?.data?.error || 'Failed to fetch patient transactions');
+//   }
+// };
