@@ -55,6 +55,17 @@ export const deleteTransaction = async (transactionId) => {
   }
 };
 
+// Fulfill individual transaction item
+export const fulfillTransactionItem = async (itemId) => {
+  try {
+    const response = await apiClient.patch(`/api/transactions/fulfill-item/${itemId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fulfilling transaction item:', error);
+    throw new Error(error.response?.data?.error || 'Failed to fulfill transaction item');
+  }
+};
+
 // Get transactions by patient ID - NOT IMPLEMENTED IN BACKEND
 // export const getTransactionsByPatient = async (patientId) => {
 //   try {

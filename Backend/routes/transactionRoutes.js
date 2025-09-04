@@ -14,6 +14,9 @@ router.delete("/delete-transaction/:id",transactionController.deleteTransaction)
 router.patch("/fulfill-transaction/:id", authenticateToken, transactionController.fulfillTransaction);
 router.patch("/cancel-transaction/:id", authenticateToken, transactionController.cancelTransaction);
 
+// Individual item management
+router.patch("/fulfill-item/:itemId", authenticateToken, transactionController.fulfillTransactionItem);
+
 // Get transaction items
 router.get("/get-transaction-items/:transactionId", authenticateToken, transactionController.getTransactionItems);
 

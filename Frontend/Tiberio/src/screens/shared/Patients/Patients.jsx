@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi, updateCheckup as updateCheckupApi, deleteCheckup as deleteCheckupApi, getTotalCheckupsCount } from '../../../services/patient';
-import { createTransaction, getTransactions } from '../../../services/transaction';
+import { createTransaction, getTransactions, fulfillTransactionItem } from '../../../services/transaction';
 import Sidebar from '../../../components/Sidebar';
 import AddPatientModal from './components/AddPatientModal';
 import AddCheckupModal from './components/AddCheckupModal';
@@ -847,7 +847,7 @@ function Patients() {
                     <div className="text-gray-200">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-lg font-semibold">Transactions</h3>
-                        {userRole === 'admin' && (
+                        {(userRole === 'admin' || userRole === 'employee') && (
                           <button
                             className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm"
                             onClick={() => { 
@@ -1020,19 +1020,73 @@ function Patients() {
                                     {/* Items List */}
                                     {t.items && t.items.length > 0 && (
                                       <div className="bg-gray-800/40 rounded-lg p-4">
-                                        <h4 className="text-white font-medium mb-3">Items Purchased ({t.items.length})</h4>
+                                        <div className="flex items-center justify-between mb-3">
+                                          <h4 className="text-white font-medium">Items Purchased ({t.items.length})</h4>
+                                          <div className="flex items-center gap-2 text-sm">
+                                            {(() => {
+                                              const fulfilledCount = t.items.filter(item => item.status === 'fulfilled').length;
+                                              const pendingCount = t.items.filter(item => item.status === 'pending').length;
+                                              const refundedCount = t.items.filter(item => item.status === 'refunded').length;
+                                              
+                                              return (
+                                                <>
+                                                  {fulfilledCount > 0 && (
+                                                    <span className="bg-green-600 text-white px-2 py-1 rounded text-xs">
+                                                      {fulfilledCount} Fulfilled
+                                                    </span>
+                                                  )}
+                                                  {pendingCount > 0 && (
+                                                    <span className="bg-yellow-600 text-white px-2 py-1 rounded text-xs">
+                                                      {pendingCount} Pending
+                                                    </span>
+                                                  )}
+                                                  {refundedCount > 0 && (
+                                                    <span className="bg-red-600 text-white px-2 py-1 rounded text-xs">
+                                                      {refundedCount} Refunded
+                                                    </span>
+                                                  )}
+                                                </>
+                                              );
+                                            })()}
+                                          </div>
+                                        </div>
                                         <div className="space-y-3">
                                           {t.items.map((item, index) => {
                                             const basePrice = (item.quantity || 0) * (item.unit_price || 0);
                                             const itemDiscount = item.discount || 0;
                                             const itemTotal = basePrice - itemDiscount;
+                                            const isFulfilled = item.status === 'fulfilled';
                                             
                                             return (
-                                              <div key={index} className="bg-gray-700/40 rounded-md p-3 border-l-4 border-blue-500">
+                                              <div key={index} className={`bg-gray-700/40 rounded-md p-3 border-l-4 ${
+                                                item.status === 'fulfilled' 
+                                                  ? 'border-green-500' 
+                                                  : item.status === 'pending'
+                                                  ? 'border-yellow-500'
+                                                  : item.status === 'refunded'
+                                                  ? 'border-red-500'
+                                                  : 'border-blue-500'
+                                              }`}>
                                                 <div className="flex justify-between items-start">
                                                   <div className="flex-1">
-                                                    <div className="text-white font-medium mb-1">
-                                                      {item.product_description || item.product_code || 'Unknown Product'}
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                      <div className="text-white font-medium">
+                                                        {item.product_description || item.product_code || 'Unknown Product'}
+                                                      </div>
+                                                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                                        item.status === 'fulfilled' 
+                                                          ? 'bg-green-600 text-white' 
+                                                          : item.status === 'pending'
+                                                          ? 'bg-yellow-600 text-white'
+                                                          : item.status === 'refunded'
+                                                          ? 'bg-red-600 text-white'
+                                                          : 'bg-gray-600 text-white'
+                                                      }`}>
+                                                        {item.status === 'fulfilled' && '✓ Fulfilled'}
+                                                        {item.status === 'pending' && '⏳ Pending'}
+                                                        {item.status === 'refunded' && '↩️ Refunded'}
+                                                        {!item.status && '❓ Unknown'}
+                                                      </span>
                                                     </div>
                                                     <div className="text-gray-400 text-xs mb-1">
                                                       Product Code: {item.product_code || 'N/A'}
@@ -1054,6 +1108,26 @@ function Patients() {
                                                       <div className="text-orange-400 text-xs">
                                                         Saved: ₱{Number(itemDiscount).toLocaleString()}
                                                       </div>
+                                                    )}
+                                                    {!isFulfilled && (userRole === 'admin' || userRole === 'employee') && (
+                                                      <button
+                                                        onClick={async () => {
+                                                          try {
+                                                            await fulfillTransactionItem(item.id);
+                                                            // Refresh transactions to show updated status
+                                                            const data = await getTransactions();
+                                                            const patientTransactions = (data || []).filter(transaction => 
+                                                              transaction.patient_id === selectedPatient.id
+                                                            );
+                                                            setTransactions(patientTransactions);
+                                                          } catch (err) {
+                                                            alert('Failed to fulfill item: ' + err.message);
+                                                          }
+                                                        }}
+                                                        className="mt-2 bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded transition-colors duration-200"
+                                                      >
+                                                        Fulfill Item
+                                                      </button>
                                                     )}
                                                   </div>
                                                 </div>

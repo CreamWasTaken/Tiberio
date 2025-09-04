@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 03, 2025 at 07:20 AM
+-- Generation Time: Sep 04, 2025 at 08:18 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,6 +20,52 @@ SET time_zone = "+00:00";
 --
 -- Database: `tiberio`
 --
+
+DELIMITER $$
+--
+-- Procedures
+--
+CREATE DEFINER=`root`@`localhost` PROCEDURE `update_transaction_status` (IN `tx_id` INT)   BEGIN
+    DECLARE total_items INT;
+    DECLARE fulfilled_items INT;
+    DECLARE refunded_items INT;
+    DECLARE new_final DECIMAL(10,2);
+
+    -- Count total, fulfilled, refunded
+    SELECT COUNT(*), 
+           SUM(status = 'fulfilled'),
+           SUM(status = 'refunded')
+    INTO total_items, fulfilled_items, refunded_items
+    FROM transaction_items
+    WHERE transaction_id = tx_id;
+
+    -- Recalculate final price as sum of all non-refunded quantities
+    SELECT COALESCE(SUM(((quantity - refunded_quantity) * unit_price) - discount),0)
+    INTO new_final
+    FROM transaction_items
+    WHERE transaction_id = tx_id;
+
+    -- Update transaction final_price
+    UPDATE transactions
+    SET final_price = new_final
+    WHERE id = tx_id;
+
+    -- Decide parent status
+    IF total_items = fulfilled_items THEN
+        UPDATE transactions SET status = 'fulfilled' WHERE id = tx_id;
+
+    ELSEIF total_items = refunded_items THEN
+        UPDATE transactions SET status = 'refunded' WHERE id = tx_id;
+
+    ELSEIF refunded_items > 0 AND fulfilled_items > 0 THEN
+        UPDATE transactions SET status = 'partially_refunded' WHERE id = tx_id;
+
+    ELSE
+        UPDATE transactions SET status = 'pending' WHERE id = tx_id;
+    END IF;
+END$$
+
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -219,7 +265,8 @@ CREATE TABLE `price_subcategories` (
 --
 
 INSERT INTO `price_subcategories` (`id`, `category_id`, `name`, `description`, `created_at`, `updated_at`, `is_deleted`) VALUES
-(13, 13, 'SV Uncoated', '', '2025-09-03 01:53:55', '2025-09-03 01:53:55', 0);
+(13, 13, 'SV Uncoated', '', '2025-09-03 01:53:55', '2025-09-03 01:53:55', 0),
+(14, 14, 'DV Uncoated', '', '2025-09-03 06:20:44', '2025-09-03 06:20:44', 0);
 
 -- --------------------------------------------------------
 
@@ -247,7 +294,8 @@ CREATE TABLE `products` (
 --
 
 INSERT INTO `products` (`id`, `subcategory_id`, `supplier_id`, `code`, `description`, `pc_price`, `pc_cost`, `stock`, `low_stock_threshold`, `stock_status`, `attributes`, `is_deleted`) VALUES
-(15, 13, 4, '1', 'SV 1', 1.00, 1.00, 10, 5, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0);
+(15, 13, 4, '1', 'SV 1', 1.00, 1.00, 0, 5, 'out-of-stock', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0),
+(16, 14, 4, '1', 'DV 1', 2.00, 2.00, 4, 5, 'low', '{\"index\":\"2\",\"diameter\":\"2\",\"sphFR\":\"2\",\"sphTo\":\"2\",\"cylFr\":\"2\",\"cylTo\":\"2\",\"tp\":\"2\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0);
 
 --
 -- Triggers `products`
@@ -356,11 +404,18 @@ CREATE TABLE `transactions` (
   `total_discount` decimal(10,2) DEFAULT 0.00,
   `final_price` decimal(10,2) NOT NULL,
   `discount_percent` decimal(5,2) DEFAULT 0.00,
-  `status` enum('pending','fulfilled','cancelled','refunded') DEFAULT 'pending',
+  `status` enum('pending','fulfilled','cancelled','refunded','partially_refunded') DEFAULT 'pending',
   `deleted_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `transactions`
+--
+
+INSERT INTO `transactions` (`id`, `user_id`, `patient_id`, `receipt_number`, `subtotal_price`, `total_discount`, `final_price`, `discount_percent`, `status`, `deleted_at`, `created_at`, `updated_at`) VALUES
+(7, 1, 7, '123', 3.00, 0.00, 1.00, 0.00, 'pending', NULL, '2025-09-04 06:15:53', '2025-09-04 06:17:45');
 
 -- --------------------------------------------------------
 
@@ -372,7 +427,7 @@ CREATE TABLE `transaction_items` (
   `id` int(11) NOT NULL,
   `transaction_id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
-  `status` enum('fulfilled','pending','refunded') DEFAULT 'fulfilled',
+  `status` enum('fulfilled','pending','refunded') DEFAULT 'pending',
   `quantity` int(11) NOT NULL,
   `unit_price` decimal(10,2) NOT NULL,
   `discount` decimal(10,2) DEFAULT 0.00,
@@ -381,6 +436,30 @@ CREATE TABLE `transaction_items` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `transaction_items`
+--
+
+INSERT INTO `transaction_items` (`id`, `transaction_id`, `product_id`, `status`, `quantity`, `unit_price`, `discount`, `refunded_quantity`, `refunded_at`, `created_at`, `updated_at`) VALUES
+(10, 7, 16, 'refunded', 1, 2.00, 0.00, 1, NULL, '2025-09-04 06:15:53', '2025-09-04 06:17:56'),
+(11, 7, 15, 'pending', 1, 1.00, 0.00, 0, NULL, '2025-09-04 06:15:53', '2025-09-04 06:15:53');
+
+--
+-- Triggers `transaction_items`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_transaction_items_after_insert` AFTER INSERT ON `transaction_items` FOR EACH ROW BEGIN
+    CALL update_transaction_status(NEW.transaction_id);
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_transaction_items_after_update` AFTER UPDATE ON `transaction_items` FOR EACH ROW BEGIN
+    CALL update_transaction_status(NEW.transaction_id);
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -558,13 +637,13 @@ ALTER TABLE `price_categories`
 -- AUTO_INCREMENT for table `price_subcategories`
 --
 ALTER TABLE `price_subcategories`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `spectacle_prescriptions`
@@ -582,13 +661,13 @@ ALTER TABLE `suppliers`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `transaction_items`
 --
 ALTER TABLE `transaction_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `users`

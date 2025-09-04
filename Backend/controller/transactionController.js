@@ -427,6 +427,57 @@ exports.deleteTransaction = async (req, res) => {
   }
 };
 
+// Fulfill individual transaction item
+exports.fulfillTransactionItem = async (req, res) => {
+  try {
+    const { itemId } = req.params;
+
+    // Check if transaction item exists
+    const [existingItem] = await db.execute(
+      "SELECT id, status, transaction_id FROM transaction_items WHERE id = ?",
+      [itemId]
+    );
+
+    if (existingItem.length === 0) {
+      return res.status(404).json({ error: "Transaction item not found" });
+    }
+
+    if (existingItem[0].status === 'fulfilled') {
+      return res.status(400).json({ error: "Item is already fulfilled" });
+    }
+
+    // Update item status to fulfilled
+    await db.execute(
+      "UPDATE transaction_items SET status = 'fulfilled', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [itemId]
+    );
+
+    // Check if all items in the transaction are now fulfilled
+    const [remainingItems] = await db.execute(
+      "SELECT COUNT(*) as pending_count FROM transaction_items WHERE transaction_id = ? AND status != 'fulfilled'",
+      [existingItem[0].transaction_id]
+    );
+
+    // If all items are fulfilled, update the transaction status as well
+    if (remainingItems[0].pending_count === 0) {
+      await db.execute(
+        "UPDATE transactions SET status = 'fulfilled', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [existingItem[0].transaction_id]
+      );
+    }
+
+    res.json({ 
+      message: "Item fulfilled successfully",
+      transaction_id: existingItem[0].transaction_id,
+      all_items_fulfilled: remainingItems[0].pending_count === 0
+    });
+
+  } catch (error) {
+    console.error("Error fulfilling transaction item:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 // Get transaction items by transaction ID
 exports.getTransactionItems = async (req, res) => {
   try {
