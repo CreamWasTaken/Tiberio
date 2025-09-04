@@ -189,6 +189,12 @@ exports.addItem = async (req, res) => {
             if (newItem.attributes_json) {
                 newItem.attributes = JSON.parse(newItem.attributes_json);
             }
+            // Add stock and low_stock_threshold to attributes for frontend compatibility
+            newItem.attributes = {
+                ...newItem.attributes,
+                stock: newItem.stock,
+                low_stock_threshold: newItem.low_stock_threshold
+            };
             delete newItem.attributes_json;
             
             // Emit Socket.IO events with complete item data
@@ -347,6 +353,12 @@ exports.updateItem = async (req, res) => {
             if (updatedItem.attributes_json) {
                 updatedItem.attributes = JSON.parse(updatedItem.attributes_json);
             }
+            // Add stock and low_stock_threshold to attributes for frontend compatibility
+            updatedItem.attributes = {
+                ...updatedItem.attributes,
+                stock: updatedItem.stock,
+                low_stock_threshold: updatedItem.low_stock_threshold
+            };
             delete updatedItem.attributes_json;
             
             // Emit Socket.IO events with complete item data
@@ -399,6 +411,12 @@ exports.deleteItem = async (req, res) => {
             if (deletedItem.attributes_json) {
                 deletedItem.attributes = JSON.parse(deletedItem.attributes_json);
             }
+            // Add stock and low_stock_threshold to attributes for frontend compatibility
+            deletedItem.attributes = {
+                ...deletedItem.attributes,
+                stock: deletedItem.stock,
+                low_stock_threshold: deletedItem.low_stock_threshold
+            };
             delete deletedItem.attributes_json;
             
             // Emit Socket.IO events with complete item data

@@ -70,7 +70,7 @@ function Inventory() {
     };
   }, []);
 
-  // Socket.IO real-time updates
+  // Socket.IO real-time updates - setup immediately when component mounts
   useEffect(() => {
     const setupSocketIO = async () => {
       try {
@@ -89,7 +89,6 @@ function Inventory() {
         // Listen for inventory updates
         const handleInventoryUpdate = (data) => {
           console.log('🔌 Real-time inventory update received:', data);
-          console.log('🔌 Current items count before update:', items.length);
           
           if (data.type === 'added' && data.item) {
             console.log('🔌 Processing ADD event for item:', data.item.id);
@@ -126,10 +125,16 @@ function Inventory() {
 
         socket.on('inventory-updated', handleInventoryUpdate);
         console.log('🔌 Inventory update listener registered');
+        
+        // Add test event listener for debugging
+        socket.on('test-connection', (data) => {
+          console.log('🔌 Test event received in Inventory:', data);
+        });
 
         return () => {
           console.log('🔌 Cleaning up Socket.IO for Inventory...');
           socket.off('inventory-updated', handleInventoryUpdate);
+          socket.off('test-connection');
           socketService.leaveRoom('inventory-updated');
         };
       } catch (error) {
@@ -138,7 +143,7 @@ function Inventory() {
     };
 
     setupSocketIO();
-  }, []);
+  }, []); // Run once when component mounts
   
   // Get user role from localStorage
   const userRole = localStorage.getItem('userRole') || 'employee';
@@ -275,6 +280,20 @@ function Inventory() {
                 <div className="ml-3 flex items-center">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
                   <span className="text-xs text-green-400">Live Updates</span>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const socket = await socketService.waitForConnection();
+                        socket.emit('test-connection', { message: 'Test from Inventory', timestamp: new Date().toISOString() });
+                        console.log('🔌 Test event sent from Inventory');
+                      } catch (error) {
+                        console.error('🔌 Failed to send test event:', error);
+                      }
+                    }}
+                    className="ml-4 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
+                  >
+                    Test Socket
+                  </button>
                 </div>
               </div>
 
@@ -655,6 +674,9 @@ function Inventory() {
                 <button
                   onClick={async () => {
                     try {
+                      console.log('🔌 Starting item update for ID:', editingItem.id);
+                      console.log('🔌 Socket connection status:', socketService.getConnectionStatus());
+                      
                       // Save supplier_id directly; stock and threshold in attributes
                       const payload = {
                         ...editingItem,
@@ -663,9 +685,13 @@ function Inventory() {
                         stock: editForm.stock,
                         low_stock_threshold: editForm.low_stock_threshold
                       };
-                      await updateItem(editingItem.id, payload);
+                      
+                      console.log('🔌 Sending update payload:', payload);
+                      const result = await updateItem(editingItem.id, payload);
+                      console.log('🔌 Update API response:', result);
+                      
                       setEditingItem(null);
-                      // Socket.IO will automatically update the UI in real-time
+                      console.log('🔌 Modal closed, socket should update automatically...');
                     } catch (e) {
                       console.error('Failed to update item', e);
                     }

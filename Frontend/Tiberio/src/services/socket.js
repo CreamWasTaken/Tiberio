@@ -66,6 +66,14 @@ class SocketService {
     } else {
       console.log(`❌ Cannot join room ${room}: socket not connected`);
       console.log(`🔌 Socket status:`, this.getConnectionStatus());
+      // Try to wait for connection and then join
+      this.waitForConnection().then(() => {
+        console.log(`🔌 Connection established, now joining room: ${room}`);
+        this.socket.emit('join-room', room);
+        console.log(`🔌 Room join request sent for: ${room} (delayed)`);
+      }).catch(error => {
+        console.error(`🔌 Failed to establish connection for room ${room}:`, error);
+      });
     }
   }
 
@@ -114,7 +122,7 @@ class SocketService {
 
   // Wait for connection to be established
   waitForConnection() {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       // Ensure socket is connected first
       if (!this.socket) {
         this.connect();
@@ -126,9 +134,25 @@ class SocketService {
         // If not connected, wait for connection
         const onConnect = () => {
           this.socket.off('connect', onConnect);
+          this.socket.off('connect_error', onError);
           resolve(this.socket);
         };
+        
+        const onError = (error) => {
+          this.socket.off('connect', onConnect);
+          this.socket.off('connect_error', onError);
+          reject(error);
+        };
+        
         this.socket.on('connect', onConnect);
+        this.socket.on('connect_error', onError);
+        
+        // Timeout after 10 seconds
+        setTimeout(() => {
+          this.socket.off('connect', onConnect);
+          this.socket.off('connect_error', onError);
+          reject(new Error('Connection timeout'));
+        }, 10000);
       }
     });
   }
