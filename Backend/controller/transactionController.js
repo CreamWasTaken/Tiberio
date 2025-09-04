@@ -1,6 +1,19 @@
 require("dotenv").config();
 const db = require("../config/db");
 
+// Helper function to emit Socket.IO events
+const emitSocketEvent = (req, event, data) => {
+  const io = req.app.get('io');
+  if (io) {
+    console.log(`🔌 Emitting Socket.IO event: ${event}`, data);
+    console.log(`🔌 Emitting to room: ${event}`);
+    io.to(event).emit(event, data);
+    console.log(`🔌 Event emitted successfully`);
+  } else {
+    console.log(`❌ Socket.IO not available for event: ${event}`);
+  }
+};
+
 // Create a new transaction with items
 exports.createTransaction = async (req, res) => {
   try {
@@ -496,6 +509,58 @@ exports.fulfillTransactionItem = async (req, res) => {
       await connection.commit();
       connection.release();
 
+      // Get updated product data for socket emission (complete item data)
+      const [updatedProduct] = await db.execute(
+        `SELECT p.*, s.name as supplier_name, 
+                JSON_UNQUOTE(p.attributes) as attributes_json
+         FROM products p
+         LEFT JOIN suppliers s ON p.supplier_id = s.id
+         WHERE p.id = ? AND p.is_deleted = 0`,
+        [item.product_id]
+      );
+
+      // Emit Socket.IO events for real-time updates
+      if (updatedProduct.length > 0) {
+        const productData = updatedProduct[0];
+        
+        // Parse attributes JSON and format like category controller
+        if (productData.attributes_json) {
+          productData.attributes = JSON.parse(productData.attributes_json);
+        }
+        // Add stock and low_stock_threshold to attributes for frontend compatibility
+        productData.attributes = {
+          ...productData.attributes,
+          stock: productData.stock,
+          low_stock_threshold: productData.low_stock_threshold
+        };
+        delete productData.attributes_json;
+        
+        // Emit inventory update for the inventory page
+        console.log('🔌 Emitting inventory-updated event for fulfillment:', {
+          type: 'stock_updated',
+          item_id: productData.id,
+          new_stock: productData.stock,
+          reason: 'item_fulfilled'
+        });
+        emitSocketEvent(req, 'inventory-updated', {
+          type: 'stock_updated',
+          item: productData,
+          reason: 'item_fulfilled',
+          transaction_id: item.transaction_id,
+          item_id: itemId
+        });
+
+        // Emit transaction update for the patients/transactions page
+        emitSocketEvent(req, 'transaction-updated', {
+          type: 'item_fulfilled',
+          transaction_id: item.transaction_id,
+          item_id: itemId,
+          product_id: item.product_id,
+          quantity: item.quantity,
+          all_items_fulfilled: remainingItems[0].pending_count === 0
+        });
+      }
+
       res.json({ 
         message: "Item fulfilled successfully",
         transaction_id: item.transaction_id,
@@ -572,6 +637,62 @@ exports.refundTransactionItem = async (req, res) => {
 
       await connection.commit();
       connection.release();
+
+      // Get updated product data for socket emission (complete item data)
+      const [updatedProduct] = await db.execute(
+        `SELECT p.*, s.name as supplier_name, 
+                JSON_UNQUOTE(p.attributes) as attributes_json
+         FROM products p
+         LEFT JOIN suppliers s ON p.supplier_id = s.id
+         WHERE p.id = ? AND p.is_deleted = 0`,
+        [item.product_id]
+      );
+
+      // Emit Socket.IO events for real-time updates
+      if (updatedProduct.length > 0) {
+        const productData = updatedProduct[0];
+        
+        // Parse attributes JSON and format like category controller
+        if (productData.attributes_json) {
+          productData.attributes = JSON.parse(productData.attributes_json);
+        }
+        // Add stock and low_stock_threshold to attributes for frontend compatibility
+        productData.attributes = {
+          ...productData.attributes,
+          stock: productData.stock,
+          low_stock_threshold: productData.low_stock_threshold
+        };
+        delete productData.attributes_json;
+        
+        // Emit inventory update for the inventory page
+        console.log('🔌 Emitting inventory-updated event for refund:', {
+          type: 'stock_updated',
+          item_id: productData.id,
+          new_stock: productData.stock,
+          reason: 'item_refunded',
+          refunded_quantity: refunded_quantity
+        });
+        emitSocketEvent(req, 'inventory-updated', {
+          type: 'stock_updated',
+          item: productData,
+          reason: 'item_refunded',
+          transaction_id: item.transaction_id,
+          item_id: itemId,
+          refunded_quantity: refunded_quantity
+        });
+
+        // Emit transaction update for the patients/transactions page
+        emitSocketEvent(req, 'transaction-updated', {
+          type: 'item_refunded',
+          transaction_id: item.transaction_id,
+          item_id: itemId,
+          product_id: item.product_id,
+          refunded_quantity: refunded_quantity,
+          total_refunded_quantity: newRefundedQuantity,
+          total_quantity: totalQuantity,
+          status: newStatus
+        });
+      }
 
       res.json({ 
         message: "Item refunded successfully",

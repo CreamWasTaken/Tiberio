@@ -116,6 +116,15 @@ function Inventory() {
               console.log('🔌 Filtered items count:', filtered.length);
               return filtered;
             });
+          } else if (data.type === 'stock_updated' && data.item) {
+            console.log('🔌 Processing STOCK UPDATE event for item:', data.item.id, 'Reason:', data.reason);
+            console.log('🔌 Complete item data received:', data.item);
+            setItems(prevItems => {
+              const updated = prevItems.map(item => item.id === data.item.id ? data.item : item);
+              console.log('🔌 Stock updated for item:', data.item.id, 'New stock:', data.item.stock);
+              console.log('🔌 Updated items array length:', updated.length);
+              return updated;
+            });
           } else if (data.type === 'test') {
             console.log('🔌 Test event received:', data.message);
           } else {

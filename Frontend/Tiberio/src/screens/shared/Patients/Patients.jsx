@@ -298,7 +298,52 @@ function Patients() {
     setupSocketIO();
   }, [selectedPatient]);
 
+  // Socket.IO real-time updates for transactions
+  useEffect(() => {
+    const setupTransactionSocketIO = async () => {
+      try {
+        // Wait for Socket.IO connection to be established
+        const socket = await socketService.waitForConnection();
+        
+        // Join transaction update room
+        socketService.joinRoom('transaction-updated');
+        
+        // Listen for transaction updates
+        const handleTransactionUpdate = (data) => {
+          console.log('🔌 Real-time transaction update received:', data);
+          
+          if (data.type === 'item_fulfilled' || data.type === 'item_refunded') {
+            // Refresh transactions for the currently selected patient
+            if (selectedPatient) {
+              const refreshTransactions = async () => {
+                try {
+                  const data = await getTransactions();
+                  const patientTransactions = (data || []).filter(transaction => 
+                    transaction.patient_id === selectedPatient.id
+                  );
+                  setTransactions(patientTransactions);
+                } catch (err) {
+                  console.error('Failed to refresh transactions:', err);
+                }
+              };
+              refreshTransactions();
+            }
+          }
+        };
 
+        socket.on('transaction-updated', handleTransactionUpdate);
+
+        return () => {
+          socket.off('transaction-updated', handleTransactionUpdate);
+          socketService.leaveRoom('transaction-updated');
+        };
+      } catch (error) {
+        console.error('Failed to setup transaction Socket.IO:', error);
+      }
+    };
+
+    setupTransactionSocketIO();
+  }, [selectedPatient]);
 
   const normalizedQuery = (searchQuery || '').trim().toLowerCase();
   const filteredPatients = normalizedQuery

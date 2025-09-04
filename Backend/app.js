@@ -100,12 +100,5 @@ const PORT = process.env.PORT || 3000;
 
 //to do
 
-//product automatically adds to inventory when new items are added (form of inventory and adding price list is the same)
-
-//make description of the products unique(no the same, make it except for Frames)
-
-//Progression
-
-//2 Edit for Checkups
-//3. price module
-//4. inventory module
+//fix when adding transaction it says unkown need to refresh to see full data
+//fix when fullifing items it also says out of stock first i need to refresh after to see the data to be updated
