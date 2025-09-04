@@ -360,15 +360,21 @@ function Patients() {
         setTransactionsError(null);
         try {
           const data = await getTransactions();
-          // Filter transactions for the selected patient if needed
-          // For now, we'll show all transactions since the backend doesn't have patient-specific filtering
-          setTransactions(data || []);
+          // Filter transactions for the selected patient
+          const patientTransactions = (data || []).filter(transaction => 
+            transaction.patient_id === selectedPatient.id
+          );
+          setTransactions(patientTransactions);
         } catch (err) {
           setTransactionsError(err.message || 'Failed to load transactions');
           console.error('Error fetching transactions:', err);
         } finally {
           setTransactionsLoading(false);
         }
+      } else {
+        // Clear transactions when no patient is selected or not on transactions tab
+        setTransactions([]);
+        setTransactionsError(null);
       }
     };
     
@@ -878,7 +884,14 @@ function Patients() {
                                     <span className={'inline-block w-4 h-4 text-gray-300 transform transition-transform ' + (expandedTransactions[t.id] ? 'rotate-90' : '')}>▶</span>
                                     <div className="flex flex-col items-start">
                                       <div className="text-white font-medium text-sm">{t.receipt_number}</div>
-                                      <div className="text-gray-400 text-xs">{formatDateYMDSlash(t.transaction_date)}</div>
+                                      <div className="text-gray-400 text-xs">
+                                        {t.transaction_date && formatDateYMDSlash(t.transaction_date)}
+                                        {t.created_at && (
+                                          <span className="ml-2 text-gray-500">
+                                            (Created: {new Date(t.created_at).toLocaleDateString()})
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                                                       <div className="flex flex-col items-end">
@@ -958,14 +971,32 @@ function Patients() {
                                       </div>
                                     )}
                                     {t.items && t.items.length > 0 && (
-                                      <div>
-                                        <span className="text-gray-400">Items:</span>
-                                        <div className="ml-2 mt-1 space-y-1">
-                                          {t.items.map((item, index) => (
-                                            <div key={index} className="text-white text-xs">
-                                              {item.product_description || item.product_code} - Qty: {item.quantity} - ₱{Number(item.unit_price || 0).toLocaleString()}
-                                            </div>
-                                          ))}
+                                      <div className="mt-3">
+                                        <div className="text-gray-400 text-sm font-medium mb-2">Items ({t.items.length}):</div>
+                                        <div className="bg-gray-800/40 rounded-lg p-3 space-y-2">
+                                          {t.items.map((item, index) => {
+                                            const itemTotal = (item.quantity || 0) * (item.unit_price || 0);
+                                            return (
+                                              <div key={index} className="flex justify-between items-center bg-gray-700/30 rounded-md p-2">
+                                                <div className="flex-1">
+                                                  <div className="text-white text-sm font-medium">
+                                                    {item.product_description || item.product_code || 'Unknown Product'}
+                                                  </div>
+                                                  <div className="text-gray-400 text-xs">
+                                                    Code: {item.product_code || 'N/A'}
+                                                  </div>
+                                                </div>
+                                                <div className="text-right">
+                                                  <div className="text-white text-sm">
+                                                    {item.quantity || 0} × ₱{Number(item.unit_price || 0).toLocaleString()}
+                                                  </div>
+                                                  <div className="text-green-400 text-sm font-semibold">
+                                                    ₱{Number(itemTotal).toLocaleString()}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
                                         </div>
                                       </div>
                                     )}
