@@ -16,6 +16,7 @@ router.patch("/cancel-transaction/:id", authenticateToken, transactionController
 
 // Individual item management
 router.patch("/fulfill-item/:itemId", authenticateToken, transactionController.fulfillTransactionItem);
+router.patch("/refund-item/:itemId", authenticateToken, transactionController.refundTransactionItem);
 
 // Get transaction items
 router.get("/get-transaction-items/:transactionId", authenticateToken, transactionController.getTransactionItems);

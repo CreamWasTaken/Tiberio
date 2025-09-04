@@ -446,9 +446,9 @@ exports.fulfillTransactionItem = async (req, res) => {
       return res.status(400).json({ error: "Item is already fulfilled" });
     }
 
-    // Update item status to fulfilled
+    // Update item status to fulfilled and reset refunded quantity
     await db.execute(
-      "UPDATE transaction_items SET status = 'fulfilled', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      "UPDATE transaction_items SET status = 'fulfilled', refunded_quantity = 0, refunded_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
       [itemId]
     );
 
@@ -474,6 +474,85 @@ exports.fulfillTransactionItem = async (req, res) => {
 
   } catch (error) {
     console.error("Error fulfilling transaction item:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Refund individual transaction item
+exports.refundTransactionItem = async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { refunded_quantity } = req.body;
+
+    // Validate refunded quantity
+    if (!refunded_quantity || refunded_quantity <= 0) {
+      return res.status(400).json({ error: "Refunded quantity must be greater than 0" });
+    }
+
+    // Check if transaction item exists and get current data
+    const [existingItem] = await db.execute(
+      "SELECT id, status, transaction_id, quantity, refunded_quantity, product_id FROM transaction_items WHERE id = ?",
+      [itemId]
+    );
+
+    if (existingItem.length === 0) {
+      return res.status(404).json({ error: "Transaction item not found" });
+    }
+
+    const item = existingItem[0];
+    const currentRefundedQuantity = item.refunded_quantity || 0;
+    const totalQuantity = item.quantity;
+    const newRefundedQuantity = currentRefundedQuantity + refunded_quantity;
+
+    // Check if refunded quantity exceeds available quantity
+    if (newRefundedQuantity > totalQuantity) {
+      return res.status(400).json({ 
+        error: `Cannot refund ${refunded_quantity} items. Only ${totalQuantity - currentRefundedQuantity} items available for refund.` 
+      });
+    }
+
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    try {
+      // Update item refunded quantity and status
+      const newStatus = newRefundedQuantity === totalQuantity ? 'refunded' : 'partially_refunded';
+      
+      // Get current time in Philippine timezone
+      const phTime = new Date().toLocaleString("en-US", {timeZone: "Asia/Manila"});
+      
+      await connection.execute(
+        `UPDATE transaction_items 
+         SET refunded_quantity = ?, status = ?, refunded_at = CONVERT_TZ(NOW(), '+00:00', '+08:00'), updated_at = CURRENT_TIMESTAMP 
+         WHERE id = ?`,
+        [newRefundedQuantity, newStatus, itemId]
+      );
+
+      // Restore stock for the refunded quantity
+      await connection.execute(
+        "UPDATE products SET stock = stock + ? WHERE id = ?",
+        [refunded_quantity, item.product_id]
+      );
+
+      await connection.commit();
+      connection.release();
+
+      res.json({ 
+        message: "Item refunded successfully",
+        transaction_id: item.transaction_id,
+        refunded_quantity: newRefundedQuantity,
+        total_quantity: totalQuantity,
+        status: newStatus
+      });
+
+    } catch (error) {
+      await connection.rollback();
+      connection.release();
+      throw error;
+    }
+
+  } catch (error) {
+    console.error("Error refunding transaction item:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };

@@ -66,6 +66,19 @@ export const fulfillTransactionItem = async (itemId) => {
   }
 };
 
+// Refund individual transaction item
+export const refundTransactionItem = async (itemId, refundedQuantity) => {
+  try {
+    const response = await apiClient.patch(`/api/transactions/refund-item/${itemId}`, {
+      refunded_quantity: refundedQuantity
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error refunding transaction item:', error);
+    throw new Error(error.response?.data?.error || 'Failed to refund transaction item');
+  }
+};
+
 // Get transactions by patient ID - NOT IMPLEMENTED IN BACKEND
 // export const getTransactionsByPatient = async (patientId) => {
 //   try {

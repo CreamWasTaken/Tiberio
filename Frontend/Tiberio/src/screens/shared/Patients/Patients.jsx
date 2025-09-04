@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi, updateCheckup as updateCheckupApi, deleteCheckup as deleteCheckupApi, getTotalCheckupsCount } from '../../../services/patient';
-import { createTransaction, getTransactions, fulfillTransactionItem } from '../../../services/transaction';
+import { createTransaction, getTransactions, fulfillTransactionItem, refundTransactionItem } from '../../../services/transaction';
 import Sidebar from '../../../components/Sidebar';
 import AddPatientModal from './components/AddPatientModal';
 import AddCheckupModal from './components/AddCheckupModal';
@@ -341,6 +341,12 @@ function Patients() {
   const [transactionFormError, setTransactionFormError] = useState(null);
   const [isEditTransactionMode, setIsEditTransactionMode] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState(null);
+  
+  // Refund modal state
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [refundItem, setRefundItem] = useState(null);
+  const [refundQuantity, setRefundQuantity] = useState(1);
+  const [isProcessingRefund, setIsProcessingRefund] = useState(false);
   
   const initialTransactionForm = {
     receipt_number: '',
@@ -1065,6 +1071,8 @@ function Patients() {
                                                   ? 'border-yellow-500'
                                                   : item.status === 'refunded'
                                                   ? 'border-red-500'
+                                                  : item.status === 'partially_refunded'
+                                                  ? 'border-orange-500'
                                                   : 'border-blue-500'
                                               }`}>
                                                 <div className="flex justify-between items-start">
@@ -1080,11 +1088,14 @@ function Patients() {
                                                           ? 'bg-yellow-600 text-white'
                                                           : item.status === 'refunded'
                                                           ? 'bg-red-600 text-white'
+                                                          : item.status === 'partially_refunded'
+                                                          ? 'bg-orange-600 text-white'
                                                           : 'bg-gray-600 text-white'
                                                       }`}>
                                                         {item.status === 'fulfilled' && '✓ Fulfilled'}
                                                         {item.status === 'pending' && '⏳ Pending'}
                                                         {item.status === 'refunded' && '↩️ Refunded'}
+                                                        {item.status === 'partially_refunded' && '↩️ Partially Refunded'}
                                                         {!item.status && '❓ Unknown'}
                                                       </span>
                                                     </div>
@@ -1093,6 +1104,11 @@ function Patients() {
                                                     </div>
                                                     <div className="text-gray-300 text-sm">
                                                       Quantity: {item.quantity || 0} × ₱{Number(item.unit_price || 0).toLocaleString()} each
+                                                      {item.refunded_quantity > 0 && (
+                                                        <div className="text-orange-400 text-xs mt-1">
+                                                          Refunded: {item.refunded_quantity} / {item.quantity}
+                                                        </div>
+                                                      )}
                                                     </div>
                                                   </div>
                                                   <div className="text-right ml-4">
@@ -1109,26 +1125,40 @@ function Patients() {
                                                         Saved: ₱{Number(itemDiscount).toLocaleString()}
                                                       </div>
                                                     )}
-                                                    {!isFulfilled && (userRole === 'admin' || userRole === 'employee') && (
-                                                      <button
-                                                        onClick={async () => {
-                                                          try {
-                                                            await fulfillTransactionItem(item.id);
-                                                            // Refresh transactions to show updated status
-                                                            const data = await getTransactions();
-                                                            const patientTransactions = (data || []).filter(transaction => 
-                                                              transaction.patient_id === selectedPatient.id
-                                                            );
-                                                            setTransactions(patientTransactions);
-                                                          } catch (err) {
-                                                            alert('Failed to fulfill item: ' + err.message);
-                                                          }
-                                                        }}
-                                                        className="mt-2 bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded transition-colors duration-200"
-                                                      >
-                                                        Fulfill Item
-                                                      </button>
-                                                    )}
+                                                    <div className="flex flex-col gap-1 mt-2">
+                                                      {!isFulfilled && (userRole === 'admin' || userRole === 'employee') && (
+                                                        <button
+                                                          onClick={async () => {
+                                                            try {
+                                                              await fulfillTransactionItem(item.id);
+                                                              // Refresh transactions to show updated status
+                                                              const data = await getTransactions();
+                                                              const patientTransactions = (data || []).filter(transaction => 
+                                                                transaction.patient_id === selectedPatient.id
+                                                              );
+                                                              setTransactions(patientTransactions);
+                                                            } catch (err) {
+                                                              alert('Failed to fulfill item: ' + err.message);
+                                                            }
+                                                          }}
+                                                          className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded transition-colors duration-200"
+                                                        >
+                                                          Fulfill Item
+                                                        </button>
+                                                      )}
+                                                      {(userRole === 'admin' || userRole === 'employee') && item.status !== 'refunded' && (
+                                                        <button
+                                                          onClick={() => {
+                                                            setRefundItem(item);
+                                                            setRefundQuantity(1);
+                                                            setIsRefundModalOpen(true);
+                                                          }}
+                                                          className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded transition-colors duration-200"
+                                                        >
+                                                          Refund Item
+                                                        </button>
+                                                      )}
+                                                    </div>
                                                   </div>
                                                 </div>
                                               </div>
@@ -1339,6 +1369,100 @@ function Patients() {
               }
             }}
           />
+
+          {/* Refund Modal */}
+          {isRefundModalOpen && refundItem && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/60" onClick={() => setIsRefundModalOpen(false)}></div>
+              <div className="relative w-full max-w-md mx-4 shadow-2xl">
+                <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m5 14v-5a2 2 0 00-2-2H6a2 2 0 00-2 2v5a2 2 0 002 2h12a2 2 0 002-2z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-white">Refund Item</h3>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <p className="text-gray-300 mb-2">
+                      <strong>Product:</strong> {refundItem.product_description || refundItem.product_code || 'Unknown Product'}
+                    </p>
+                    <p className="text-gray-300 mb-2">
+                      <strong>Total Quantity:</strong> {refundItem.quantity}
+                    </p>
+                    {refundItem.refunded_quantity > 0 && (
+                      <p className="text-orange-400 mb-2">
+                        <strong>Already Refunded:</strong> {refundItem.refunded_quantity}
+                      </p>
+                    )}
+                    <p className="text-gray-300 mb-4">
+                      <strong>Available for Refund:</strong> {refundItem.quantity - (refundItem.refunded_quantity || 0)}
+                    </p>
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Refund Quantity
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max={refundItem.quantity - (refundItem.refunded_quantity || 0)}
+                      value={refundQuantity}
+                      onChange={(e) => setRefundQuantity(parseInt(e.target.value) || 1)}
+                      className="w-full px-3 py-2 bg-gray-900/60 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3">
+                    <button
+                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200"
+                      onClick={() => setIsRefundModalOpen(false)}
+                      disabled={isProcessingRefund}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 disabled:opacity-50"
+                      onClick={async () => {
+                        if (!refundQuantity || refundQuantity <= 0) {
+                          alert('Please enter a valid refund quantity');
+                          return;
+                        }
+                        
+                        if (refundQuantity > (refundItem.quantity - (refundItem.refunded_quantity || 0))) {
+                          alert('Refund quantity cannot exceed available quantity');
+                          return;
+                        }
+
+                        setIsProcessingRefund(true);
+                        try {
+                          await refundTransactionItem(refundItem.id, refundQuantity);
+                          // Refresh transactions to show updated status
+                          const data = await getTransactions();
+                          const patientTransactions = (data || []).filter(transaction => 
+                            transaction.patient_id === selectedPatient.id
+                          );
+                          setTransactions(patientTransactions);
+                          setIsRefundModalOpen(false);
+                          alert('Item refunded successfully!');
+                        } catch (err) {
+                          alert('Failed to refund item: ' + err.message);
+                        } finally {
+                          setIsProcessingRefund(false);
+                        }
+                      }}
+                      disabled={isProcessingRefund}
+                    >
+                      {isProcessingRefund ? 'Processing...' : 'Refund Item'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Custom Alert Modal */}
           {alertConfig.isOpen && (
