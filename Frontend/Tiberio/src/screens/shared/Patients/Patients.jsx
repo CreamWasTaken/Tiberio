@@ -880,24 +880,46 @@ function Patients() {
                                   className="flex-1 flex items-center justify-between text-left hover:bg-gray-800/60"
                                   onClick={() => setExpandedTransactions(prev => ({ ...prev, [t.id]: !prev[t.id] }))}
                                 >
-                                  <div className="flex items-center gap-3">
-                                    <span className={'inline-block w-4 h-4 text-gray-300 transform transition-transform ' + (expandedTransactions[t.id] ? 'rotate-90' : '')}>▶</span>
-                                    <div className="flex flex-col items-start">
-                                      <div className="text-white font-medium text-sm">{t.receipt_number}</div>
-                                      <div className="text-gray-400 text-xs">
-                                        {t.transaction_date && formatDateYMDSlash(t.transaction_date)}
-                                        {t.created_at && (
-                                          <span className="ml-2 text-gray-500">
-                                            (Created: {new Date(t.created_at).toLocaleDateString()})
-                                          </span>
-                                        )}
-                                      </div>
+                               <div className="flex items-center gap-3">
+                                  <span
+                                    className={
+                                      'inline-block w-4 h-4 text-gray-300 transform transition-transform ' +
+                                      (expandedTransactions[t.id] ? 'rotate-90' : '')
+                                    }
+                                  >
+                                    ▶
+                                  </span>
+
+                                  <div className="flex flex-row items-center gap-6">
+                                    {/* Receipt number */}
+                                    <div className="text-white font-medium text-sm">
+                                      <span className="text-gray-400 mr-1">Receipt:</span>
+                                      {t.receipt_number}
+                                    </div>
+
+                                    {/* Dates */}
+                                    <div className="text-white font-medium text-sm">
+                                      <span className="text-gray-400 mr-1">Date:</span>
+                                      {t.transaction_date && formatDateYMDSlash(t.transaction_date)}
+                                      {t.created_at && (
+                                        <span className="ml-2 text-gray-500 text-xs font-normal">
+                                          (Created: {new Date(t.created_at).toLocaleDateString()})
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
-                                                                      <div className="flex flex-col items-end">
-                                    <div className="text-green-400 font-semibold text-sm">₱{Number(t.final_price || 0).toLocaleString()}</div>
-                                    <div className="text-gray-400 text-xs">By: {t.user_first_name && t.user_last_name ? `${t.user_first_name} ${t.user_last_name}` : '—'}</div>
                                   </div>
+
+
+                                                                                                                                              <div className="flex flex-col items-end">
+                                      <div className="text-green-400 font-semibold text-sm">₱{Number(t.final_price || 0).toLocaleString()}</div>
+                                      {t.discount_percent && t.discount_percent > 0 && (
+                                        <div className="text-orange-400 text-xs">
+                                          {t.discount_percent}% discount
+                                        </div>
+                                      )}
+                                      <div className="text-gray-400 text-xs">By: {t.user_first_name && t.user_last_name ? `${t.user_first_name} ${t.user_last_name}` : '—'}</div>
+                                    </div>
                                 </button>
                                 <div className="flex items-center gap-1">
                                   {userRole === 'admin' && (
@@ -952,8 +974,14 @@ function Patients() {
                                         <span className="ml-2 text-white">₱{Number(t.subtotal_price || 0).toLocaleString()}</span>
                                       </div>
                                       <div>
-                                        <span className="text-gray-400">Discount:</span>
+                                        <span className="text-gray-400">Discount Amount:</span>
                                         <span className="ml-2 text-white">₱{Number(t.total_discount || 0).toLocaleString()}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-400">Discount %:</span>
+                                        <span className="ml-2 text-orange-400 font-semibold">
+                                          {t.discount_percent ? `${t.discount_percent}%` : '0%'}
+                                        </span>
                                       </div>
                                       <div>
                                         <span className="text-gray-400">Final Price:</span>
@@ -975,7 +1003,10 @@ function Patients() {
                                         <div className="text-gray-400 text-sm font-medium mb-2">Items ({t.items.length}):</div>
                                         <div className="bg-gray-800/40 rounded-lg p-3 space-y-2">
                                           {t.items.map((item, index) => {
-                                            const itemTotal = (item.quantity || 0) * (item.unit_price || 0);
+                                            const basePrice = (item.quantity || 0) * (item.unit_price || 0);
+                                            const itemDiscount = item.discount || 0;
+                                            const itemTotal = basePrice - itemDiscount;
+                                            
                                             return (
                                               <div key={index} className="flex justify-between items-center bg-gray-700/30 rounded-md p-2">
                                                 <div className="flex-1">
@@ -985,11 +1016,21 @@ function Patients() {
                                                   <div className="text-gray-400 text-xs">
                                                     Code: {item.product_code || 'N/A'}
                                                   </div>
+                                                  {itemDiscount > 0 && (
+                                                    <div className="text-orange-400 text-xs">
+                                                      Item discount: ₱{Number(itemDiscount).toLocaleString()}
+                                                    </div>
+                                                  )}
                                                 </div>
                                                 <div className="text-right">
                                                   <div className="text-white text-sm">
                                                     {item.quantity || 0} × ₱{Number(item.unit_price || 0).toLocaleString()}
                                                   </div>
+                                                  {itemDiscount > 0 && (
+                                                    <div className="text-gray-400 text-xs line-through">
+                                                      ₱{Number(basePrice).toLocaleString()}
+                                                    </div>
+                                                  )}
                                                   <div className="text-green-400 text-sm font-semibold">
                                                     ₱{Number(itemTotal).toLocaleString()}
                                                   </div>
