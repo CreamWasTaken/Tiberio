@@ -280,20 +280,7 @@ function Inventory() {
                 <div className="ml-3 flex items-center">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
                   <span className="text-xs text-green-400">Live Updates</span>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const socket = await socketService.waitForConnection();
-                        socket.emit('test-connection', { message: 'Test from Inventory', timestamp: new Date().toISOString() });
-                        console.log('🔌 Test event sent from Inventory');
-                      } catch (error) {
-                        console.error('🔌 Failed to send test event:', error);
-                      }
-                    }}
-                    className="ml-4 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
-                  >
-                    Test Socket
-                  </button>
+               
                 </div>
               </div>
 

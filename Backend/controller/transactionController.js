@@ -94,11 +94,7 @@ exports.createTransaction = async (req, res) => {
           [transaction_id, item.product_id, item.quantity, unit_price, item.discount || 0]
         );
 
-        // Update product stock
-        await connection.execute(
-          "UPDATE products SET stock = stock - ? WHERE id = ?",
-          [item.quantity, item.product_id]
-        );
+        // Note: Inventory will be deducted when items are fulfilled, not immediately upon transaction creation
       }
 
       await connection.commit();
@@ -333,7 +329,7 @@ exports.fulfillTransaction = async (req, res) => {
   }
 };
 
-// Cancel transaction (restore stock and change status)
+// Cancel transaction (restore stock only for fulfilled items and change status)
 exports.cancelTransaction = async (req, res) => {
   try {
     const { id } = req.params;
@@ -356,13 +352,13 @@ exports.cancelTransaction = async (req, res) => {
     await connection.beginTransaction();
 
     try {
-      // Get items to restore stock
+      // Get items to restore stock - only for fulfilled items since pending items never had stock deducted
       const [items] = await connection.execute(
-        "SELECT product_id, quantity FROM transaction_items WHERE transaction_id = ?",
+        "SELECT product_id, quantity, status FROM transaction_items WHERE transaction_id = ? AND status = 'fulfilled'",
         [id]
       );
 
-      // Restore stock for each product
+      // Restore stock only for fulfilled items
       for (const item of items) {
         await connection.execute(
           "UPDATE products SET stock = stock + ? WHERE id = ?",
@@ -384,7 +380,10 @@ exports.cancelTransaction = async (req, res) => {
       await connection.commit();
       connection.release();
 
-      res.json({ message: "Transaction cancelled successfully" });
+      res.json({ 
+        message: "Transaction cancelled successfully",
+        stock_restored_items: items.length
+      });
 
     } catch (error) {
       await connection.rollback();
@@ -432,9 +431,9 @@ exports.fulfillTransactionItem = async (req, res) => {
   try {
     const { itemId } = req.params;
 
-    // Check if transaction item exists
+    // Check if transaction item exists and get product info
     const [existingItem] = await db.execute(
-      "SELECT id, status, transaction_id FROM transaction_items WHERE id = ?",
+      "SELECT id, status, transaction_id, product_id, quantity FROM transaction_items WHERE id = ?",
       [itemId]
     );
 
@@ -446,31 +445,68 @@ exports.fulfillTransactionItem = async (req, res) => {
       return res.status(400).json({ error: "Item is already fulfilled" });
     }
 
-    // Update item status to fulfilled and reset refunded quantity
-    await db.execute(
-      "UPDATE transaction_items SET status = 'fulfilled', refunded_quantity = 0, refunded_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-      [itemId]
+    const item = existingItem[0];
+
+    // Check if product has sufficient stock
+    const [productData] = await db.execute(
+      "SELECT stock FROM products WHERE id = ? AND is_deleted = 0",
+      [item.product_id]
     );
 
-    // Check if all items in the transaction are now fulfilled
-    const [remainingItems] = await db.execute(
-      "SELECT COUNT(*) as pending_count FROM transaction_items WHERE transaction_id = ? AND status != 'fulfilled'",
-      [existingItem[0].transaction_id]
-    );
-
-    // If all items are fulfilled, update the transaction status as well
-    if (remainingItems[0].pending_count === 0) {
-      await db.execute(
-        "UPDATE transactions SET status = 'fulfilled', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-        [existingItem[0].transaction_id]
-      );
+    if (productData.length === 0) {
+      return res.status(404).json({ error: "Product not found" });
     }
 
-    res.json({ 
-      message: "Item fulfilled successfully",
-      transaction_id: existingItem[0].transaction_id,
-      all_items_fulfilled: remainingItems[0].pending_count === 0
-    });
+    if (productData[0].stock < item.quantity) {
+      return res.status(400).json({ 
+        error: `Insufficient stock. Available: ${productData[0].stock}, Required: ${item.quantity}` 
+      });
+    }
+
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    try {
+      // Deduct inventory when fulfilling the item
+      await connection.execute(
+        "UPDATE products SET stock = stock - ? WHERE id = ?",
+        [item.quantity, item.product_id]
+      );
+
+      // Update item status to fulfilled and reset refunded quantity
+      await connection.execute(
+        "UPDATE transaction_items SET status = 'fulfilled', refunded_quantity = 0, refunded_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [itemId]
+      );
+
+      // Check if all items in the transaction are now fulfilled
+      const [remainingItems] = await connection.execute(
+        "SELECT COUNT(*) as pending_count FROM transaction_items WHERE transaction_id = ? AND status != 'fulfilled'",
+        [item.transaction_id]
+      );
+
+      // If all items are fulfilled, update the transaction status as well
+      if (remainingItems[0].pending_count === 0) {
+        await connection.execute(
+          "UPDATE transactions SET status = 'fulfilled', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+          [item.transaction_id]
+        );
+      }
+
+      await connection.commit();
+      connection.release();
+
+      res.json({ 
+        message: "Item fulfilled successfully",
+        transaction_id: item.transaction_id,
+        all_items_fulfilled: remainingItems[0].pending_count === 0
+      });
+
+    } catch (error) {
+      await connection.rollback();
+      connection.release();
+      throw error;
+    }
 
   } catch (error) {
     console.error("Error fulfilling transaction item:", error);
