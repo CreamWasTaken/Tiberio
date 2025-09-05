@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 04, 2025 at 08:18 AM
+-- Generation Time: Sep 05, 2025 at 06:16 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -29,35 +29,36 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `update_transaction_status` (IN `tx_
     DECLARE total_items INT;
     DECLARE fulfilled_items INT;
     DECLARE refunded_items INT;
+    DECLARE partial_items INT;
     DECLARE new_final DECIMAL(10,2);
 
-    -- Count total, fulfilled, refunded
+    -- Count statuses
     SELECT COUNT(*), 
            SUM(status = 'fulfilled'),
-           SUM(status = 'refunded')
-    INTO total_items, fulfilled_items, refunded_items
+           SUM(status = 'refunded'),
+           SUM(status = 'partially_refunded')
+    INTO total_items, fulfilled_items, refunded_items, partial_items
     FROM transaction_items
     WHERE transaction_id = tx_id;
 
-    -- Recalculate final price as sum of all non-refunded quantities
+    -- Recalculate final price (exclude refunded qty)
     SELECT COALESCE(SUM(((quantity - refunded_quantity) * unit_price) - discount),0)
     INTO new_final
     FROM transaction_items
     WHERE transaction_id = tx_id;
 
-    -- Update transaction final_price
     UPDATE transactions
     SET final_price = new_final
     WHERE id = tx_id;
 
-    -- Decide parent status
+    -- Decide transaction status
     IF total_items = fulfilled_items THEN
         UPDATE transactions SET status = 'fulfilled' WHERE id = tx_id;
 
     ELSEIF total_items = refunded_items THEN
         UPDATE transactions SET status = 'refunded' WHERE id = tx_id;
 
-    ELSEIF refunded_items > 0 AND fulfilled_items > 0 THEN
+    ELSEIF partial_items > 0 OR (refunded_items > 0 AND fulfilled_items > 0) THEN
         UPDATE transactions SET status = 'partially_refunded' WHERE id = tx_id;
 
     ELSE
@@ -294,8 +295,8 @@ CREATE TABLE `products` (
 --
 
 INSERT INTO `products` (`id`, `subcategory_id`, `supplier_id`, `code`, `description`, `pc_price`, `pc_cost`, `stock`, `low_stock_threshold`, `stock_status`, `attributes`, `is_deleted`) VALUES
-(15, 13, 4, '1', 'SV 1', 1.00, 1.00, 0, 5, 'out-of-stock', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0),
-(16, 14, 4, '1', 'DV 1', 2.00, 2.00, 4, 5, 'low', '{\"index\":\"2\",\"diameter\":\"2\",\"sphFR\":\"2\",\"sphTo\":\"2\",\"cylFr\":\"2\",\"cylTo\":\"2\",\"tp\":\"2\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0);
+(15, 13, 4, '1', 'SV 1', 1.00, 1.00, 90, 1, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0),
+(16, 14, 5, '1', 'DV 1', 2.00, 2.00, 65, 1, 'normal', '{}', 0);
 
 --
 -- Triggers `products`
@@ -415,7 +416,7 @@ CREATE TABLE `transactions` (
 --
 
 INSERT INTO `transactions` (`id`, `user_id`, `patient_id`, `receipt_number`, `subtotal_price`, `total_discount`, `final_price`, `discount_percent`, `status`, `deleted_at`, `created_at`, `updated_at`) VALUES
-(7, 1, 7, '123', 3.00, 0.00, 1.00, 0.00, 'pending', NULL, '2025-09-04 06:15:53', '2025-09-04 06:17:45');
+(12, 1, 7, '123', 20.00, 0.00, 18.00, 0.00, 'partially_refunded', NULL, '2025-09-05 04:15:05', '2025-09-05 04:15:36');
 
 -- --------------------------------------------------------
 
@@ -427,7 +428,7 @@ CREATE TABLE `transaction_items` (
   `id` int(11) NOT NULL,
   `transaction_id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
-  `status` enum('fulfilled','pending','refunded') DEFAULT 'pending',
+  `status` enum('fulfilled','pending','refunded','partially_refunded') DEFAULT 'pending',
   `quantity` int(11) NOT NULL,
   `unit_price` decimal(10,2) NOT NULL,
   `discount` decimal(10,2) DEFAULT 0.00,
@@ -442,8 +443,7 @@ CREATE TABLE `transaction_items` (
 --
 
 INSERT INTO `transaction_items` (`id`, `transaction_id`, `product_id`, `status`, `quantity`, `unit_price`, `discount`, `refunded_quantity`, `refunded_at`, `created_at`, `updated_at`) VALUES
-(10, 7, 16, 'refunded', 1, 2.00, 0.00, 1, NULL, '2025-09-04 06:15:53', '2025-09-04 06:17:56'),
-(11, 7, 15, 'pending', 1, 1.00, 0.00, 0, NULL, '2025-09-04 06:15:53', '2025-09-04 06:15:53');
+(17, 12, 16, 'partially_refunded', 10, 2.00, 0.00, 1, '2025-09-05 12:15:36', '2025-09-05 04:15:05', '2025-09-05 04:15:36');
 
 --
 -- Triggers `transaction_items`
@@ -661,13 +661,13 @@ ALTER TABLE `suppliers`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `transaction_items`
 --
 ALTER TABLE `transaction_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `users`

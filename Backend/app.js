@@ -101,4 +101,4 @@ const PORT = process.env.PORT || 3000;
 //to do
 
 //fix when adding transaction it says unkown need to refresh to see full data
-//fix when fullifing items it also says out of stock first i need to refresh after to see the data to be updated
+
