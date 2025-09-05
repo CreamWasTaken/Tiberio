@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi, updateCheckup as updateCheckupApi, deleteCheckup as deleteCheckupApi, getTotalCheckupsCount } from '../../../services/patient';
 import { createTransaction, getTransactions, fulfillTransactionItem, refundTransactionItem } from '../../../services/transaction';
 import Sidebar from '../../../components/Sidebar';
@@ -7,6 +7,332 @@ import AddPatientModal from './components/AddPatientModal';
 import AddCheckupModal from './components/AddCheckupModal';
 import socketService from '../../../services/socket';
 import AddTransactionModal from './components/AddTransactionModal';
+
+// Memoized TransactionItem component for better performance
+const TransactionItem = memo(({ 
+  transaction, 
+  isExpanded, 
+  onToggle, 
+  onEdit, 
+  onDelete, 
+  onFulfill, 
+  onRefund,
+  userRole,
+  formatDateYMDSlash 
+}) => {
+  const itemCalculations = useMemo(() => {
+    const fulfilledCount = transaction.items?.filter(item => item.status === 'fulfilled').length || 0;
+    const pendingCount = transaction.items?.filter(item => item.status === 'pending').length || 0;
+    const refundedCount = transaction.items?.filter(item => item.status === 'refunded').length || 0;
+    
+    return { fulfilledCount, pendingCount, refundedCount };
+  }, [transaction.items]);
+
+  // Memoize formatted dates to avoid recalculation
+  const formattedDates = useMemo(() => ({
+    transactionDate: transaction.transaction_date ? formatDateYMDSlash(transaction.transaction_date) : null,
+    createdAt: transaction.created_at ? formatDateYMDSlash(transaction.created_at) : null
+  }), [transaction.transaction_date, transaction.created_at, formatDateYMDSlash]);
+
+  // Memoize price calculations
+  const priceCalculations = useMemo(() => ({
+    finalPrice: Number(transaction.final_price || 0).toLocaleString(),
+    subtotalPrice: Number(transaction.subtotal_price || 0).toLocaleString(),
+    totalDiscount: Number(transaction.total_discount || 0).toLocaleString()
+  }), [transaction.final_price, transaction.subtotal_price, transaction.total_discount]);
+
+  return (
+    <div className="bg-gray-900/60 border border-gray-700 rounded-lg">
+      <div className="flex items-center justify-between px-4 py-3">
+        <button
+          className="flex-1 flex items-center justify-between text-left hover:bg-gray-800/60"
+          onClick={onToggle}
+        >
+          <div className="flex items-center gap-3">
+            <span
+              className={
+                'inline-block w-4 h-4 text-gray-300 transform transition-transform ' +
+                (isExpanded ? 'rotate-90' : '')
+              }
+            >
+              ▶
+            </span>
+
+            <div className="flex items-center justify-between w-full">
+              {/* Left side - Receipt number and date */}
+              <div className="flex flex-col">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="text-white font-medium text-sm">
+                    Receipt #{transaction.receipt_number}
+                  </div>
+                  <div className="text-gray-400 text-sm">
+                    {formattedDates.transactionDate || formattedDates.createdAt || '—'}
+                  </div>
+                </div>
+                {transaction.discount_percent && transaction.discount_percent > 0 && (
+                  <div>
+                    <span className="text-orange-400 bg-orange-400/10 px-2 py-0.5 rounded text-xs">
+                      {transaction.discount_percent}% OFF
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Right side - Price and added by */}
+              <div className="flex flex-col items-end">
+                <div className="text-green-400 font-semibold text-lg mb-1">
+                  ₱{priceCalculations.finalPrice}
+                </div>
+                <div className="text-gray-500 text-xs">
+                  Added by: {transaction.user_first_name && transaction.user_last_name ? `${transaction.user_first_name} ${transaction.user_last_name}` : 'Unknown'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </button>
+        <div className="flex items-center gap-1">
+          {userRole === 'admin' && (
+            <>
+              <button
+                className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded"
+                onClick={onEdit}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+              <button
+                className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded"
+                onClick={onDelete}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      {isExpanded && (
+        <TransactionExpandedContent
+          transaction={transaction}
+          itemCalculations={itemCalculations}
+          priceCalculations={priceCalculations}
+          formattedDates={formattedDates}
+          userRole={userRole}
+          onFulfill={onFulfill}
+          onRefund={onRefund}
+        />
+      )}
+    </div>
+  );
+});
+
+TransactionItem.displayName = 'TransactionItem';
+
+// Memoized component for expanded transaction content
+const TransactionExpandedContent = memo(({ 
+  transaction, 
+  itemCalculations, 
+  priceCalculations, 
+  formattedDates,
+  userRole,
+  onFulfill,
+  onRefund 
+}) => {
+  return (
+    <div className="px-4 pb-3 border-t border-gray-700">
+      <div className="pt-4 space-y-4 text-sm">
+        {/* Financial Summary */}
+        <div className="bg-gray-800/40 rounded-lg p-4">
+          <h4 className="text-white font-medium mb-3">Financial Summary</h4>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Subtotal:</span>
+              <span className="text-white font-medium">₱{priceCalculations.subtotalPrice}</span>
+            </div>
+            {transaction.discount_percent && transaction.discount_percent > 0 && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Discount ({transaction.discount_percent}%):</span>
+                  <span className="text-orange-400 font-medium">-₱{priceCalculations.totalDiscount}</span>
+                </div>
+              </>
+            )}
+            <div className="flex justify-between border-t border-gray-600 pt-2 col-span-2">
+              <span className="text-gray-300 font-medium">Total Amount:</span>
+              <span className="text-green-400 font-bold text-lg">₱{priceCalculations.finalPrice}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Transaction Details */}
+        <div className="bg-gray-800/40 rounded-lg p-4">
+          <h4 className="text-white font-medium mb-3">Transaction Details</h4>
+          <div className="space-y-2">
+            {transaction.patient_first_name && transaction.patient_last_name && (
+              <div className="flex justify-between">
+                <span className="text-gray-400">Patient:</span>
+                <span className="text-white">{transaction.patient_first_name} {transaction.patient_last_name}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-gray-400">Status:</span>
+              <span className="text-white capitalize">{transaction.status || 'Completed'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Receipt Number:</span>
+              <span className="text-white font-mono">#{transaction.receipt_number}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Transaction Date:</span>
+              <span className="text-white">{formattedDates.transactionDate || formattedDates.createdAt || '—'}</span>
+            </div>
+          </div>
+        </div>
+        {/* Items List */}
+        {transaction.items && transaction.items.length > 0 && (
+          <div className="bg-gray-800/40 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-white font-medium">Items Purchased ({transaction.items.length})</h4>
+              <div className="flex items-center gap-2 text-sm">
+                {itemCalculations.fulfilledCount > 0 && (
+                  <span className="bg-green-600 text-white px-2 py-1 rounded text-xs">
+                    {itemCalculations.fulfilledCount} Fulfilled
+                  </span>
+                )}
+                {itemCalculations.pendingCount > 0 && (
+                  <span className="bg-yellow-600 text-white px-2 py-1 rounded text-xs">
+                    {itemCalculations.pendingCount} Pending
+                  </span>
+                )}
+                {itemCalculations.refundedCount > 0 && (
+                  <span className="bg-red-600 text-white px-2 py-1 rounded text-xs">
+                    {itemCalculations.refundedCount} Refunded
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="space-y-3">
+              {transaction.items.map((item, index) => (
+                <TransactionItemDetail
+                  key={index}
+                  item={item}
+                  userRole={userRole}
+                  onFulfill={onFulfill}
+                  onRefund={onRefund}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+TransactionExpandedContent.displayName = 'TransactionExpandedContent';
+
+// Memoized component for individual transaction items
+const TransactionItemDetail = memo(({ item, userRole, onFulfill, onRefund }) => {
+  const itemCalculations = useMemo(() => {
+    const basePrice = (item.quantity || 0) * (item.unit_price || 0);
+    const itemDiscount = item.discount || 0;
+    const itemTotal = basePrice - itemDiscount;
+    const isFulfilled = item.status === 'fulfilled';
+    
+    return { basePrice, itemDiscount, itemTotal, isFulfilled };
+  }, [item.quantity, item.unit_price, item.discount, item.status]);
+  
+  const { basePrice, itemDiscount, itemTotal, isFulfilled } = itemCalculations;
+  
+  return (
+    <div className={`bg-gray-700/40 rounded-md p-3 border-l-4 ${
+      item.status === 'fulfilled' 
+        ? 'border-green-500' 
+        : item.status === 'pending'
+        ? 'border-yellow-500'
+        : item.status === 'refunded'
+        ? 'border-red-500'
+        : item.status === 'partially_refunded'
+        ? 'border-orange-500'
+        : 'border-blue-500'
+    }`}>
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="text-white font-medium">
+              {item.product_description || item.product_code || 'Unknown Product'}
+            </div>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${
+              item.status === 'fulfilled' 
+                ? 'bg-green-600 text-white' 
+                : item.status === 'pending'
+                ? 'bg-yellow-600 text-white'
+                : item.status === 'refunded'
+                ? 'bg-red-600 text-white'
+                : item.status === 'partially_refunded'
+                ? 'bg-orange-600 text-white'
+                : 'bg-gray-600 text-white'
+            }`}>
+              {item.status === 'fulfilled' && '✓ Fulfilled'}
+              {item.status === 'pending' && '⏳ Pending'}
+              {item.status === 'refunded' && '↩️ Refunded'}
+              {item.status === 'partially_refunded' && '↩️ Partially Refunded'}
+              {!item.status && '❓ Unknown'}
+            </span>
+          </div>
+          <div className="text-gray-400 text-xs mb-1">
+            Product Code: {item.product_code || 'N/A'}
+          </div>
+          <div className="text-gray-300 text-sm">
+            Quantity: {item.quantity || 0} × ₱{Number(item.unit_price || 0).toLocaleString()} each
+            {item.refunded_quantity > 0 && (
+              <div className="text-orange-400 text-xs mt-1">
+                Refunded: {item.refunded_quantity} / {item.quantity}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="text-right ml-4">
+          {itemDiscount > 0 && (
+            <div className="text-gray-400 text-xs line-through mb-1">
+              ₱{Number(basePrice).toLocaleString()}
+            </div>
+          )}
+          <div className="text-green-400 font-semibold text-lg">
+            ₱{Number(itemTotal).toLocaleString()}
+          </div>
+          {itemDiscount > 0 && (
+            <div className="text-orange-400 text-xs">
+              Saved: ₱{Number(itemDiscount).toLocaleString()}
+            </div>
+          )}
+          <div className="flex flex-col gap-1 mt-2">
+            {!isFulfilled && (userRole === 'admin' || userRole === 'employee') && (
+              <button
+                onClick={() => onFulfill(item)}
+                className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded transition-colors duration-200"
+              >
+                Fulfill Item
+              </button>
+            )}
+            {(userRole === 'admin' || userRole === 'employee') && item.status !== 'refunded' && (
+              <button
+                onClick={() => onRefund(item)}
+                className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded transition-colors duration-200"
+              >
+                Refund Item
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+TransactionItemDetail.displayName = 'TransactionItemDetail';
 
 function Patients() {
   const navigate = useNavigate();
@@ -399,18 +725,104 @@ function Patients() {
   const [transactions, setTransactions] = useState([]);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [transactionsError, setTransactionsError] = useState(null);
-  const [expandedTransactions, setExpandedTransactions] = useState({});
+  const [expandedTransactions, setExpandedTransactions] = useState(new Set());
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [isSavingTransaction, setIsSavingTransaction] = useState(false);
   const [transactionFormError, setTransactionFormError] = useState(null);
   const [isEditTransactionMode, setIsEditTransactionMode] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState(null);
   
+  // Pagination state for transactions
+  const [transactionCurrentPage, setTransactionCurrentPage] = useState(1);
+  const [transactionsPerPage] = useState(10);
+  
   // Refund modal state
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
   const [refundItem, setRefundItem] = useState(null);
   const [refundQuantity, setRefundQuantity] = useState(1);
   const [isProcessingRefund, setIsProcessingRefund] = useState(false);
+  
+  // Memoized callbacks for transaction actions
+  const handleTransactionToggle = useCallback((transactionId) => {
+    setExpandedTransactions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(transactionId)) {
+        newSet.delete(transactionId);
+      } else {
+        // Limit to maximum 2 expanded transactions to prevent performance issues
+        if (newSet.size >= 2) {
+          // Remove the first (oldest) expanded transaction
+          const firstExpanded = newSet.values().next().value;
+          newSet.delete(firstExpanded);
+        }
+        newSet.add(transactionId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const handleTransactionEdit = useCallback((transaction) => {
+    const editForm = {
+      receipt_number: transaction.receipt_number || '',
+      transaction_date: transaction.transaction_date ? formatDateYMD(transaction.transaction_date) : '',
+      amount: transaction.amount || '',
+      payment_method: transaction.payment_method || '',
+      transaction_type: transaction.transaction_type || '',
+      description: transaction.description || ''
+    };
+    setTransactionForm(editForm);
+    setEditingTransactionId(transaction.id);
+    setIsEditTransactionMode(true);
+    setIsAddTransactionOpen(true);
+  }, []);
+
+  const handleTransactionDelete = useCallback((transaction) => {
+    if (window.confirm('Are you sure you want to delete this transaction?')) {
+      setTransactions(prev => prev.filter(t => t.id !== transaction.id));
+    }
+  }, []);
+
+  const handleItemFulfill = useCallback(async (item) => {
+    try {
+      await fulfillTransactionItem(item.id);
+      // Refresh transactions to show updated status
+      const data = await getTransactions();
+      const patientTransactions = (data || []).filter(transaction => 
+        transaction.patient_id === selectedPatient.id
+      );
+      setTransactions(patientTransactions);
+    } catch (err) {
+      alert('Failed to fulfill item: ' + err.message);
+    }
+  }, [selectedPatient]);
+
+  const handleItemRefund = useCallback((item) => {
+    setRefundItem(item);
+    setRefundQuantity(1);
+    setIsRefundModalOpen(true);
+  }, []);
+
+  // Memoized pagination calculations
+  const paginatedTransactions = useMemo(() => {
+    const startIndex = (transactionCurrentPage - 1) * transactionsPerPage;
+    return transactions.slice(startIndex, startIndex + transactionsPerPage);
+  }, [transactions, transactionCurrentPage, transactionsPerPage]);
+
+  const totalTransactionPages = Math.ceil(transactions.length / transactionsPerPage);
+
+  // Reset pagination when transactions change
+  useEffect(() => {
+    setTransactionCurrentPage(1);
+  }, [transactions.length]);
+
+  // Memoized pagination handlers
+  const handlePreviousPage = useCallback(() => {
+    setTransactionCurrentPage(prev => Math.max(1, prev - 1));
+  }, []);
+
+  const handleNextPage = useCallback(() => {
+    setTransactionCurrentPage(prev => Math.min(totalTransactionPages, prev + 1));
+  }, [totalTransactionPages]);
   
   const initialTransactionForm = {
     receipt_number: '',
@@ -943,300 +1355,58 @@ function Patients() {
                       ) : (!transactions || transactions.length === 0) ? (
                         <p className="text-gray-400 text-sm">No transactions yet.</p>
                       ) : (
-                        <div className="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1">
-                          {transactions.map(t => (
-                            <div key={t.id} className="bg-gray-900/60 border border-gray-700 rounded-lg">
-                              <div className="flex items-center justify-between px-4 py-3">
-                                <button
-                                  className="flex-1 flex items-center justify-between text-left hover:bg-gray-800/60"
-                                  onClick={() => setExpandedTransactions(prev => ({ ...prev, [t.id]: !prev[t.id] }))}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <span
-                                      className={
-                                        'inline-block w-4 h-4 text-gray-300 transform transition-transform ' +
-                                        (expandedTransactions[t.id] ? 'rotate-90' : '')
-                                      }
-                                    >
-                                      ▶
-                                    </span>
-
-                                    <div className="flex items-center justify-between w-full">
-                                      {/* Left side - Receipt number and date */}
-                                      <div className="flex flex-col">
-                                        <div className="flex items-center gap-3 mb-1">
-                                          <div className="text-white font-medium text-sm">
-                                            Receipt #{t.receipt_number}
-                                          </div>
-                                          <div className="text-gray-400 text-sm">
-                                            {(t.transaction_date && formatDateYMDSlash(t.transaction_date)) || (t.created_at && formatDateYMDSlash(t.created_at)) || '—'}
-                                          </div>
-                                        </div>
-                                        {t.discount_percent && t.discount_percent > 0 && (
-                                          <div>
-                                            <span className="text-orange-400 bg-orange-400/10 px-2 py-0.5 rounded text-xs">
-                                              {t.discount_percent}% OFF
-                                            </span>
-                                          </div>
-                                        )}
-                                      </div>
-                                      
-                                      {/* Right side - Price and added by */}
-                                      <div className="flex flex-col items-end">
-                                        <div className="text-green-400 font-semibold text-lg mb-1">
-                                          ₱{Number(t.final_price || 0).toLocaleString()}
-                                        </div>
-                                        <div className="text-gray-500 text-xs">
-                                          Added by: {t.user_first_name && t.user_last_name ? `${t.user_first_name} ${t.user_last_name}` : 'Unknown'}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </button>
-                                <div className="flex items-center gap-1">
-                                  {userRole === 'admin' && (
-                                    <>
-                                      <button
-                                        className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded"
-                                        onClick={async (e) => {
-                                          e.stopPropagation();
-                                          // Prepare form data for editing
-                                          const editForm = {
-                                            receipt_number: t.receipt_number || '',
-                                            transaction_date: t.transaction_date ? formatDateYMD(t.transaction_date) : '',
-                                            amount: t.amount || '',
-                                            payment_method: t.payment_method || '',
-                                            transaction_type: t.transaction_type || '',
-                                            description: t.description || ''
-                                          };
-                                          setTransactionForm(editForm);
-                                          setEditingTransactionId(t.id);
-                                          setIsEditTransactionMode(true);
-                                          setIsAddTransactionOpen(true);
-                                        }}
-                                      >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                      </button>
-                                      <button
-                                        className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded"
-                                        onClick={async (e) => {
-                                          e.stopPropagation();
-                                          if (window.confirm('Are you sure you want to delete this transaction?')) {
-                                            // For now, just remove from local state. In the future, this would call an API
-                                            setTransactions(prev => prev.filter(transaction => transaction.id !== t.id));
-                                          }
-                                        }}
-                                      >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
+                        <>
+                          <div className="space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1">
+                            {paginatedTransactions.map(t => (
+                              <TransactionItem
+                                key={t.id}
+                                transaction={t}
+                                isExpanded={expandedTransactions.has(t.id)}
+                                onToggle={() => handleTransactionToggle(t.id)}
+                                onEdit={(e) => {
+                                  e.stopPropagation();
+                                  handleTransactionEdit(t);
+                                }}
+                                onDelete={(e) => {
+                                  e.stopPropagation();
+                                  handleTransactionDelete(t);
+                                }}
+                                onFulfill={handleItemFulfill}
+                                onRefund={handleItemRefund}
+                                userRole={userRole}
+                                formatDateYMDSlash={formatDateYMDSlash}
+                              />
+                            ))}
+                          </div>
+                          
+                          {/* Pagination Controls */}
+                          {totalTransactionPages > 1 && (
+                            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-700">
+                              <div className="text-sm text-gray-400">
+                                Showing {((transactionCurrentPage - 1) * transactionsPerPage) + 1} to {Math.min(transactionCurrentPage * transactionsPerPage, transactions.length)} of {transactions.length} transactions
                               </div>
-                              {expandedTransactions[t.id] && (
-                                <div className="px-4 pb-3 border-t border-gray-700">
-                                  <div className="pt-4 space-y-4 text-sm">
-                                    {/* Financial Summary */}
-                                    <div className="bg-gray-800/40 rounded-lg p-4">
-                                      <h4 className="text-white font-medium mb-3">Financial Summary</h4>
-                                      <div className="grid grid-cols-2 gap-3">
-                                        <div className="flex justify-between">
-                                          <span className="text-gray-400">Subtotal:</span>
-                                          <span className="text-white font-medium">₱{Number(t.subtotal_price || 0).toLocaleString()}</span>
-                                        </div>
-                                        {t.discount_percent && t.discount_percent > 0 && (
-                                          <>
-                                            <div className="flex justify-between">
-                                              <span className="text-gray-400">Discount ({t.discount_percent}%):</span>
-                                              <span className="text-orange-400 font-medium">-₱{Number(t.total_discount || 0).toLocaleString()}</span>
-                                            </div>
-                                          </>
-                                        )}
-                                        <div className="flex justify-between border-t border-gray-600 pt-2 col-span-2">
-                                          <span className="text-gray-300 font-medium">Total Amount:</span>
-                                          <span className="text-green-400 font-bold text-lg">₱{Number(t.final_price || 0).toLocaleString()}</span>
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    {/* Transaction Details */}
-                                    <div className="bg-gray-800/40 rounded-lg p-4">
-                                      <h4 className="text-white font-medium mb-3">Transaction Details</h4>
-                                      <div className="space-y-2">
-                                        {t.patient_first_name && t.patient_last_name && (
-                                          <div className="flex justify-between">
-                                            <span className="text-gray-400">Patient:</span>
-                                            <span className="text-white">{t.patient_first_name} {t.patient_last_name}</span>
-                                          </div>
-                                        )}
-                                        <div className="flex justify-between">
-                                          <span className="text-gray-400">Status:</span>
-                                          <span className="text-white capitalize">{t.status || 'Completed'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-gray-400">Receipt Number:</span>
-                                          <span className="text-white font-mono">#{t.receipt_number}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-gray-400">Transaction Date:</span>
-                                          <span className="text-white">{(t.transaction_date && formatDateYMDSlash(t.transaction_date)) || (t.created_at && formatDateYMDSlash(t.created_at)) || '—'}</span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    {/* Items List */}
-                                    {t.items && t.items.length > 0 && (
-                                      <div className="bg-gray-800/40 rounded-lg p-4">
-                                        <div className="flex items-center justify-between mb-3">
-                                          <h4 className="text-white font-medium">Items Purchased ({t.items.length})</h4>
-                                          <div className="flex items-center gap-2 text-sm">
-                                            {(() => {
-                                              const fulfilledCount = t.items.filter(item => item.status === 'fulfilled').length;
-                                              const pendingCount = t.items.filter(item => item.status === 'pending').length;
-                                              const refundedCount = t.items.filter(item => item.status === 'refunded').length;
-                                              
-                                              return (
-                                                <>
-                                                  {fulfilledCount > 0 && (
-                                                    <span className="bg-green-600 text-white px-2 py-1 rounded text-xs">
-                                                      {fulfilledCount} Fulfilled
-                                                    </span>
-                                                  )}
-                                                  {pendingCount > 0 && (
-                                                    <span className="bg-yellow-600 text-white px-2 py-1 rounded text-xs">
-                                                      {pendingCount} Pending
-                                                    </span>
-                                                  )}
-                                                  {refundedCount > 0 && (
-                                                    <span className="bg-red-600 text-white px-2 py-1 rounded text-xs">
-                                                      {refundedCount} Refunded
-                                                    </span>
-                                                  )}
-                                                </>
-                                              );
-                                            })()}
-                                          </div>
-                                        </div>
-                                        <div className="space-y-3">
-                                          {t.items.map((item, index) => {
-                                            const basePrice = (item.quantity || 0) * (item.unit_price || 0);
-                                            const itemDiscount = item.discount || 0;
-                                            const itemTotal = basePrice - itemDiscount;
-                                            const isFulfilled = item.status === 'fulfilled';
-                                            
-                                            return (
-                                              <div key={index} className={`bg-gray-700/40 rounded-md p-3 border-l-4 ${
-                                                item.status === 'fulfilled' 
-                                                  ? 'border-green-500' 
-                                                  : item.status === 'pending'
-                                                  ? 'border-yellow-500'
-                                                  : item.status === 'refunded'
-                                                  ? 'border-red-500'
-                                                  : item.status === 'partially_refunded'
-                                                  ? 'border-orange-500'
-                                                  : 'border-blue-500'
-                                              }`}>
-                                                <div className="flex justify-between items-start">
-                                                  <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                      <div className="text-white font-medium">
-                                                        {item.product_description || item.product_code || 'Unknown Product'}
-                                                      </div>
-                                                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                                        item.status === 'fulfilled' 
-                                                          ? 'bg-green-600 text-white' 
-                                                          : item.status === 'pending'
-                                                          ? 'bg-yellow-600 text-white'
-                                                          : item.status === 'refunded'
-                                                          ? 'bg-red-600 text-white'
-                                                          : item.status === 'partially_refunded'
-                                                          ? 'bg-orange-600 text-white'
-                                                          : 'bg-gray-600 text-white'
-                                                      }`}>
-                                                        {item.status === 'fulfilled' && '✓ Fulfilled'}
-                                                        {item.status === 'pending' && '⏳ Pending'}
-                                                        {item.status === 'refunded' && '↩️ Refunded'}
-                                                        {item.status === 'partially_refunded' && '↩️ Partially Refunded'}
-                                                        {!item.status && '❓ Unknown'}
-                                                      </span>
-                                                    </div>
-                                                    <div className="text-gray-400 text-xs mb-1">
-                                                      Product Code: {item.product_code || 'N/A'}
-                                                    </div>
-                                                    <div className="text-gray-300 text-sm">
-                                                      Quantity: {item.quantity || 0} × ₱{Number(item.unit_price || 0).toLocaleString()} each
-                                                      {item.refunded_quantity > 0 && (
-                                                        <div className="text-orange-400 text-xs mt-1">
-                                                          Refunded: {item.refunded_quantity} / {item.quantity}
-                                                        </div>
-                                                      )}
-                                                    </div>
-                                                  </div>
-                                                  <div className="text-right ml-4">
-                                                    {itemDiscount > 0 && (
-                                                      <div className="text-gray-400 text-xs line-through mb-1">
-                                                        ₱{Number(basePrice).toLocaleString()}
-                                                      </div>
-                                                    )}
-                                                    <div className="text-green-400 font-semibold text-lg">
-                                                      ₱{Number(itemTotal).toLocaleString()}
-                                                    </div>
-                                                    {itemDiscount > 0 && (
-                                                      <div className="text-orange-400 text-xs">
-                                                        Saved: ₱{Number(itemDiscount).toLocaleString()}
-                                                      </div>
-                                                    )}
-                                                    <div className="flex flex-col gap-1 mt-2">
-                                                      {!isFulfilled && (userRole === 'admin' || userRole === 'employee') && (
-                                                        <button
-                                                          onClick={async () => {
-                                                            try {
-                                                              await fulfillTransactionItem(item.id);
-                                                              // Refresh transactions to show updated status
-                                                              const data = await getTransactions();
-                                                              const patientTransactions = (data || []).filter(transaction => 
-                                                                transaction.patient_id === selectedPatient.id
-                                                              );
-                                                              setTransactions(patientTransactions);
-                                                            } catch (err) {
-                                                              alert('Failed to fulfill item: ' + err.message);
-                                                            }
-                                                          }}
-                                                          className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded transition-colors duration-200"
-                                                        >
-                                                          Fulfill Item
-                                                        </button>
-                                                      )}
-                                                      {(userRole === 'admin' || userRole === 'employee') && item.status !== 'refunded' && (
-                                                        <button
-                                                          onClick={() => {
-                                                            setRefundItem(item);
-                                                            setRefundQuantity(1);
-                                                            setIsRefundModalOpen(true);
-                                                          }}
-                                                          className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded transition-colors duration-200"
-                                                        >
-                                                          Refund Item
-                                                        </button>
-                                                      )}
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={handlePreviousPage}
+                                  disabled={transactionCurrentPage === 1}
+                                  className="px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors duration-200"
+                                >
+                                  Previous
+                                </button>
+                                <span className="text-sm text-gray-300">
+                                  Page {transactionCurrentPage} of {totalTransactionPages}
+                                </span>
+                                <button
+                                  onClick={handleNextPage}
+                                  disabled={transactionCurrentPage === totalTransactionPages}
+                                  className="px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors duration-200"
+                                >
+                                  Next
+                                </button>
+                              </div>
                             </div>
-                          ))}
-                        </div>
+                          )}
+                        </>
                       )}
                     </div>
                   )}
