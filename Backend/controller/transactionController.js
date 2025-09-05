@@ -113,6 +113,38 @@ exports.createTransaction = async (req, res) => {
       await connection.commit();
       connection.release();
 
+      // Get the complete transaction data with user and patient info for Socket.IO emission
+      const [newTransaction] = await db.execute(
+        `SELECT t.*, 
+                u.first_name as user_first_name, 
+                u.last_name as user_last_name,
+                p.first_name as patient_first_name, 
+                p.last_name as patient_last_name
+         FROM transactions t
+         LEFT JOIN users u ON t.user_id = u.id
+         LEFT JOIN patients p ON t.patient_id = p.id
+         WHERE t.id = ?`,
+        [transaction_id]
+      );
+
+      // Get transaction items for Socket.IO emission
+      const [transactionItems] = await db.execute(
+        `SELECT ti.*, p.description as product_description, p.code as product_code
+         FROM transaction_items ti
+         LEFT JOIN products p ON ti.product_id = p.id
+         WHERE ti.transaction_id = ?`,
+        [transaction_id]
+      );
+
+      const completeTransaction = newTransaction[0];
+      completeTransaction.items = transactionItems;
+
+      // Emit Socket.IO event for real-time updates
+      emitSocketEvent(req, 'transaction-updated', {
+        type: 'added',
+        transaction: completeTransaction
+      });
+
       res.status(201).json({
         message: "Transaction created successfully",
         transaction_id: transaction_id,
@@ -290,6 +322,38 @@ exports.updateTransaction = async (req, res) => {
       await connection.commit();
       connection.release();
 
+      // Get updated transaction data for Socket.IO emission
+      const [updatedTransaction] = await db.execute(
+        `SELECT t.*, 
+                u.first_name as user_first_name, 
+                u.last_name as user_last_name,
+                p.first_name as patient_first_name, 
+                p.last_name as patient_last_name
+         FROM transactions t
+         LEFT JOIN users u ON t.user_id = u.id
+         LEFT JOIN patients p ON t.patient_id = p.id
+         WHERE t.id = ?`,
+        [id]
+      );
+
+      // Get transaction items for Socket.IO emission
+      const [transactionItems] = await db.execute(
+        `SELECT ti.*, p.description as product_description, p.code as product_code
+         FROM transaction_items ti
+         LEFT JOIN products p ON ti.product_id = p.id
+         WHERE ti.transaction_id = ?`,
+        [id]
+      );
+
+      const completeTransaction = updatedTransaction[0];
+      completeTransaction.items = transactionItems;
+
+      // Emit Socket.IO event for real-time updates
+      emitSocketEvent(req, 'transaction-updated', {
+        type: 'updated',
+        transaction: completeTransaction
+      });
+
       res.json({ message: "Transaction updated successfully" });
 
     } catch (error) {
@@ -430,6 +494,12 @@ exports.deleteTransaction = async (req, res) => {
       "UPDATE transactions SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?",
       [id]
     );
+
+    // Emit Socket.IO event for real-time updates
+    emitSocketEvent(req, 'transaction-updated', {
+      type: 'deleted',
+      transaction_id: id
+    });
 
     res.json({ message: "Transaction deleted successfully" });
 

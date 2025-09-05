@@ -19,6 +19,15 @@ function AddTransactionModal({
   const [inventory, setInventory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Custom alert state
+  const [alertConfig, setAlertConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info', // 'info', 'success', 'warning', 'error'
+    onConfirm: null
+  });
 
   // Load inventory and categories when modal opens
   useEffect(() => {
@@ -135,12 +144,24 @@ function AddTransactionModal({
     e.preventDefault();
     
     if (cart.length === 0) {
-      alert('Please add items to cart before proceeding');
+      setAlertConfig({
+        isOpen: true,
+        title: 'Empty Cart',
+        message: 'Please add items to cart before proceeding',
+        type: 'warning',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, isOpen: false }))
+      });
       return;
     }
 
     if (!receiptNumber.trim()) {
-      alert('Please enter a receipt number');
+      setAlertConfig({
+        isOpen: true,
+        title: 'Missing Receipt Number',
+        message: 'Please enter a receipt number',
+        type: 'warning',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, isOpen: false }))
+      });
       return;
     }
 
@@ -424,6 +445,66 @@ function AddTransactionModal({
           </div>
         </div>
       </div>
+
+      {/* Custom Alert Modal */}
+      {alertConfig.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}></div>
+          <div className="relative w-full max-w-md mx-4 shadow-2xl">
+            <div className={`rounded-t-xl border border-gray-700 p-4 flex items-center gap-3 ${
+              alertConfig.type === 'error' ? 'bg-gradient-to-r from-red-700 via-red-600 to-red-700' :
+              alertConfig.type === 'warning' ? 'bg-gradient-to-r from-yellow-700 via-yellow-600 to-yellow-700' :
+              alertConfig.type === 'success' ? 'bg-gradient-to-r from-green-700 via-green-600 to-green-700' :
+              'bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700'
+            }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                alertConfig.type === 'error' ? 'bg-red-800' :
+                alertConfig.type === 'warning' ? 'bg-yellow-800' :
+                alertConfig.type === 'success' ? 'bg-green-800' :
+                'bg-blue-800'
+              }`}>
+                {alertConfig.type === 'error' && (
+                  <svg className="w-5 h-5 text-red-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+                {alertConfig.type === 'warning' && (
+                  <svg className="w-5 h-5 text-yellow-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                )}
+                {alertConfig.type === 'success' && (
+                  <svg className="w-5 h-5 text-green-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+                {alertConfig.type === 'info' && (
+                  <svg className="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+              </div>
+              <h3 className="text-lg font-semibold text-white">{alertConfig.title}</h3>
+            </div>
+            <div className="bg-gray-800 border-x border-b border-gray-700 rounded-b-xl p-6">
+              <p className="text-gray-300 mb-6">{alertConfig.message}</p>
+              <div className="flex justify-end">
+                <button
+                  className={`px-6 py-3 text-white rounded-lg transition-colors duration-200 font-medium ${
+                    alertConfig.type === 'error' ? 'bg-red-600 hover:bg-red-700' :
+                    alertConfig.type === 'warning' ? 'bg-yellow-600 hover:bg-yellow-700' :
+                    alertConfig.type === 'success' ? 'bg-green-600 hover:bg-green-700' :
+                    'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                  onClick={alertConfig.onConfirm || (() => setAlertConfig(prev => ({ ...prev, isOpen: false })))}
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

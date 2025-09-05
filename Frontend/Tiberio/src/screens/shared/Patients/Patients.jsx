@@ -312,7 +312,26 @@ function Patients() {
         const handleTransactionUpdate = (data) => {
           console.log('🔌 Real-time transaction update received:', data);
           
-          if (data.type === 'item_fulfilled' || data.type === 'item_refunded') {
+          if (data.type === 'added') {
+            // Add new transaction to the list if it belongs to the currently selected patient
+            if (selectedPatient && data.transaction.patient_id === selectedPatient.id) {
+              setTransactions(prevTransactions => [data.transaction, ...prevTransactions]);
+            }
+          } else if (data.type === 'updated') {
+            // Update existing transaction in the list
+            if (selectedPatient && data.transaction.patient_id === selectedPatient.id) {
+              setTransactions(prevTransactions => 
+                prevTransactions.map(transaction => 
+                  transaction.id === data.transaction.id ? data.transaction : transaction
+                )
+              );
+            }
+          } else if (data.type === 'deleted') {
+            // Remove deleted transaction from the list
+            setTransactions(prevTransactions => 
+              prevTransactions.filter(transaction => transaction.id !== data.transaction_id)
+            );
+          } else if (data.type === 'item_fulfilled' || data.type === 'item_refunded') {
             // Refresh transactions for the currently selected patient
             if (selectedPatient) {
               const refreshTransactions = async () => {
@@ -1381,24 +1400,10 @@ function Patients() {
                   ));
                 } else {
                   // Create new transaction via API
-                  const response = await createTransaction(apiTransactionData);
+                  await createTransaction(apiTransactionData);
                   
-                  // Add the new transaction to local state with the response data
-                  const newTransaction = {
-                    id: response.transaction_id,
-                    receipt_number: response.receipt_number,
-                    subtotal_price: response.subtotal_price,
-                    total_discount: response.total_discount,
-                    final_price: response.final_price,
-                    discount_percent: transactionData.overall_discount || 0,
-                    transaction_date: new Date().toISOString().split('T')[0],
-                    transaction_type: 'pos_sale',
-                    description: 'POS Transaction',
-                    items: transactionData.items,
-                    customer_name: transactionData.customer_name,
-                    created_by_name: 'Current User' // This would come from user context in real app
-                  };
-                  setTransactions(prev => [newTransaction, ...prev]);
+                  // Socket.IO will handle adding the transaction to the list automatically
+                  // No need to manually update the state here
                 }
                 
                 setIsAddTransactionOpen(false);
