@@ -160,6 +160,8 @@ function Inventory() {
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userRole');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('name');
     navigate('/');
   };
 

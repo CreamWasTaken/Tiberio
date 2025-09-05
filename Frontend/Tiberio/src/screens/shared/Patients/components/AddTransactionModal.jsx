@@ -8,7 +8,9 @@ function AddTransactionModal({
   isSavingTransaction, 
   mode = 'add',
   onSubmit,
-  selectedPatient = null
+  selectedPatient = null,
+  transactionFormError = null,
+  onClearError = null
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState([]);
@@ -297,11 +299,22 @@ function AddTransactionModal({
                 <input
                   type="text"
                   value={receiptNumber}
-                  onChange={(e) => setReceiptNumber(e.target.value)}
+                  onChange={(e) => {
+                    setReceiptNumber(e.target.value);
+                    // Clear error when user starts typing
+                    if (transactionFormError && onClearError) {
+                      onClearError();
+                    }
+                  }}
                   placeholder="Enter receipt number"
                   className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                   required
                 />
+                {transactionFormError && (
+                  <div className="mt-2 p-3 bg-red-900/20 border border-red-500/50 rounded-md">
+                    <p className="text-red-400 text-sm">{transactionFormError}</p>
+                  </div>
+                )}
               </div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Customer Name

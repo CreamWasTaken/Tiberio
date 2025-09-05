@@ -14,8 +14,10 @@ export const login = async (username, password) => {
       if (response.data.token) {
         localStorage.setItem('authToken', response.data.token);
       }
-      if(response.data.name){
-        localStorage.setItem('name', response.data.name);
+      if(response.data.user){
+        localStorage.setItem('name', response.data.user.name);
+        localStorage.setItem('userId', response.data.user.id);
+        localStorage.setItem('userRole', response.data.user.role);
       }
   
       return response.data;

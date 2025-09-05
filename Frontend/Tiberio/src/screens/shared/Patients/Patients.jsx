@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi, updateCheckup as updateCheckupApi, deleteCheckup as deleteCheckupApi, getTotalCheckupsCount } from '../../../services/patient';
-import { createTransaction, getTransactions, fulfillTransactionItem, refundTransactionItem } from '../../../services/transaction';
+import { createTransaction, getTransactions, fulfillTransactionItem, refundTransactionItem, deleteTransaction } from '../../../services/transaction';
 import Sidebar from '../../../components/Sidebar';
 import AddPatientModal from './components/AddPatientModal';
 import AddCheckupModal from './components/AddCheckupModal';
@@ -349,6 +349,8 @@ function Patients() {
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userRole');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('name');
     navigate('/');
   };
 
@@ -638,6 +640,8 @@ function Patients() {
         // Listen for transaction updates
         const handleTransactionUpdate = (data) => {
           console.log('🔌 Real-time transaction update received:', data);
+          console.log('🔌 Event type:', data.type);
+          console.log('🔌 Selected patient ID:', selectedPatient?.id);
           
           if (data.type === 'added') {
             // Add new transaction to the list if it belongs to the currently selected patient
@@ -655,9 +659,19 @@ function Patients() {
             }
           } else if (data.type === 'deleted') {
             // Remove deleted transaction from the list
-            setTransactions(prevTransactions => 
-              prevTransactions.filter(transaction => transaction.id !== data.transaction_id)
-            );
+            console.log('🔌 Removing deleted transaction:', data.transaction_id);
+            setTransactions(prevTransactions => {
+              const filtered = prevTransactions.filter(transaction => {
+                // Convert both to numbers for comparison to handle string/number mismatch
+                const transactionId = Number(transaction.id);
+                const deletedId = Number(data.transaction_id);
+                const shouldKeep = transactionId !== deletedId;
+                console.log(`🔌 Transaction ${transactionId} vs deleted ${deletedId}: ${shouldKeep ? 'keep' : 'remove'}`);
+                return shouldKeep;
+              });
+              console.log(`🔌 Transactions before: ${prevTransactions.length}, after: ${filtered.length}`);
+              return filtered;
+            });
           } else if (data.type === 'item_fulfilled' || data.type === 'item_refunded') {
             // Refresh transactions for the currently selected patient
             if (selectedPatient) {
@@ -777,10 +791,31 @@ function Patients() {
     setIsAddTransactionOpen(true);
   }, []);
 
-  const handleTransactionDelete = useCallback((transaction) => {
-    if (window.confirm('Are you sure you want to delete this transaction?')) {
-      setTransactions(prev => prev.filter(t => t.id !== transaction.id));
-    }
+  const handleTransactionDelete = useCallback(async (transaction) => {
+    setAlertConfig({
+      isOpen: true,
+      title: 'Delete Transaction',
+      message: 'Are you sure you want to delete this transaction? This action cannot be undone.',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          await deleteTransaction(transaction.id);
+          // The transaction will be removed from the list via Socket.IO real-time updates
+          // No need to manually update the state here
+          setAlertConfig(prev => ({ ...prev, isOpen: false }));
+        } catch (err) {
+          setAlertConfig({
+            isOpen: true,
+            title: 'Error',
+            message: 'Failed to delete transaction: ' + err.message,
+            type: 'error',
+            onConfirm: () => setAlertConfig(prev => ({ ...prev, isOpen: false })),
+            onCancel: null
+          });
+        }
+      },
+      onCancel: () => setAlertConfig(prev => ({ ...prev, isOpen: false }))
+    });
   }, []);
 
   const handleItemFulfill = useCallback(async (item) => {
@@ -1535,7 +1570,8 @@ function Patients() {
               setIsAddTransactionOpen(false); 
               setIsEditTransactionMode(false); 
               setEditingTransactionId(null); 
-              setTransactionForm(initialTransactionForm); 
+              setTransactionForm(initialTransactionForm);
+              setTransactionFormError(null); // Clear error when closing modal
             }}
             transactionForm={transactionForm}
             setTransactionForm={setTransactionForm}
@@ -1543,6 +1579,7 @@ function Patients() {
             isSavingTransaction={isSavingTransaction}
             mode={isEditTransactionMode ? 'edit' : 'add'}
             selectedPatient={selectedPatient}
+            onClearError={() => setTransactionFormError(null)}
             onSubmit={async (e, transactionData) => {
               e.preventDefault();
               if (!selectedPatient) return;
