@@ -7,6 +7,7 @@ import AddPatientModal from './components/AddPatientModal';
 import AddCheckupModal from './components/AddCheckupModal';
 import socketService from '../../../services/socket';
 import AddTransactionModal from './components/AddTransactionModal';
+import Alert from '../../../components/Alert';
 
 // Memoized TransactionItem component for better performance
 const TransactionItem = memo(({ 
@@ -792,7 +793,14 @@ function Patients() {
       );
       setTransactions(patientTransactions);
     } catch (err) {
-      alert('Failed to fulfill item: ' + err.message);
+      setAlertConfig({
+        isOpen: true,
+        title: 'Error',
+        message: 'Failed to fulfill item: ' + err.message,
+        type: 'error',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, isOpen: false })),
+        onCancel: null
+      });
     }
   }, [selectedPatient]);
 
@@ -1580,7 +1588,14 @@ function Patients() {
                 setTransactionForm(initialTransactionForm);
                 
                 // Show success message
-                alert('Transaction created successfully!');
+                setAlertConfig({
+                  isOpen: true,
+                  title: 'Success',
+                  message: 'Transaction created successfully!',
+                  type: 'success',
+                  onConfirm: () => setAlertConfig(prev => ({ ...prev, isOpen: false })),
+                  onCancel: null
+                });
               } catch (err) {
                 setTransactionFormError(err.message || 'Failed to save transaction');
                 console.error('Transaction error:', err);
@@ -1648,12 +1663,26 @@ function Patients() {
                       className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 disabled:opacity-50"
                       onClick={async () => {
                         if (!refundQuantity || refundQuantity <= 0) {
-                          alert('Please enter a valid refund quantity');
+                          setAlertConfig({
+                            isOpen: true,
+                            title: 'Invalid Input',
+                            message: 'Please enter a valid refund quantity',
+                            type: 'warning',
+                            onConfirm: () => setAlertConfig(prev => ({ ...prev, isOpen: false })),
+                            onCancel: null
+                          });
                           return;
                         }
                         
                         if (refundQuantity > (refundItem.quantity - (refundItem.refunded_quantity || 0))) {
-                          alert('Refund quantity cannot exceed available quantity');
+                          setAlertConfig({
+                            isOpen: true,
+                            title: 'Invalid Input',
+                            message: 'Refund quantity cannot exceed available quantity',
+                            type: 'warning',
+                            onConfirm: () => setAlertConfig(prev => ({ ...prev, isOpen: false })),
+                            onCancel: null
+                          });
                           return;
                         }
 
@@ -1667,9 +1696,23 @@ function Patients() {
                           );
                           setTransactions(patientTransactions);
                           setIsRefundModalOpen(false);
-                          alert('Item refunded successfully!');
+                          setAlertConfig({
+                            isOpen: true,
+                            title: 'Success',
+                            message: 'Item refunded successfully!',
+                            type: 'success',
+                            onConfirm: () => setAlertConfig(prev => ({ ...prev, isOpen: false })),
+                            onCancel: null
+                          });
                         } catch (err) {
-                          alert('Failed to refund item: ' + err.message);
+                          setAlertConfig({
+                            isOpen: true,
+                            title: 'Error',
+                            message: 'Failed to refund item: ' + err.message,
+                            type: 'error',
+                            onConfirm: () => setAlertConfig(prev => ({ ...prev, isOpen: false })),
+                            onCancel: null
+                          });
                         } finally {
                           setIsProcessingRefund(false);
                         }
@@ -1685,72 +1728,16 @@ function Patients() {
           )}
 
           {/* Custom Alert Modal */}
-          {alertConfig.isOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-              <div className="absolute inset-0 bg-black/60" onClick={alertConfig.onCancel || (() => setAlertConfig(prev => ({ ...prev, isOpen: false })))}></div>
-              <div className="relative w-full max-w-md mx-4 shadow-2xl">
-                <div className={`rounded-t-xl border border-gray-700 p-4 flex items-center gap-3 ${
-                  alertConfig.type === 'error' ? 'bg-gradient-to-r from-red-700 via-red-600 to-red-700' :
-                  alertConfig.type === 'warning' ? 'bg-gradient-to-r from-yellow-700 via-yellow-600 to-yellow-700' :
-                  alertConfig.type === 'success' ? 'bg-gradient-to-r from-green-700 via-green-600 to-green-700' :
-                  'bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700'
-                }`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    alertConfig.type === 'error' ? 'bg-red-800' :
-                    alertConfig.type === 'warning' ? 'bg-yellow-800' :
-                    alertConfig.type === 'success' ? 'bg-green-800' :
-                    'bg-blue-800'
-                  }`}>
-                    {alertConfig.type === 'error' && (
-                      <svg className="w-5 h-5 text-red-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    )}
-                    {alertConfig.type === 'warning' && (
-                      <svg className="w-5 h-5 text-yellow-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                      </svg>
-                    )}
-                    {alertConfig.type === 'success' && (
-                      <svg className="w-5 h-5 text-green-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    )}
-                    {alertConfig.type === 'info' && (
-                      <svg className="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    )}
-        </div>
-                  <h3 className="text-lg font-semibold text-white">{alertConfig.title}</h3>
-      </div>
-                <div className="bg-gray-800 border-x border-b border-gray-700 rounded-b-xl p-6">
-                  <p className="text-gray-300 mb-6">{alertConfig.message}</p>
-                  <div className="flex justify-end gap-3">
-                    {alertConfig.onCancel && (
-                      <button
-                        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200"
-                        onClick={alertConfig.onCancel}
-                      >
-                        Cancel
-                      </button>
-                    )}
-                    <button
-                      className={`px-4 py-2 text-white rounded-lg transition-colors duration-200 ${
-                        alertConfig.type === 'error' ? 'bg-red-600 hover:bg-red-700' :
-                        alertConfig.type === 'warning' ? 'bg-yellow-600 hover:bg-yellow-700' :
-                        alertConfig.type === 'success' ? 'bg-green-600 hover:bg-green-700' :
-                        'bg-blue-600 hover:bg-blue-700'
-                      }`}
-                      onClick={alertConfig.onConfirm}
-                    >
-                      {alertConfig.type === 'error' ? 'OK' : 'Confirm'}
-                    </button>
-    </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <Alert
+            isOpen={alertConfig.isOpen}
+            title={alertConfig.title}
+            message={alertConfig.message}
+            type={alertConfig.type}
+            onConfirm={alertConfig.onConfirm}
+            onCancel={alertConfig.onCancel}
+            showCancel={!!alertConfig.onCancel}
+            confirmText={alertConfig.type === 'error' ? 'OK' : 'Confirm'}
+          />
          </main>
        </div>
      </div>
