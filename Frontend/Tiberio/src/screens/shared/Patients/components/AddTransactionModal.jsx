@@ -194,39 +194,39 @@ function AddTransactionModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
       <div className="bg-gray-800 rounded-lg w-full max-w-[95vw] h-[95vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-gray-700 px-8 py-6 flex items-center justify-between">
-          <h2 className="text-3xl font-bold text-white">
+        <div className="bg-gray-700 px-4 sm:px-8 py-4 sm:py-6 flex items-center justify-between">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">
             {mode === 'edit' ? 'Edit Transaction' : 'Point of Sale'}
           </h2>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 sm:gap-6">
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white text-3xl"
+              className="text-gray-400 hover:text-white text-2xl sm:text-3xl"
             >
               ×
             </button>
           </div>
         </div>
 
-        <div className="flex h-[calc(95vh-140px)]">
+        <div className="flex flex-col lg:flex-row h-[calc(95vh-120px)] sm:h-[calc(95vh-140px)]">
           {/* Left Side - Inventory */}
-          <div className="w-2/3 bg-gray-900 p-8 overflow-hidden">
+          <div className="w-full lg:w-2/3 bg-gray-900 p-4 sm:p-6 lg:p-8 overflow-hidden">
             {/* Search and Categories */}
-            <div className="mb-8">
-              <div className="flex gap-6 mb-6">
+            <div className="mb-4 sm:mb-6 lg:mb-8">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
                 <div className="flex-1">
                   <input
                     type="text"
                     placeholder="Search items..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-6 py-4 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
+                    className="w-full px-3 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base lg:text-lg"
                   />
                 </div>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-6 py-4 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg min-w-[200px]"
+                  className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base lg:text-lg min-w-[150px] sm:min-w-[180px] lg:min-w-[200px]"
                 >
                   {availableCategories.map(category => (
                     <option key={category.key} value={category.key}>
@@ -237,7 +237,7 @@ function AddTransactionModal({
                 <button
                   onClick={loadData}
                   disabled={isLoading}
-                  className="px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-lg font-medium"
+                  className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm sm:text-base lg:text-lg font-medium"
                 >
                   {isLoading ? 'Loading...' : 'Refresh'}
                 </button>
@@ -245,7 +245,7 @@ function AddTransactionModal({
             </div>
 
             {/* Inventory Grid */}
-            <div className="grid grid-cols-3 gap-6 overflow-y-auto max-h-[calc(95vh-400px)] custom-scrollbar">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 overflow-y-auto max-h-[calc(95vh-300px)] sm:max-h-[calc(95vh-350px)] lg:max-h-[calc(95vh-400px)] custom-scrollbar">
               {isLoading ? (
                 <div className="col-span-full text-center py-10 text-gray-400">
                   <p>Loading inventory...</p>
@@ -262,12 +262,12 @@ function AddTransactionModal({
                 filteredInventory.map(item => (
                                      <div
                      key={item.id}
-                     className="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:border-blue-500 transition-colors cursor-pointer"
+                     className="bg-gray-800 border border-gray-700 rounded-lg p-3 sm:p-4 lg:p-6 hover:border-blue-500 transition-colors cursor-pointer"
                      onClick={() => addToCart(item)}
                    >
-                     <div className="flex justify-between items-start mb-3">
-                       <h3 className="text-white font-medium text-base">{item.name}</h3>
-                       <span className="text-sm text-gray-400 capitalize">{item.category}</span>
+                     <div className="flex justify-between items-start mb-2 sm:mb-3">
+                       <h3 className="text-white font-medium text-sm sm:text-base">{item.name}</h3>
+                       <span className="text-xs sm:text-sm text-gray-400 capitalize">{item.category}</span>
                      </div>
                      <div className="mb-2">
                        <span className="text-xs text-gray-500 bg-gray-700 px-2 py-1 rounded">
@@ -275,11 +275,11 @@ function AddTransactionModal({
                        </span>
                      </div>
                      <div className="flex justify-between items-center">
-                       <span className="text-green-400 font-bold text-xl">₱{item.price.toLocaleString()}</span>
-                       <span className="text-gray-400 text-sm">Stock: {item.stock}</span>
+                       <span className="text-green-400 font-bold text-lg sm:text-xl">₱{item.price.toLocaleString()}</span>
+                       <span className="text-gray-400 text-xs sm:text-sm">Stock: {item.stock}</span>
                      </div>
-                     <div className="mt-3 text-center">
-                       <span className="text-blue-400 text-sm">Click to add to cart</span>
+                     <div className="mt-2 sm:mt-3 text-center">
+                       <span className="text-blue-400 text-xs sm:text-sm">Click to add to cart</span>
                      </div>
                    </div>
                 ))
@@ -288,12 +288,12 @@ function AddTransactionModal({
           </div>
 
           {/* Right Side - Cart */}
-          <div className="w-1/3 bg-gray-800 p-8 flex flex-col">
+          <div className="w-full lg:w-1/3 bg-gray-800 p-4 sm:p-6 lg:p-8 flex flex-col">
             {/* Customer Info */}
-            <div className="mb-8">
-              <h3 className="text-white font-semibold text-lg mb-4">Customer Information</h3>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+            <div className="mb-4 sm:mb-6 lg:mb-8">
+              <h3 className="text-white font-semibold text-base sm:text-lg mb-3 sm:mb-4">Customer Information</h3>
+              <div className="mb-3 sm:mb-4">
+                <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1 sm:mb-2">
                   Receipt Number *
                 </label>
                 <input
@@ -307,16 +307,16 @@ function AddTransactionModal({
                     }
                   }}
                   placeholder="Enter receipt number"
-                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                   required
                 />
                 {transactionFormError && (
-                  <div className="mt-2 p-3 bg-red-900/20 border border-red-500/50 rounded-md">
-                    <p className="text-red-400 text-sm">{transactionFormError}</p>
+                  <div className="mt-2 p-2 sm:p-3 bg-red-900/20 border border-red-500/50 rounded-md">
+                    <p className="text-red-400 text-xs sm:text-sm">{transactionFormError}</p>
                   </div>
                 )}
               </div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1 sm:mb-2">
                 Customer Name
               </label>
               <input
@@ -324,7 +324,7 @@ function AddTransactionModal({
                 placeholder={selectedPatient ? "Selected patient name" : "Customer Name (Optional)"}
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
               />
               {selectedPatient && (
                 <p className="text-xs text-blue-400 mt-1">
@@ -335,47 +335,47 @@ function AddTransactionModal({
 
             {/* Cart Items */}
             <div className="flex-1 overflow-y-auto">
-              <h3 className="text-white font-semibold text-lg mb-4">Cart Items</h3>
+              <h3 className="text-white font-semibold text-base sm:text-lg mb-3 sm:mb-4">Cart Items</h3>
               {cart.length === 0 ? (
-                <p className="text-gray-400 text-base">No items in cart</p>
+                <p className="text-gray-400 text-sm sm:text-base">No items in cart</p>
               ) : (
                 <div className="space-y-2">
                   {cart.map(item => (
-                    <div key={item.id} className="bg-gray-700 rounded-lg p-3">
+                    <div key={item.id} className="bg-gray-700 rounded-lg p-2 sm:p-3">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex-1">
-                          <h4 className="text-white font-medium text-sm">{item.name}</h4>
+                          <h4 className="text-white font-medium text-xs sm:text-sm">{item.name}</h4>
                           <p className="text-gray-400 text-xs">₱{item.price.toLocaleString()} each</p>
                         </div>
                         <button
                           onClick={() => removeFromCart(item.id)}
-                          className="text-red-400 hover:text-red-300 text-lg"
+                          className="text-red-400 hover:text-red-300 text-base sm:text-lg"
                         >
                           ×
                         </button>
                       </div>
                       <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2">
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="w-6 h-6 bg-gray-600 text-white rounded flex items-center justify-center hover:bg-gray-500 text-sm"
+                            className="w-5 h-5 sm:w-6 sm:h-6 bg-gray-600 text-white rounded flex items-center justify-center hover:bg-gray-500 text-xs sm:text-sm"
                           >
                             -
                           </button>
-                          <span className="text-white font-medium w-8 text-center text-sm">{item.quantity}</span>
+                          <span className="text-white font-medium w-6 sm:w-8 text-center text-xs sm:text-sm">{item.quantity}</span>
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="w-6 h-6 bg-gray-600 text-white rounded flex items-center justify-center hover:bg-gray-500 text-sm"
+                            className="w-5 h-5 sm:w-6 sm:h-6 bg-gray-600 text-white rounded flex items-center justify-center hover:bg-gray-500 text-xs sm:text-sm"
                           >
                             +
                           </button>
                         </div>
-                        <span className="text-green-400 font-bold text-base">
+                        <span className="text-green-400 font-bold text-sm sm:text-base">
                           ₱{((item.price * item.quantity) - (item.discount || 0)).toLocaleString()}
                         </span>
                       </div>
                       {/* Item Discount Field */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 sm:gap-2">
                         <label className="text-gray-400 text-xs">Item Discount:</label>
                         <div className="flex items-center gap-1">
                           <span className="text-gray-400 text-xs">₱</span>
@@ -385,7 +385,7 @@ function AddTransactionModal({
                             max={item.price * item.quantity}
                             value={item.discount || ''}
                             onChange={(e) => updateItemDiscount(item.id, parseFloat(e.target.value) || 0)}
-                            className="w-20 px-2 py-1 bg-gray-600 border border-gray-500 rounded text-white text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="w-16 sm:w-20 px-1 sm:px-2 py-1 bg-gray-600 border border-gray-500 rounded text-white text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             placeholder="0"
                           />
                         </div>
@@ -402,36 +402,36 @@ function AddTransactionModal({
             </div>
 
             {/* Totals and Payment */}
-            <div className="mt-8 border-t border-gray-700 pt-6">
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between text-gray-300 text-lg">
+            <div className="mt-4 sm:mt-6 lg:mt-8 border-t border-gray-700 pt-4 sm:pt-6">
+              <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+                <div className="flex justify-between text-gray-300 text-sm sm:text-base lg:text-lg">
                   <span>Subtotal:</span>
                   <span>₱{subtotal.toLocaleString()}</span>
                 </div>
                 {itemDiscounts > 0 && (
-                  <div className="flex justify-between text-orange-400 text-lg">
+                  <div className="flex justify-between text-orange-400 text-sm sm:text-base lg:text-lg">
                     <span>Item Discounts:</span>
                     <span>-₱{itemDiscounts.toLocaleString()}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-gray-300 text-lg">
+                <div className="flex justify-between text-gray-300 text-sm sm:text-base lg:text-lg">
                   <span>Overall Discount:</span>
                   <span>{overallDiscountPercentage}%</span>
                 </div>
                 {overallDiscountAmount > 0 && (
-                  <div className="flex justify-between text-orange-400 text-lg">
+                  <div className="flex justify-between text-orange-400 text-sm sm:text-base lg:text-lg">
                     <span>Overall Discount Amount:</span>
                     <span>-₱{overallDiscountAmount.toLocaleString()}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-white text-xl font-bold border-t border-gray-600 pt-3">
+                <div className="flex justify-between text-white text-base sm:text-lg lg:text-xl font-bold border-t border-gray-600 pt-2 sm:pt-3">
                   <span>Total:</span>
                   <span>₱{total.toLocaleString()}</span>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                 <button
                   type="button"
                   onClick={() => {
@@ -443,14 +443,14 @@ function AddTransactionModal({
                       setCustomerName('');
                     }
                   }}
-                  className="flex-1 px-6 py-4 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors text-lg font-medium"
+                  className="flex-1 px-4 sm:px-6 py-3 sm:py-4 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors text-sm sm:text-base lg:text-lg font-medium"
                 >
                   Clear Cart
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={cart.length === 0 || isSavingTransaction}
-                  className="flex-1 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-lg font-medium"
+                  className="flex-1 px-4 sm:px-6 py-3 sm:py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm sm:text-base lg:text-lg font-medium"
                 >
                   {isSavingTransaction ? 'Processing...' : 'Complete Sale'}
                 </button>
