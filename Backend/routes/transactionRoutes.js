@@ -7,7 +7,6 @@ const { authenticateToken } = require("../middleware/authenticateToken");
 router.post("/add-transaction",transactionController.createTransaction);
 router.get("/get-transactions",transactionController.getAllTransactions);
 router.get("/get-transaction/:id", transactionController.getTransactionById);
-router.put("/update-transaction/:id",transactionController.updateTransaction);
 router.delete("/delete-transaction/:id",transactionController.deleteTransaction);
 
 // Transaction status management

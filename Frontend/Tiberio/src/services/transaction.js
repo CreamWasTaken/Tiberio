@@ -33,16 +33,6 @@ export const getTransactionById = async (transactionId) => {
   }
 };
 
-// Update transaction
-export const updateTransaction = async (transactionId, transactionData) => {
-  try {
-    const response = await apiClient.put(`/api/transactions/update-transaction/${transactionId}`, transactionData);
-    return response.data;
-  } catch (error) {
-    console.error('Error updating transaction:', error);
-    throw new Error(error.response?.data?.error || 'Failed to update transaction');
-  }
-};
 
 // Delete transaction
 export const deleteTransaction = async (transactionId) => {

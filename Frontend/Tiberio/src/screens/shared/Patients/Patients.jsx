@@ -14,7 +14,6 @@ const TransactionItem = memo(({
   transaction, 
   isExpanded, 
   onToggle, 
-  onEdit, 
   onDelete, 
   onFulfill, 
   onRefund,
@@ -94,14 +93,6 @@ const TransactionItem = memo(({
         <div className="flex items-center gap-1">
           {userRole === 'admin' && (
             <>
-              <button
-                className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded"
-                onClick={onEdit}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
               <button
                 className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded"
                 onClick={onDelete}
@@ -744,8 +735,6 @@ function Patients() {
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [isSavingTransaction, setIsSavingTransaction] = useState(false);
   const [transactionFormError, setTransactionFormError] = useState(null);
-  const [isEditTransactionMode, setIsEditTransactionMode] = useState(false);
-  const [editingTransactionId, setEditingTransactionId] = useState(null);
   
   // Pagination state for transactions
   const [transactionCurrentPage, setTransactionCurrentPage] = useState(1);
@@ -776,20 +765,6 @@ function Patients() {
     });
   }, []);
 
-  const handleTransactionEdit = useCallback((transaction) => {
-    const editForm = {
-      receipt_number: transaction.receipt_number || '',
-      transaction_date: transaction.transaction_date ? formatDateYMD(transaction.transaction_date) : '',
-      amount: transaction.amount || '',
-      payment_method: transaction.payment_method || '',
-      transaction_type: transaction.transaction_type || '',
-      description: transaction.description || ''
-    };
-    setTransactionForm(editForm);
-    setEditingTransactionId(transaction.id);
-    setIsEditTransactionMode(true);
-    setIsAddTransactionOpen(true);
-  }, []);
 
   const handleTransactionDelete = useCallback(async (transaction) => {
     setAlertConfig({
@@ -1378,8 +1353,6 @@ function Patients() {
                             onClick={() => { 
                               setTransactionForm(initialTransactionForm); 
                               setTransactionFormError(null); 
-                              setIsEditTransactionMode(false);
-                              setEditingTransactionId(null);
                               setIsAddTransactionOpen(true); 
                             }}
                           >
@@ -1406,10 +1379,6 @@ function Patients() {
                                 transaction={t}
                                 isExpanded={expandedTransactions.has(t.id)}
                                 onToggle={() => handleTransactionToggle(t.id)}
-                                onEdit={(e) => {
-                                  e.stopPropagation();
-                                  handleTransactionEdit(t);
-                                }}
                                 onDelete={(e) => {
                                   e.stopPropagation();
                                   handleTransactionDelete(t);
@@ -1568,8 +1537,6 @@ function Patients() {
             isOpen={isAddTransactionOpen}
             onClose={() => { 
               setIsAddTransactionOpen(false); 
-              setIsEditTransactionMode(false); 
-              setEditingTransactionId(null); 
               setTransactionForm(initialTransactionForm);
               setTransactionFormError(null); // Clear error when closing modal
             }}
@@ -1577,7 +1544,6 @@ function Patients() {
             setTransactionForm={setTransactionForm}
             transactionFormError={transactionFormError}
             isSavingTransaction={isSavingTransaction}
-            mode={isEditTransactionMode ? 'edit' : 'add'}
             selectedPatient={selectedPatient}
             onClearError={() => setTransactionFormError(null)}
             onSubmit={async (e, transactionData) => {
@@ -1605,21 +1571,11 @@ function Patients() {
                   discount_percent: transactionData.overall_discount || 0
                 };
 
-                if (isEditTransactionMode && editingTransactionId) {
-                  // Update existing transaction - you'll need to implement updateTransaction API
-                  // For now, we'll keep the local state update
-                  setTransactions(prev => prev.map(transaction => 
-                    transaction.id === editingTransactionId 
-                      ? { ...transaction, ...transactionData }
-                      : transaction
-                  ));
-                } else {
-                  // Create new transaction via API
-                  await createTransaction(apiTransactionData);
-                  
-                  // Socket.IO will handle adding the transaction to the list automatically
-                  // No need to manually update the state here
-                }
+                // Create new transaction via API
+                await createTransaction(apiTransactionData);
+                
+                // Socket.IO will handle adding the transaction to the list automatically
+                // No need to manually update the state here
                 
                 setIsAddTransactionOpen(false);
                 setTransactionForm(initialTransactionForm);

@@ -6,7 +6,6 @@ function AddTransactionModal({
   isOpen, 
   onClose, 
   isSavingTransaction, 
-  mode = 'add',
   onSubmit,
   selectedPatient = null,
   transactionFormError = null,
@@ -196,7 +195,7 @@ function AddTransactionModal({
         {/* Header */}
         <div className="bg-gray-700 px-4 sm:px-8 py-4 sm:py-6 flex items-center justify-between">
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">
-            {mode === 'edit' ? 'Edit Transaction' : 'Point of Sale'}
+            Point of Sale
           </h2>
           <div className="flex items-center gap-2 sm:gap-6">
             <button

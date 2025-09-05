@@ -100,5 +100,6 @@ const PORT = process.env.PORT || 3000;
 
 //to do
 
-//fix when adding transaction it says unkown need to refresh to see full data
+//fix addTransactions modal cart cannot be seen in small screen sizes
+//remove edit on transactions once fulfilled cannot be touched
 
