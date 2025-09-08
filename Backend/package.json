@@ -4,7 +4,9 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "concurrently \"nodemon app\" \"cd ../Frontend/Tiberio && npm run dev\""
+    "dev": "concurrently \"nodemon app\" \"cd ../Frontend/Tiberio && npm run dev\"",
+    "network": "node app.js",
+    "get-ip": "node ../get-ip.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

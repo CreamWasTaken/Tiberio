@@ -18,7 +18,7 @@ const server = createServer(app);
 // Socket.IO setup with CORS
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173", // Frontend URL
+    origin: "*", // Allow all origins for network access
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -29,7 +29,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // CORS configuration
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: "*", // Allow all origins for network access
   credentials: true
 }));
 
@@ -88,9 +88,10 @@ const PORT = process.env.PORT || 3000;
     console.log("✅ MySQL connected!");
     conn.release();
 
-    server.listen(PORT, () => {
-      console.log(`🚀 Tiberio API is running on http://localhost:${PORT}`);
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Tiberio API is running on http://0.0.0.0:${PORT}`);
       console.log(`🔌 Socket.IO server is ready for real-time updates`);
+      console.log(`🌐 Server accessible from network on port ${PORT}`);
     });
   } catch (err) {
     console.error("❌ Failed to connect to MySQL:", err.message);
