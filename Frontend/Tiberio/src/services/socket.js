@@ -12,7 +12,7 @@ class SocketService {
     }
 
     console.log('🔌 Initializing Socket.IO connection...');
-    this.socket = io('http://localhost:3000', {
+    this.socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000', {
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
