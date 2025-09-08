@@ -190,8 +190,8 @@ function AddTransactionModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-      <div className="bg-gray-800 rounded-lg w-full max-w-[95vw] h-[95vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-1 sm:p-2">
+      <div className="bg-gray-800 rounded-lg w-full max-w-[95vw] h-[95vh] sm:h-[95vh] overflow-hidden">
         {/* Header */}
         <div className="bg-gray-700 px-4 sm:px-8 py-4 sm:py-6 flex items-center justify-between">
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">
@@ -207,12 +207,12 @@ function AddTransactionModal({
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row h-[calc(95vh-120px)] sm:h-[calc(95vh-140px)]">
+        <div className="flex flex-col md:flex-row h-[calc(95vh-100px)] sm:h-[calc(95vh-120px)]">
           {/* Left Side - Inventory */}
-          <div className="w-full lg:w-2/3 bg-gray-900 p-4 sm:p-6 lg:p-8 overflow-hidden">
+          <div className="w-full md:w-2/3 bg-gray-900 p-3 sm:p-4 lg:p-6 overflow-hidden">
             {/* Search and Categories */}
-            <div className="mb-4 sm:mb-6 lg:mb-8">
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
+            <div className="mb-3 sm:mb-4 lg:mb-6">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:gap-4 mb-3 sm:mb-4">
                 <div className="flex-1">
                   <input
                     type="text"
@@ -244,7 +244,7 @@ function AddTransactionModal({
             </div>
 
             {/* Inventory Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 overflow-y-auto max-h-[calc(95vh-300px)] sm:max-h-[calc(95vh-350px)] lg:max-h-[calc(95vh-400px)] custom-scrollbar">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 overflow-y-auto max-h-[calc(95vh-250px)] sm:max-h-[calc(95vh-280px)] md:max-h-[calc(95vh-320px)] lg:max-h-[calc(95vh-350px)] custom-scrollbar">
               {isLoading ? (
                 <div className="col-span-full text-center py-10 text-gray-400">
                   <p>Loading inventory...</p>
@@ -287,11 +287,11 @@ function AddTransactionModal({
           </div>
 
           {/* Right Side - Cart */}
-          <div className="w-full lg:w-1/3 bg-gray-800 p-4 sm:p-6 lg:p-8 flex flex-col">
+          <div className="w-full md:w-1/3 bg-gray-800 p-3 sm:p-4 lg:p-6 flex flex-col min-h-0">
             {/* Customer Info */}
-            <div className="mb-4 sm:mb-6 lg:mb-8">
-              <h3 className="text-white font-semibold text-base sm:text-lg mb-3 sm:mb-4">Customer Information</h3>
-              <div className="mb-3 sm:mb-4">
+            <div className="mb-2 sm:mb-3 lg:mb-4 flex-shrink-0">
+              <h3 className="text-white font-semibold text-base sm:text-lg mb-2 sm:mb-3">Customer Information</h3>
+              <div className="mb-2 sm:mb-3">
                 <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1 sm:mb-2">
                   Receipt Number *
                 </label>
@@ -306,7 +306,7 @@ function AddTransactionModal({
                     }
                   }}
                   placeholder="Enter receipt number"
-                  className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   required
                 />
                 {transactionFormError && (
@@ -315,7 +315,7 @@ function AddTransactionModal({
                   </div>
                 )}
               </div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1 sm:mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
                 Customer Name
               </label>
               <input
@@ -323,7 +323,7 @@ function AddTransactionModal({
                 placeholder={selectedPatient ? "Selected patient name" : "Customer Name (Optional)"}
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
               {selectedPatient && (
                 <p className="text-xs text-blue-400 mt-1">
@@ -333,12 +333,12 @@ function AddTransactionModal({
             </div>
 
             {/* Cart Items */}
-            <div className="flex-1 overflow-y-auto">
-              <h3 className="text-white font-semibold text-base sm:text-lg mb-3 sm:mb-4">Cart Items</h3>
+            <div className="flex-1 overflow-y-auto min-h-[150px] max-h-[300px] custom-scrollbar">
+              <h3 className="text-white font-semibold text-base sm:text-lg mb-2 sm:mb-3">Cart Items</h3>
               {cart.length === 0 ? (
                 <p className="text-gray-400 text-sm sm:text-base">No items in cart</p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 pr-2">
                   {cart.map(item => (
                     <div key={item.id} className="bg-gray-700 rounded-lg p-2 sm:p-3">
                       <div className="flex justify-between items-start mb-2">
@@ -401,8 +401,8 @@ function AddTransactionModal({
             </div>
 
             {/* Totals and Payment */}
-            <div className="mt-4 sm:mt-6 lg:mt-8 border-t border-gray-700 pt-4 sm:pt-6">
-              <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+            <div className="mt-3 sm:mt-4 lg:mt-6 border-t border-gray-700 pt-3 sm:pt-4 flex-shrink-0">
+              <div className="space-y-2 sm:space-y-3 mb-3 sm:mb-4">
                 <div className="flex justify-between text-gray-300 text-sm sm:text-base lg:text-lg">
                   <span>Subtotal:</span>
                   <span>₱{subtotal.toLocaleString()}</span>
@@ -430,7 +430,7 @@ function AddTransactionModal({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => {

@@ -100,6 +100,6 @@ const PORT = process.env.PORT || 3000;
 
 //to do
 
-//fix addTransactions modal cart cannot be seen in small screen sizes
-//remove edit on transactions once fulfilled cannot be touched
+//fix subtotal total and buttons on transaction modal cannot be seen in small screen sizes
+
 
