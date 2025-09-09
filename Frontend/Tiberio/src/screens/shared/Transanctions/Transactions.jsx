@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../components/Sidebar';
 import { getTransactions } from '../../../services/transaction';
+import socketService from '../../../services/socket';
 
 function Transactions() {
   const navigate = useNavigate();
@@ -53,6 +54,76 @@ function Transactions() {
     };
 
     fetchTransactions();
+  }, []);
+
+  // Socket.IO real-time updates for transactions
+  useEffect(() => {
+    const setupSocketIO = async () => {
+      try {
+        // Wait for Socket.IO connection to be established
+        const socket = await socketService.waitForConnection();
+        
+        // Join transaction update room
+        socketService.joinRoom('transaction-updated');
+        
+        // Listen for transaction updates
+        const handleTransactionUpdate = (data) => {
+          console.log('🔌 Real-time transaction update received in Daily Sales:', data);
+          console.log('🔌 Event type:', data.type);
+          
+          if (data.type === 'added') {
+            // Add new transaction to the list
+            setTransactions(prevTransactions => [data.transaction, ...prevTransactions]);
+          } else if (data.type === 'updated') {
+            // Update existing transaction in the list
+            setTransactions(prevTransactions => 
+              prevTransactions.map(transaction => 
+                transaction.id === data.transaction.id ? data.transaction : transaction
+              )
+            );
+          } else if (data.type === 'deleted') {
+            // Remove deleted transaction from the list
+            console.log('🔌 Removing deleted transaction:', data.transaction_id);
+            setTransactions(prevTransactions => {
+              const filtered = prevTransactions.filter(transaction => {
+                // Convert both to numbers for comparison to handle string/number mismatch
+                const transactionId = Number(transaction.id);
+                const deletedId = Number(data.transaction_id);
+                const shouldKeep = transactionId !== deletedId;
+                console.log(`🔌 Transaction ${transactionId} vs deleted ${deletedId}: ${shouldKeep ? 'keep' : 'remove'}`);
+                return shouldKeep;
+              });
+              console.log(`🔌 Transactions before: ${prevTransactions.length}, after: ${filtered.length}`);
+              return filtered;
+            });
+          } else if (data.type === 'item_fulfilled' || data.type === 'item_refunded') {
+            // Refresh transactions to show updated status when items are fulfilled or refunded
+            console.log('🔌 Item fulfillment/refund detected, refreshing transactions...');
+            const refreshTransactions = async () => {
+              try {
+                const data = await getTransactions();
+                setTransactions(data || []);
+                console.log('🔌 Transactions refreshed after item status change');
+              } catch (err) {
+                console.error('Failed to refresh transactions:', err);
+              }
+            };
+            refreshTransactions();
+          }
+        };
+
+        socket.on('transaction-updated', handleTransactionUpdate);
+
+        return () => {
+          socket.off('transaction-updated', handleTransactionUpdate);
+          socketService.leaveRoom('transaction-updated');
+        };
+      } catch (error) {
+        console.error('Failed to setup Socket.IO:', error);
+      }
+    };
+
+    setupSocketIO();
   }, []);
 
   // Close date picker when clicking outside
@@ -188,6 +259,10 @@ function Transactions() {
                   </svg>
                 </button>
                 <h1 className="text-2xl font-bold text-white">Daily Sales</h1>
+                <div className="ml-3 flex items-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
+                  <span className="text-xs text-green-400">Live Updates</span>
+                </div>
               </div>
              
             </div>
