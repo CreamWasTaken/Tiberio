@@ -1,3 +1,408 @@
 require("dotenv").config();
 const db = require("../config/db");
 
+// Get all orders with supplier information (with pagination and filtering)
+const getOrders = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      supplier_id,
+      search,
+      start_date,
+      end_date,
+      sort_by = 'created_at',
+      sort_order = 'DESC'
+    } = req.query;
+
+    const offset = (page - 1) * limit;
+    
+    // Build WHERE conditions
+    let whereConditions = ['o.is_deleted = 0'];
+    let queryParams = [];
+    
+    if (status) {
+      whereConditions.push('o.status = ?');
+      queryParams.push(status);
+    }
+    
+    if (supplier_id) {
+      whereConditions.push('o.supplier_id = ?');
+      queryParams.push(supplier_id);
+    }
+    
+    if (search) {
+      whereConditions.push('(o.receipt_number LIKE ? OR o.description LIKE ? OR s.name LIKE ?)');
+      const searchTerm = `%${search}%`;
+      queryParams.push(searchTerm, searchTerm, searchTerm);
+    }
+    
+    if (start_date) {
+      whereConditions.push('DATE(o.created_at) >= ?');
+      queryParams.push(start_date);
+    }
+    
+    if (end_date) {
+      whereConditions.push('DATE(o.created_at) <= ?');
+      queryParams.push(end_date);
+    }
+    
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+    
+    // Validate sort_by to prevent SQL injection
+    const allowedSortFields = ['id', 'created_at', 'updated_at', 'status', 'total_price', 'receipt_number'];
+    const sortField = allowedSortFields.includes(sort_by) ? sort_by : 'created_at';
+    const sortDirection = sort_order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    
+    // Get total count for pagination
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM orders o
+      LEFT JOIN suppliers s ON o.supplier_id = s.id
+      ${whereClause}
+    `;
+    
+    const [countResult] = await db.execute(countQuery, queryParams);
+    const total = countResult[0].total;
+    
+    // Get orders with pagination
+    const query = `
+      SELECT 
+        o.id,
+        o.supplier_id,
+        o.description,
+        o.status,
+        o.total_price,
+        o.receipt_number,
+        o.created_at,
+        o.updated_at,
+        s.name as supplier_name,
+        s.contact_person,
+        s.contact_number,
+        s.email,
+        s.address as supplier_address
+      FROM orders o
+      LEFT JOIN suppliers s ON o.supplier_id = s.id
+      ${whereClause}
+      ORDER BY o.${sortField} ${sortDirection}
+      LIMIT ? OFFSET ?
+    `;
+    
+    const [orders] = await db.execute(query, [...queryParams, parseInt(limit), parseInt(offset)]);
+    
+    // Get order items for each order
+    for (let order of orders) {
+      const itemsQuery = `
+        SELECT 
+          oi.id,
+          oi.order_id,
+          oi.item_id,
+          oi.qty,
+          oi.unit_price,
+          oi.status,
+          p.code as product_code,
+          p.description as product_description,
+          p.pc_price,
+          p.pc_cost
+        FROM order_items oi
+        LEFT JOIN products p ON oi.item_id = p.id
+        WHERE oi.order_id = ? AND p.is_deleted = 0
+      `;
+      
+      const [items] = await db.execute(itemsQuery, [order.id]);
+      order.items = items;
+    }
+    
+    const totalPages = Math.ceil(total / limit);
+    
+    res.json({
+      orders,
+      pagination: {
+        current_page: parseInt(page),
+        total_pages: totalPages,
+        total_items: total,
+        items_per_page: parseInt(limit),
+        has_next: page < totalPages,
+        has_prev: page > 1
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    res.status(500).json({ message: 'Failed to fetch orders', error: error.message });
+  }
+};
+
+// Get single order with items
+const getOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const orderQuery = `
+      SELECT 
+        o.id,
+        o.supplier_id,
+        o.description,
+        o.status,
+        o.total_price,
+        o.receipt_number,
+        o.created_at,
+        o.updated_at,
+        s.name as supplier_name,
+        s.contact_person,
+        s.contact_number,
+        s.email,
+        s.address as supplier_address
+      FROM orders o
+      LEFT JOIN suppliers s ON o.supplier_id = s.id
+      WHERE o.id = ? AND o.is_deleted = 0
+    `;
+    
+    const [orders] = await db.execute(orderQuery, [id]);
+    
+    if (orders.length === 0) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    
+    const order = orders[0];
+    
+    // Get order items
+    const itemsQuery = `
+      SELECT 
+        oi.id,
+        oi.order_id,
+        oi.item_id,
+        oi.qty,
+        oi.unit_price,
+        oi.status,
+        p.code as product_code,
+        p.description as product_description,
+        p.pc_price,
+        p.pc_cost
+      FROM order_items oi
+      LEFT JOIN products p ON oi.item_id = p.id
+      WHERE oi.order_id = ? AND p.is_deleted = 0
+    `;
+    
+    const [items] = await db.execute(itemsQuery, [id]);
+    order.items = items;
+    
+    res.json(order);
+  } catch (error) {
+    console.error('Error fetching order:', error);
+    res.status(500).json({ message: 'Failed to fetch order', error: error.message });
+  }
+};
+
+// Create new order
+const createOrder = async (req, res) => {
+  const connection = await db.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+    
+    const { supplier_id, description, items, receipt_number } = req.body;
+    
+    // Validate required fields
+    if (!supplier_id || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: 'Supplier ID and items are required' });
+    }
+    
+    // Calculate total price
+    let total_price = 0;
+    for (const item of items) {
+      total_price += (item.qty || 0) * (item.unit_price || 0);
+    }
+    
+    // Insert order
+    const orderQuery = `
+      INSERT INTO orders (supplier_id, description, status, total_price, receipt_number)
+      VALUES (?, ?, 'ordered', ?, ?)
+    `;
+    
+    const [orderResult] = await connection.execute(orderQuery, [
+      supplier_id,
+      description || null,
+      total_price,
+      receipt_number || null
+    ]);
+    
+    const orderId = orderResult.insertId;
+    
+    // Insert order items
+    for (const item of items) {
+      const itemQuery = `
+        INSERT INTO order_items (order_id, item_id, qty, unit_price, status)
+        VALUES (?, ?, ?, ?, 'pending')
+      `;
+      
+      await connection.execute(itemQuery, [
+        orderId,
+        item.item_id,
+        item.qty,
+        item.unit_price
+      ]);
+    }
+    
+    await connection.commit();
+    
+    // Fetch and return the created order
+    const createdOrder = await getOrderById({ params: { id: orderId } }, res);
+    
+    // Emit real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.to('order-updated').emit('order-updated', {
+        type: 'added',
+        order: createdOrder
+      });
+    }
+    
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error creating order:', error);
+    res.status(500).json({ message: 'Failed to create order', error: error.message });
+  } finally {
+    connection.release();
+  }
+};
+
+// Update order
+const updateOrder = async (req, res) => {
+  const connection = await db.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+    
+    const { id } = req.params;
+    const { supplier_id, description, status, items, receipt_number } = req.body;
+    
+    // Update order
+    const orderQuery = `
+      UPDATE orders 
+      SET supplier_id = ?, description = ?, status = ?, receipt_number = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND is_deleted = 0
+    `;
+    
+    await connection.execute(orderQuery, [
+      supplier_id,
+      description,
+      status || 'ordered',
+      receipt_number,
+      id
+    ]);
+    
+    // If items are provided, update them
+    if (items && Array.isArray(items)) {
+      // Delete existing items
+      await connection.execute('DELETE FROM order_items WHERE order_id = ?', [id]);
+      
+      // Insert new items
+      for (const item of items) {
+        const itemQuery = `
+          INSERT INTO order_items (order_id, item_id, qty, unit_price, status)
+          VALUES (?, ?, ?, ?, ?)
+        `;
+        
+        await connection.execute(itemQuery, [
+          id,
+          item.item_id,
+          item.qty,
+          item.unit_price,
+          item.status || 'pending'
+        ]);
+      }
+      
+      // Recalculate total price
+      let total_price = 0;
+      for (const item of items) {
+        total_price += (item.qty || 0) * (item.unit_price || 0);
+      }
+      
+      await connection.execute(
+        'UPDATE orders SET total_price = ? WHERE id = ?',
+        [total_price, id]
+      );
+    }
+    
+    await connection.commit();
+    
+    // Fetch and return the updated order
+    const updatedOrder = await getOrderById({ params: { id } }, res);
+    
+    // Emit real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.to('order-updated').emit('order-updated', {
+        type: 'updated',
+        order: updatedOrder
+      });
+    }
+    
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error updating order:', error);
+    res.status(500).json({ message: 'Failed to update order', error: error.message });
+  } finally {
+    connection.release();
+  }
+};
+
+// Delete order (soft delete)
+const deleteOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const query = 'UPDATE orders SET is_deleted = 1 WHERE id = ?';
+    const [result] = await db.execute(query, [id]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    
+    // Emit real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.to('order-updated').emit('order-updated', {
+        type: 'deleted',
+        orderId: id
+      });
+    }
+    
+    res.json({ message: 'Order deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    res.status(500).json({ message: 'Failed to delete order', error: error.message });
+  }
+};
+
+// Get order statistics
+const getOrderStats = async (req, res) => {
+  try {
+    const statsQuery = `
+      SELECT 
+        COUNT(*) as total_orders,
+        SUM(CASE WHEN status = 'ordered' THEN 1 ELSE 0 END) as pending_orders,
+        SUM(CASE WHEN status = 'delivered' OR status = 'completed' THEN 1 ELSE 0 END) as completed_orders,
+        SUM(CASE WHEN status = 'on_delivery' THEN 1 ELSE 0 END) as on_delivery_orders,
+        COALESCE(SUM(total_price), 0) as total_value
+      FROM orders 
+      WHERE is_deleted = 0
+    `;
+    
+    const [stats] = await db.execute(statsQuery);
+    res.json(stats[0]);
+  } catch (error) {
+    console.error('Error fetching order stats:', error);
+    res.status(500).json({ message: 'Failed to fetch order statistics', error: error.message });
+  }
+};
+
+module.exports = {
+  getOrders,
+  getOrderById,
+  createOrder,
+  updateOrder,
+  deleteOrder,
+  getOrderStats
+};
