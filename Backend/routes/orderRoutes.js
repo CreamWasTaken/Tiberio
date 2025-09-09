@@ -21,6 +21,9 @@ router.put("/:id", authenticateToken, orderController.updateOrder);
 // Update order status
 router.patch("/:id/status", authenticateToken, orderController.updateOrderStatus);
 
+// Update order item status
+router.patch("/:orderId/items/:itemId/status", authenticateToken, orderController.updateOrderItemStatus);
+
 // Delete order
 router.delete("/:id", authenticateToken, orderController.deleteOrder);
 

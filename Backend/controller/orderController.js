@@ -543,12 +543,114 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+// Update order item status
+const updateOrderItemStatus = async (req, res) => {
+  try {
+    const { orderId, itemId } = req.params;
+    const { status } = req.body;
+
+    // Validate status
+    const validStatuses = ['pending', 'received', 'returned'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        message: 'Invalid status. Must be one of: pending, received, returned' 
+      });
+    }
+
+    // Check if order exists
+    const orderCheckQuery = 'SELECT id FROM orders WHERE id = ? AND is_deleted = 0';
+    const [orderExists] = await db.execute(orderCheckQuery, [orderId]);
+    
+    if (orderExists.length === 0) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Check if order item exists
+    const itemCheckQuery = 'SELECT id FROM order_items WHERE id = ? AND order_id = ?';
+    const [itemExists] = await db.execute(itemCheckQuery, [itemId, orderId]);
+    
+    if (itemExists.length === 0) {
+      return res.status(404).json({ message: 'Order item not found' });
+    }
+
+    // Update the item status
+    const updateQuery = 'UPDATE order_items SET status = ? WHERE id = ? AND order_id = ?';
+    await db.execute(updateQuery, [status, itemId, orderId]);
+
+    // Get the updated order with items
+    const fetchUpdatedOrderQuery = `
+      SELECT 
+        o.id,
+        o.supplier_id,
+        o.description,
+        o.status,
+        o.total_price,
+        o.receipt_number,
+        o.created_at,
+        o.updated_at,
+        s.name as supplier_name,
+        s.contact_person,
+        s.contact_number,
+        s.email,
+        s.address as supplier_address
+      FROM orders o
+      LEFT JOIN suppliers s ON o.supplier_id = s.id
+      WHERE o.id = ? AND o.is_deleted = 0
+    `;
+    
+    const [orders] = await db.execute(fetchUpdatedOrderQuery, [orderId]);
+    const updatedOrder = orders[0];
+    
+    // Get order items
+    const itemsQuery = `
+      SELECT 
+        oi.id,
+        oi.order_id,
+        oi.item_id,
+        oi.qty,
+        oi.unit_price,
+        oi.status,
+        p.code as product_code,
+        p.description as product_description,
+        p.pc_price,
+        p.pc_cost
+      FROM order_items oi
+      LEFT JOIN products p ON oi.item_id = p.id
+      WHERE oi.order_id = ? AND p.is_deleted = 0
+    `;
+    
+    const [items] = await db.execute(itemsQuery, [orderId]);
+    updatedOrder.items = items;
+
+    // Emit real-time update
+    const io = req.app.get('io');
+    if (io) {
+      console.log('🔌 Emitting order-updated event for item status update:', orderId);
+      io.to('order-updated').emit('order-updated', {
+        type: 'updated',
+        order: updatedOrder
+      });
+    } else {
+      console.log('❌ Socket.IO not available for order-updated event');
+    }
+
+    res.json({
+      message: 'Order item status updated successfully',
+      order: updatedOrder
+    });
+  } catch (error) {
+    console.error('Error updating order item status:', error);
+    res.status(500).json({ message: 'Failed to update order item status', error: error.message });
+  }
+};
+
 module.exports = {
   getOrders,
   getOrderById,
   createOrder,
   updateOrder,
   updateOrderStatus,
+  updateOrderItemStatus,
   deleteOrder,
   getOrderStats
 };

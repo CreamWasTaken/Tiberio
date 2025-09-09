@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../components/Sidebar';
-import { getOrders, getOrderStats, deleteOrder, updateOrderStatus } from '../../../services/order';
+import { getOrders, getOrderStats, deleteOrder, updateOrderStatus, updateOrderItemStatus } from '../../../services/order';
 import socketService from '../../../services/socket';
 import { NewOrderModal, ErrorBoundary, Pagination, OrderFilters, DeleteConfirmationModal } from './components';
 
@@ -122,7 +122,7 @@ function Orders() {
   };
 
   // Fetch orders data with pagination and filtering
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -135,17 +135,17 @@ function Orders() {
       
       const response = await getOrders(params);
       setOrders(response.orders || []);
-      setPagination(response.pagination || pagination);
+      setPagination(prev => response.pagination || prev);
     } catch (err) {
       console.error('Error fetching orders:', err);
       setError(err.message || 'Failed to load orders');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [pagination.current_page, pagination.items_per_page, filters]);
 
   // Fetch order statistics
-  const fetchOrderStats = async () => {
+  const fetchOrderStats = useCallback(async () => {
     try {
       const statsData = await getOrderStats();
       setOrderStats(statsData || {
@@ -157,7 +157,7 @@ function Orders() {
     } catch (err) {
       console.error('Error fetching order stats:', err);
     }
-  };
+  }, []);
 
   // Handle order deletion
   const handleDeleteOrder = (order) => {
@@ -203,6 +203,30 @@ function Orders() {
     } catch (err) {
       console.error('Error updating order status:', err);
       alert('Failed to update order status: ' + err.message);
+    }
+  };
+
+  // Handle order item status change
+  const handleItemStatusChange = async (orderId, itemId, newStatus) => {
+    try {
+      await updateOrderItemStatus(orderId, itemId, newStatus);
+      // Update the selected order in the modal to reflect the change
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder(prevOrder => ({
+          ...prevOrder,
+          items: prevOrder.items.map(item => 
+            item.id === itemId ? { ...item, status: newStatus } : item
+          )
+        }));
+      }
+      // Fallback refresh in case Socket.IO doesn't work
+      setTimeout(() => {
+        fetchOrders();
+        fetchOrderStats();
+      }, 500);
+    } catch (err) {
+      console.error('Error updating item status:', err);
+      alert('Failed to update item status: ' + err.message);
     }
   };
 
@@ -289,7 +313,7 @@ function Orders() {
   useEffect(() => {
     fetchOrders();
     fetchOrderStats();
-  }, [pagination.current_page, pagination.items_per_page, filters]);
+  }, [fetchOrders, fetchOrderStats]);
 
   // Socket.IO real-time updates for orders
   useEffect(() => {
@@ -396,7 +420,7 @@ function Orders() {
     };
 
     setupSocketIO();
-  }, [filters, pagination.current_page]); // Re-setup when filters or page changes
+  }, [filters, pagination.current_page, fetchOrders, fetchOrderStats, orders, pagination]); // Re-setup when filters or page changes
 
   return (
     <ErrorBoundary>
@@ -589,7 +613,6 @@ function Orders() {
                         </tr>
                       ) : (
                         orders.map((order) => {
-                          const statusConfig = getStatusBadge(order.status);
                           return (
                             <tr key={order.id} className="hover:bg-gray-700/50">
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
@@ -770,13 +793,15 @@ function Orders() {
                                 {formatCurrency((item.qty || 0) * (item.unit_price || 0))}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap">
-                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                  item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                  item.status === 'received' ? 'bg-green-100 text-green-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {item.status || 'pending'}
-                                </span>
+                                <select
+                                  value={item.status || 'pending'}
+                                  onChange={(e) => handleItemStatusChange(selectedOrder.id, item.id, e.target.value)}
+                                  className="px-2 py-1 text-xs font-medium rounded-lg border border-gray-600 bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-700 transition-colors duration-200"
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="received">Received</option>
+                                  <option value="returned">Returned</option>
+                                </select>
                               </td>
                             </tr>
                           ))

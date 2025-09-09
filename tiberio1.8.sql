@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 09, 2025 at 07:33 AM
+-- Generation Time: Sep 09, 2025 at 09:56 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -182,6 +182,17 @@ CREATE TABLE `orders` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `orders`
+--
+
+INSERT INTO `orders` (`id`, `supplier_id`, `description`, `status`, `total_price`, `receipt_number`, `is_deleted`, `created_at`, `updated_at`) VALUES
+(4, 5, NULL, 'ordered', 100.00, '123', 1, '2025-09-09 06:42:57', '2025-09-09 07:10:14'),
+(5, 5, 'test 2', 'on_delivery', 100.00, '563', 1, '2025-09-09 07:02:21', '2025-09-09 07:12:24'),
+(6, 5, NULL, 'ordered', 10.00, '123524', 1, '2025-09-09 07:15:43', '2025-09-09 07:22:26'),
+(7, 5, NULL, 'ordered', 10.00, '59170', 1, '2025-09-09 07:22:15', '2025-09-09 07:22:24'),
+(8, 5, NULL, 'ordered', 10.00, '435', 0, '2025-09-09 07:42:06', '2025-09-09 07:42:06');
+
 -- --------------------------------------------------------
 
 --
@@ -194,8 +205,19 @@ CREATE TABLE `order_items` (
   `item_id` int(11) NOT NULL,
   `qty` int(11) NOT NULL,
   `unit_price` decimal(12,2) NOT NULL,
-  `status` varchar(50) DEFAULT NULL
+  `status` enum('pending','received','returned') DEFAULT 'pending'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `order_items`
+--
+
+INSERT INTO `order_items` (`id`, `order_id`, `item_id`, `qty`, `unit_price`, `status`) VALUES
+(4, 4, 15, 10, 10.00, 'pending'),
+(5, 5, 16, 10, 10.00, 'pending'),
+(6, 6, 15, 10, 1.00, 'pending'),
+(7, 7, 15, 10, 1.00, 'pending'),
+(8, 8, 16, 10, 1.00, 'pending');
 
 -- --------------------------------------------------------
 
@@ -314,7 +336,7 @@ CREATE TABLE `products` (
 INSERT INTO `products` (`id`, `subcategory_id`, `supplier_id`, `code`, `description`, `pc_price`, `pc_cost`, `stock`, `low_stock_threshold`, `stock_status`, `attributes`, `is_deleted`) VALUES
 (15, 13, 4, '1', 'SV 1', 1.00, 1.00, 65, 1, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0),
 (16, 14, 5, '1', 'DV 1', 2.00, 2.00, 51, 1, 'normal', '{}', 0),
-(17, 15, 4, '1', 'Progressive 1', 10.00, 10.00, 100, 10, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0);
+(17, 15, 4, '1', 'Progressive 1', 10.00, 10.00, 95, 10, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0);
 
 --
 -- Triggers `products`
@@ -440,8 +462,10 @@ INSERT INTO `transactions` (`id`, `user_id`, `patient_id`, `receipt_number`, `su
 (17, 2, 7, '5647324', 2.00, 0.00, 2.00, 0.00, 'pending', '2025-09-05 08:56:09', '2025-09-05 08:55:55', '2025-09-05 08:56:09'),
 (18, 1, 7, '567453', 3.00, 0.00, 3.00, 0.00, 'fulfilled', '2025-09-05 09:57:55', '2025-09-05 09:55:18', '2025-09-05 09:57:55'),
 (19, 1, 7, '25367', 3.00, 0.00, 3.00, 0.00, 'pending', '2025-09-05 09:57:58', '2025-09-05 09:57:33', '2025-09-05 09:57:58'),
-(20, 2, 7, '5342675', 3.00, 0.00, 3.00, 0.00, 'fulfilled', NULL, '2025-09-05 10:00:40', '2025-09-08 02:15:06'),
-(21, 1, 7, '45657', 20.00, 0.00, 20.00, 0.00, 'fulfilled', NULL, '2025-09-08 02:20:16', '2025-09-08 02:20:20');
+(20, 2, 7, '5342675', 3.00, 0.00, 3.00, 0.00, 'fulfilled', '2025-09-09 07:32:45', '2025-09-05 10:00:40', '2025-09-09 07:32:45'),
+(21, 1, 7, '45657', 20.00, 0.00, 20.00, 0.00, 'fulfilled', '2025-09-09 07:32:44', '2025-09-08 02:20:16', '2025-09-09 07:32:44'),
+(22, 2, 7, '4575432', 10.00, 0.00, 10.00, 0.00, 'fulfilled', '2025-09-09 07:32:42', '2025-09-09 07:28:26', '2025-09-09 07:32:42'),
+(23, 2, 8, '8659', 50.00, 0.00, 40.00, 0.00, 'partially_refunded', '2025-09-09 07:32:49', '2025-09-09 07:31:47', '2025-09-09 07:32:49');
 
 -- --------------------------------------------------------
 
@@ -477,7 +501,9 @@ INSERT INTO `transaction_items` (`id`, `transaction_id`, `product_id`, `status`,
 (26, 19, 15, 'pending', 3, 1.00, 0.00, 0, NULL, '2025-09-05 09:57:33', '2025-09-05 09:57:33'),
 (27, 20, 16, 'fulfilled', 1, 2.00, 0.00, 0, NULL, '2025-09-05 10:00:40', '2025-09-08 02:15:05'),
 (28, 20, 15, 'fulfilled', 1, 1.00, 0.00, 0, NULL, '2025-09-05 10:00:40', '2025-09-08 02:15:06'),
-(29, 21, 15, 'fulfilled', 20, 1.00, 0.00, 0, NULL, '2025-09-08 02:20:16', '2025-09-08 02:20:20');
+(29, 21, 15, 'fulfilled', 20, 1.00, 0.00, 0, NULL, '2025-09-08 02:20:16', '2025-09-08 02:20:20'),
+(30, 22, 17, 'fulfilled', 1, 10.00, 0.00, 0, NULL, '2025-09-09 07:28:26', '2025-09-09 07:28:33'),
+(31, 23, 17, 'partially_refunded', 5, 10.00, 0.00, 1, '2025-09-09 15:32:05', '2025-09-09 07:31:47', '2025-09-09 07:32:05');
 
 --
 -- Triggers `transaction_items`
@@ -660,13 +686,13 @@ ALTER TABLE `logs`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `patients`
@@ -708,13 +734,13 @@ ALTER TABLE `suppliers`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `transaction_items`
 --
 ALTER TABLE `transaction_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- AUTO_INCREMENT for table `users`
