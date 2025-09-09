@@ -103,6 +103,6 @@ const PORT = process.env.PORT || 3000;
 
 //to do
 
-//fix subtotal total and buttons on transaction modal cannot be seen in small screen sizes
+//change database to be like transaction in orders where you can return qty number of items
 
 

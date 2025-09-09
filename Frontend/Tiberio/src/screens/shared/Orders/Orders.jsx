@@ -793,15 +793,37 @@ function Orders() {
                                 {formatCurrency((item.qty || 0) * (item.unit_price || 0))}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap">
-                                <select
-                                  value={item.status || 'pending'}
-                                  onChange={(e) => handleItemStatusChange(selectedOrder.id, item.id, e.target.value)}
-                                  className="px-2 py-1 text-xs font-medium rounded-lg border border-gray-600 bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-700 transition-colors duration-200"
-                                >
-                                  <option value="pending">Pending</option>
-                                  <option value="received">Received</option>
-                                  <option value="returned">Returned</option>
-                                </select>
+                                <div className="flex space-x-2">
+                                  {/* Debug: Show current status */}
+                                  <span className="text-xs text-gray-400 mr-2">Status: {item.status || 'null'}</span>
+                                  
+                                  {(item.status === 'pending' || !item.status || item.status === null) && (
+                                    <>
+                                      <button
+                                        onClick={() => handleItemStatusChange(selectedOrder.id, item.id, 'received')}
+                                        className="px-3 py-1 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200"
+                                      >
+                                        Complete
+                                      </button>
+                                      <button
+                                        onClick={() => handleItemStatusChange(selectedOrder.id, item.id, 'returned')}
+                                        className="px-3 py-1 text-xs font-medium bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors duration-200"
+                                      >
+                                        Return
+                                      </button>
+                                    </>
+                                  )}
+                                  {item.status === 'received' && (
+                                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                      Received
+                                    </span>
+                                  )}
+                                  {item.status === 'returned' && (
+                                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                                      Returned
+                                    </span>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))
