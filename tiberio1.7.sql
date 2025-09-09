@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 05, 2025 at 06:16 AM
+-- Generation Time: Sep 09, 2025 at 07:26 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -100,7 +100,8 @@ INSERT INTO `checkups` (`id`, `user_id`, `patient_id`, `checkup_date`, `notes`, 
 (12, 1, 7, '2025-09-01', 'test 2', 'test 2', '1', '2025-09-01 05:20:50', '2025-09-01 05:23:17', 1),
 (13, 1, 7, '2025-09-01', '12', '12', '11', '2025-09-01 05:27:58', '2025-09-01 05:28:32', 1),
 (14, 1, 7, '2025-09-01', '1', '1', NULL, '2025-09-01 05:29:47', '2025-09-01 05:33:25', 1),
-(15, 1, 7, '2025-09-02', '1', 'Diagnosis Update', '1', '2025-09-02 06:52:27', '2025-09-02 06:53:23', 1);
+(15, 1, 7, '2025-09-02', '1', 'Diagnosis Update', '1', '2025-09-02 06:52:27', '2025-09-02 06:53:23', 1),
+(16, 1, 8, '2025-09-12', '123', '123', '1', '2025-09-05 08:13:19', '2025-09-05 08:13:19', 0);
 
 -- --------------------------------------------------------
 
@@ -138,7 +139,8 @@ INSERT INTO `contact_lens_prescriptions` (`contactId`, `checkupId`, `sphereRight
 (11, 12, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (12, 13, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (13, 14, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(14, 15, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+(14, 15, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(15, 16, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -170,15 +172,29 @@ INSERT INTO `logs` (`id`, `user_id`, `type`, `data`, `created_at`) VALUES
 
 CREATE TABLE `orders` (
   `id` int(11) NOT NULL,
-  `order_number` varchar(100) NOT NULL,
   `supplier_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `order_date` date NOT NULL,
-  `expected_delivery_date` date DEFAULT NULL,
-  `status` enum('pending','ordered','received','cancelled') DEFAULT 'pending',
-  `total_amount` decimal(10,2) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `status` varchar(50) DEFAULT NULL,
+  `total_price` decimal(12,2) DEFAULT NULL,
+  `receipt_number` varchar(100) DEFAULT NULL,
+  `is_deleted` tinyint(1) DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `order_items`
+--
+
+CREATE TABLE `order_items` (
+  `id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `item_id` int(11) NOT NULL,
+  `qty` int(11) NOT NULL,
+  `unit_price` decimal(12,2) NOT NULL,
+  `status` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -267,7 +283,8 @@ CREATE TABLE `price_subcategories` (
 
 INSERT INTO `price_subcategories` (`id`, `category_id`, `name`, `description`, `created_at`, `updated_at`, `is_deleted`) VALUES
 (13, 13, 'SV Uncoated', '', '2025-09-03 01:53:55', '2025-09-03 01:53:55', 0),
-(14, 14, 'DV Uncoated', '', '2025-09-03 06:20:44', '2025-09-03 06:20:44', 0);
+(14, 14, 'DV Uncoated', '', '2025-09-03 06:20:44', '2025-09-03 06:20:44', 0),
+(15, 15, 'Progressive', '', '2025-09-09 04:07:02', '2025-09-09 04:07:02', 0);
 
 -- --------------------------------------------------------
 
@@ -295,8 +312,9 @@ CREATE TABLE `products` (
 --
 
 INSERT INTO `products` (`id`, `subcategory_id`, `supplier_id`, `code`, `description`, `pc_price`, `pc_cost`, `stock`, `low_stock_threshold`, `stock_status`, `attributes`, `is_deleted`) VALUES
-(15, 13, 4, '1', 'SV 1', 1.00, 1.00, 90, 1, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0),
-(16, 14, 5, '1', 'DV 1', 2.00, 2.00, 65, 1, 'normal', '{}', 0);
+(15, 13, 4, '1', 'SV 1', 1.00, 1.00, 65, 1, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0),
+(16, 14, 5, '1', 'DV 1', 2.00, 2.00, 51, 1, 'normal', '{}', 0),
+(17, 15, 4, '1', 'Progressive 1', 10.00, 10.00, 100, 10, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0);
 
 --
 -- Triggers `products`
@@ -362,7 +380,8 @@ INSERT INTO `spectacle_prescriptions` (`spectacleId`, `checkupId`, `sphereRight`
 (11, 12, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
 (12, 13, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
 (13, 14, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(14, 15, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1');
+(14, 15, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(15, 16, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1');
 
 -- --------------------------------------------------------
 
@@ -416,7 +435,13 @@ CREATE TABLE `transactions` (
 --
 
 INSERT INTO `transactions` (`id`, `user_id`, `patient_id`, `receipt_number`, `subtotal_price`, `total_discount`, `final_price`, `discount_percent`, `status`, `deleted_at`, `created_at`, `updated_at`) VALUES
-(12, 1, 7, '123', 20.00, 0.00, 18.00, 0.00, 'partially_refunded', NULL, '2025-09-05 04:15:05', '2025-09-05 04:15:36');
+(15, 1, 7, '123', 8.00, 0.00, 8.00, 0.00, 'pending', '2025-09-05 08:42:25', '2025-09-05 08:30:41', '2025-09-05 08:42:25'),
+(16, 1, 7, '345123', 4.00, 0.00, 4.00, 0.00, 'pending', '2025-09-05 08:51:52', '2025-09-05 08:51:15', '2025-09-05 08:51:52'),
+(17, 2, 7, '5647324', 2.00, 0.00, 2.00, 0.00, 'pending', '2025-09-05 08:56:09', '2025-09-05 08:55:55', '2025-09-05 08:56:09'),
+(18, 1, 7, '567453', 3.00, 0.00, 3.00, 0.00, 'fulfilled', '2025-09-05 09:57:55', '2025-09-05 09:55:18', '2025-09-05 09:57:55'),
+(19, 1, 7, '25367', 3.00, 0.00, 3.00, 0.00, 'pending', '2025-09-05 09:57:58', '2025-09-05 09:57:33', '2025-09-05 09:57:58'),
+(20, 2, 7, '5342675', 3.00, 0.00, 3.00, 0.00, 'fulfilled', NULL, '2025-09-05 10:00:40', '2025-09-08 02:15:06'),
+(21, 1, 7, '45657', 20.00, 0.00, 20.00, 0.00, 'fulfilled', NULL, '2025-09-08 02:20:16', '2025-09-08 02:20:20');
 
 -- --------------------------------------------------------
 
@@ -443,7 +468,16 @@ CREATE TABLE `transaction_items` (
 --
 
 INSERT INTO `transaction_items` (`id`, `transaction_id`, `product_id`, `status`, `quantity`, `unit_price`, `discount`, `refunded_quantity`, `refunded_at`, `created_at`, `updated_at`) VALUES
-(17, 12, 16, 'partially_refunded', 10, 2.00, 0.00, 1, '2025-09-05 12:15:36', '2025-09-05 04:15:05', '2025-09-05 04:15:36');
+(20, 15, 16, 'pending', 3, 2.00, 0.00, 0, NULL, '2025-09-05 08:30:41', '2025-09-05 08:30:41'),
+(21, 15, 15, 'pending', 2, 1.00, 0.00, 0, NULL, '2025-09-05 08:30:41', '2025-09-05 08:30:41'),
+(22, 16, 16, 'pending', 2, 2.00, 0.00, 0, NULL, '2025-09-05 08:51:15', '2025-09-05 08:51:15'),
+(23, 17, 15, 'pending', 2, 1.00, 0.00, 0, NULL, '2025-09-05 08:55:55', '2025-09-05 08:55:55'),
+(24, 18, 15, 'fulfilled', 1, 1.00, 0.00, 0, NULL, '2025-09-05 09:55:18', '2025-09-05 09:55:55'),
+(25, 18, 16, 'fulfilled', 1, 2.00, 0.00, 0, NULL, '2025-09-05 09:55:18', '2025-09-05 09:55:57'),
+(26, 19, 15, 'pending', 3, 1.00, 0.00, 0, NULL, '2025-09-05 09:57:33', '2025-09-05 09:57:33'),
+(27, 20, 16, 'fulfilled', 1, 2.00, 0.00, 0, NULL, '2025-09-05 10:00:40', '2025-09-08 02:15:05'),
+(28, 20, 15, 'fulfilled', 1, 1.00, 0.00, 0, NULL, '2025-09-05 10:00:40', '2025-09-08 02:15:06'),
+(29, 21, 15, 'fulfilled', 20, 1.00, 0.00, 0, NULL, '2025-09-08 02:20:16', '2025-09-08 02:20:20');
 
 --
 -- Triggers `transaction_items`
@@ -521,9 +555,16 @@ ALTER TABLE `logs`
 --
 ALTER TABLE `orders`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `order_number` (`order_number`),
-  ADD KEY `supplier_id` (`supplier_id`),
-  ADD KEY `user_id` (`user_id`);
+  ADD UNIQUE KEY `receipt_number` (`receipt_number`),
+  ADD KEY `fk_orders_supplier` (`supplier_id`);
+
+--
+-- Indexes for table `order_items`
+--
+ALTER TABLE `order_items`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_orderitems_order` (`order_id`),
+  ADD KEY `fk_orderitems_product` (`item_id`);
 
 --
 -- Indexes for table `patients`
@@ -601,13 +642,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `checkups`
 --
 ALTER TABLE `checkups`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `contact_lens_prescriptions`
 --
 ALTER TABLE `contact_lens_prescriptions`
-  MODIFY `contactId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `contactId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `logs`
@@ -619,6 +660,12 @@ ALTER TABLE `logs`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `order_items`
+--
+ALTER TABLE `order_items`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -637,19 +684,19 @@ ALTER TABLE `price_categories`
 -- AUTO_INCREMENT for table `price_subcategories`
 --
 ALTER TABLE `price_subcategories`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `spectacle_prescriptions`
 --
 ALTER TABLE `spectacle_prescriptions`
-  MODIFY `spectacleId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `spectacleId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `suppliers`
@@ -661,13 +708,13 @@ ALTER TABLE `suppliers`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `transaction_items`
 --
 ALTER TABLE `transaction_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -702,8 +749,14 @@ ALTER TABLE `logs`
 -- Constraints for table `orders`
 --
 ALTER TABLE `orders`
-  ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `orders_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_orders_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `order_items`
+--
+ALTER TABLE `order_items`
+  ADD CONSTRAINT `fk_orderitems_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
+  ADD CONSTRAINT `fk_orderitems_product` FOREIGN KEY (`item_id`) REFERENCES `products` (`id`);
 
 --
 -- Constraints for table `patients`

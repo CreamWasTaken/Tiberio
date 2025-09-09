@@ -11,6 +11,7 @@ const supplierRoutes = require("./routes/supplierRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const { testSocketEvent } = require("./test-socket-endpoint");
+const orderRoutes = require("./routes/orderRoutes");
 
 const app = express();
 const server = createServer(app);
@@ -29,7 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // CORS configuration
 app.use(cors({
-  origin: "*", // Allow all origins for network access
+  origin: "*", 
   credentials: true
 }));
 
@@ -40,6 +41,7 @@ app.use("/api/checkups", checkUpRoutes);
 app.use("/api/suppliers", supplierRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/transactions", transactionRoutes);
+app.use("/api/orders", orderRoutes);
 
 // Test endpoint for Socket.IO
 app.get("/api/test-socket", testSocketEvent);
@@ -70,7 +72,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// Make io available globally for use in routes
+
 app.set("io", io);
 
 // Error handling middleware
@@ -81,7 +83,7 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
-// Check DB connection before starting server
+
 (async () => {
   try {
     const conn = await pool.getConnection();
