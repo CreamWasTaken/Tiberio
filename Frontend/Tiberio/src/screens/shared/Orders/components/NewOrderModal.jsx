@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createOrder } from '../../../../services/order';
 import { getSuppliers } from '../../../../services/supplier';
 import { getInventoryItems } from '../../../../services/item';
+import Alert from '../../../../components/Alert';
 
 const NewOrderModal = ({ isOpen, onClose, onOrderCreated }) => {
   const [suppliers, setSuppliers] = useState([]);
@@ -13,8 +14,15 @@ const NewOrderModal = ({ isOpen, onClose, onOrderCreated }) => {
     items: []
   });
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
-  const [orderFormError, setOrderFormError] = useState(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
+  
+  // Alert state
+  const [alert, setAlert] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
 
   // Load suppliers and products when modal opens
   useEffect(() => {
@@ -23,10 +31,23 @@ const NewOrderModal = ({ isOpen, onClose, onOrderCreated }) => {
     }
   }, [isOpen]);
 
+  // Alert helper functions
+  const showAlert = (title, message, type = 'info') => {
+    setAlert({
+      isOpen: true,
+      title,
+      message,
+      type
+    });
+  };
+
+  const hideAlert = () => {
+    setAlert(prev => ({ ...prev, isOpen: false }));
+  };
+
   const loadFormData = async () => {
     try {
       setIsLoadingData(true);
-      setOrderFormError(null);
       
       // Fetch suppliers and products
       const [suppliersData, productsData] = await Promise.all([
@@ -46,7 +67,7 @@ const NewOrderModal = ({ isOpen, onClose, onOrderCreated }) => {
       });
     } catch (err) {
       console.error('Error loading form data:', err);
-      setOrderFormError('Failed to load suppliers and products');
+      showAlert('Error', 'Failed to load suppliers and products', 'error');
     } finally {
       setIsLoadingData(false);
     }
@@ -59,7 +80,6 @@ const NewOrderModal = ({ isOpen, onClose, onOrderCreated }) => {
       receipt_number: '',
       items: []
     });
-    setOrderFormError(null);
     onClose();
   };
 
@@ -92,34 +112,35 @@ const NewOrderModal = ({ isOpen, onClose, onOrderCreated }) => {
     console.log('Submitting order with data:', newOrderForm);
     
     if (!newOrderForm.supplier_id) {
-      setOrderFormError('Please select a supplier');
+      showAlert('Validation Error', 'Please select a supplier', 'warning');
       return;
     }
     
     if (newOrderForm.items.length === 0) {
-      setOrderFormError('Please add at least one item');
+      showAlert('Validation Error', 'Please add at least one item', 'warning');
       return;
     }
     
     // Validate items
     for (let item of newOrderForm.items) {
       if (!item.item_id || !item.qty || item.unit_price === '' || item.unit_price === null || item.unit_price === undefined) {
-        setOrderFormError('Please fill in all item details');
+        showAlert('Validation Error', 'Please fill in all item details', 'warning');
         return;
       }
     }
     
     try {
       setIsSubmittingOrder(true);
-      setOrderFormError(null);
       
       await createOrder(newOrderForm);
       
-      // Show success message first
-      alert('Order created successfully!');
+      // Show success message
+      showAlert('Success!', 'Order created successfully!', 'success');
       
-      // Close modal
-      handleClose();
+      // Close modal after a short delay
+      setTimeout(() => {
+        handleClose();
+      }, 1500);
       
       // Notify parent component (with error handling)
       try {
@@ -131,7 +152,7 @@ const NewOrderModal = ({ isOpen, onClose, onOrderCreated }) => {
       
     } catch (err) {
       console.error('Error creating order:', err);
-      setOrderFormError(err.message || 'Failed to create order');
+      showAlert('Error', err.message || 'Failed to create order', 'error');
     } finally {
       setIsSubmittingOrder(false);
     }
@@ -146,8 +167,7 @@ const NewOrderModal = ({ isOpen, onClose, onOrderCreated }) => {
 
   if (!isOpen) return null;
 
-  try {
-    return (
+  return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={handleClose}></div>
       <div className="relative w-full max-w-4xl mx-4 shadow-2xl">
@@ -174,11 +194,6 @@ const NewOrderModal = ({ isOpen, onClose, onOrderCreated }) => {
           {/* Modal Content */}
           <form onSubmit={handleSubmitOrder}>
             <div className="p-6 max-h-[70vh] overflow-y-auto">
-              {orderFormError && (
-                <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg">
-                  <p className="text-red-400 text-sm">{orderFormError}</p>
-                </div>
-              )}
 
               {isLoadingData ? (
                 <div className="flex justify-center items-center py-12">
@@ -366,29 +381,18 @@ const NewOrderModal = ({ isOpen, onClose, onOrderCreated }) => {
           </form>
         </div>
       </div>
+
+      {/* Alert Component */}
+      <Alert
+        isOpen={alert.isOpen}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onConfirm={hideAlert}
+        confirmText="OK"
+      />
     </div>
-    );
-  } catch (error) {
-    console.error('Error rendering NewOrderModal:', error);
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60"></div>
-        <div className="relative bg-gray-800 border border-gray-700 rounded-xl p-6 mx-4">
-          <div className="text-center">
-            <div className="text-red-400 text-4xl mb-4">⚠️</div>
-            <h3 className="text-xl font-semibold text-white mb-2">Error Loading Form</h3>
-            <p className="text-gray-400 mb-4">There was an error loading the order form. Please try again.</p>
-            <button
-              onClick={handleClose}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  );
 };
 
 export default NewOrderModal;

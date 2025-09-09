@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../components/Sidebar';
-import { getOrders, getOrderStats, deleteOrder } from '../../../services/order';
+import { getOrders, getOrderStats, deleteOrder, updateOrderStatus } from '../../../services/order';
 import socketService from '../../../services/socket';
-import { NewOrderModal, ErrorBoundary, Pagination, OrderFilters } from './components';
+import { NewOrderModal, ErrorBoundary, Pagination, OrderFilters, DeleteConfirmationModal } from './components';
 
 function Orders() {
   const navigate = useNavigate();
@@ -42,6 +42,13 @@ function Orders() {
   // New Order Modal State
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
   
+  // Delete Confirmation Modal State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState(null);
+  
+  // Socket.IO Connection State
+  const [socketConnected, setSocketConnected] = useState(false);
+  
   // Get user role from localStorage
   const userRole = localStorage.getItem('userRole') || 'employee';
 
@@ -74,13 +81,12 @@ function Orders() {
 
   const handleOrderCreated = async () => {
     try {
-      // Refresh orders and stats when a new order is created
+      // Refresh orders and stats as fallback
       await fetchOrders();
       await fetchOrderStats();
     } catch (err) {
       console.error('Error refreshing data after order creation:', err);
       // Don't throw the error to prevent component crash
-      // The data will be refreshed on next page load or manual refresh
     }
   };
 
@@ -154,17 +160,49 @@ function Orders() {
   };
 
   // Handle order deletion
-  const handleDeleteOrder = async (orderId) => {
-    if (window.confirm('Are you sure you want to delete this order?')) {
-      try {
-        await deleteOrder(orderId);
-        // Refresh orders list
-        await fetchOrders();
-        await fetchOrderStats();
-      } catch (err) {
-        console.error('Error deleting order:', err);
-        alert('Failed to delete order: ' + (err.message || 'Unknown error'));
-      }
+  const handleDeleteOrder = (order) => {
+    setOrderToDelete(order);
+    setIsDeleteModalOpen(true);
+  };
+
+  // Confirm order deletion
+  const confirmDeleteOrder = async () => {
+    if (!orderToDelete) return;
+    
+    try {
+      await deleteOrder(orderToDelete.id);
+      // Fallback refresh in case Socket.IO doesn't work
+      setTimeout(() => {
+        fetchOrders();
+        fetchOrderStats();
+      }, 500);
+    } catch (err) {
+      console.error('Error deleting order:', err);
+      setError('Failed to delete order: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsDeleteModalOpen(false);
+      setOrderToDelete(null);
+    }
+  };
+
+  // Cancel order deletion
+  const cancelDeleteOrder = () => {
+    setIsDeleteModalOpen(false);
+    setOrderToDelete(null);
+  };
+
+  // Handle order status change
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      await updateOrderStatus(orderId, newStatus);
+      // Fallback refresh in case Socket.IO doesn't work
+      setTimeout(() => {
+        fetchOrders();
+        fetchOrderStats();
+      }, 500);
+    } catch (err) {
+      console.error('Error updating order status:', err);
+      alert('Failed to update order status: ' + err.message);
     }
   };
 
@@ -204,6 +242,49 @@ function Orders() {
     return config;
   };
 
+  // Helper function to check if an order matches current filters
+  const checkOrderMatchesFilters = (order, currentFilters) => {
+    // Check status filter
+    if (currentFilters.status && order.status !== currentFilters.status) {
+      return false;
+    }
+    
+    // Check supplier filter
+    if (currentFilters.supplier_id && order.supplier_id !== parseInt(currentFilters.supplier_id)) {
+      return false;
+    }
+    
+    // Check search filter
+    if (currentFilters.search) {
+      const searchTerm = currentFilters.search.toLowerCase();
+      const matchesSearch = 
+        (order.receipt_number && order.receipt_number.toLowerCase().includes(searchTerm)) ||
+        (order.description && order.description.toLowerCase().includes(searchTerm)) ||
+        (order.supplier_name && order.supplier_name.toLowerCase().includes(searchTerm));
+      
+      if (!matchesSearch) {
+        return false;
+      }
+    }
+    
+    // Check date range filters
+    if (currentFilters.start_date) {
+      const orderDate = new Date(order.created_at).toISOString().split('T')[0];
+      if (orderDate < currentFilters.start_date) {
+        return false;
+      }
+    }
+    
+    if (currentFilters.end_date) {
+      const orderDate = new Date(order.created_at).toISOString().split('T')[0];
+      if (orderDate > currentFilters.end_date) {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
   // Load data on component mount
   useEffect(() => {
     fetchOrders();
@@ -215,51 +296,107 @@ function Orders() {
     const setupSocketIO = async () => {
       try {
         const socket = await socketService.waitForConnection();
+        setSocketConnected(true);
         
         // Join order update room
-        socketService.joinRoom('order-updated');
+        await socketService.joinRoom('order-updated');
         
         // Listen for order updates
         const handleOrderUpdate = (data) => {
           console.log('🔌 Real-time order update received:', data);
+          console.log('🔌 Current filters:', filters);
+          console.log('🔌 Current pagination:', pagination);
           
           if (data.type === 'added') {
-            // Add new order to the list
-            setOrders(prevOrders => [data.order, ...prevOrders]);
-            // Refresh stats
+            // Check if the new order matches current filters
+            const matchesFilters = checkOrderMatchesFilters(data.order, filters);
+            
+            if (matchesFilters) {
+              // Add new order to the list (only if it matches current filters)
+              setOrders(prevOrders => {
+                // Check if we're on the first page, if not, don't add to avoid pagination issues
+                if (pagination.current_page === 1) {
+                  return [data.order, ...prevOrders];
+                } else {
+                  // If not on first page, just refresh the current page
+                  fetchOrders();
+                  return prevOrders;
+                }
+              });
+            }
+            // Always refresh stats when new order is added
             fetchOrderStats();
           } else if (data.type === 'updated') {
-            // Update existing order in the list
-            setOrders(prevOrders => 
-              prevOrders.map(order => 
-                order.id === data.order.id ? data.order : order
-              )
-            );
-            // Refresh stats
+            // Check if the updated order matches current filters
+            const matchesFilters = checkOrderMatchesFilters(data.order, filters);
+            
+            if (matchesFilters) {
+              // Update existing order in the list
+              setOrders(prevOrders => 
+                prevOrders.map(order => 
+                  order.id === data.order.id ? data.order : order
+                )
+              );
+            } else {
+              // If updated order no longer matches filters, remove it from current view
+              setOrders(prevOrders => 
+                prevOrders.filter(order => order.id !== data.order.id)
+              );
+            }
+            // Always refresh stats when order is updated
             fetchOrderStats();
           } else if (data.type === 'deleted') {
+            console.log('🔌 Processing delete event for order ID:', data.orderId, typeof data.orderId);
+            console.log('🔌 Current orders before deletion:', orders.length);
+            console.log('🔌 Current order IDs:', orders.map(o => ({ id: o.id, type: typeof o.id })));
             // Remove deleted order from the list
-            setOrders(prevOrders => 
-              prevOrders.filter(order => order.id !== data.orderId)
-            );
-            // Refresh stats
+            setOrders(prevOrders => {
+              const filtered = prevOrders.filter(order => {
+                // Ensure both IDs are compared as integers
+                const orderIdInt = parseInt(order.id);
+                const deleteOrderIdInt = parseInt(data.orderId);
+                const matches = orderIdInt !== deleteOrderIdInt;
+                if (!matches) {
+                  console.log('🔌 Found matching order to delete:', orderIdInt, 'vs', deleteOrderIdInt);
+                }
+                return matches;
+              });
+              console.log('🔌 Orders after deletion:', filtered.length);
+              return filtered;
+            });
+            // Always refresh stats when order is deleted
             fetchOrderStats();
           }
         };
 
         socket.on('order-updated', handleOrderUpdate);
 
+        // Handle connection events
+        socket.on('connect', () => {
+          setSocketConnected(true);
+          console.log('🔌 Socket.IO connected');
+        });
+
+        socket.on('disconnect', () => {
+          setSocketConnected(false);
+          console.log('🔌 Socket.IO disconnected');
+        });
+
         return () => {
           socket.off('order-updated', handleOrderUpdate);
+          socket.off('connect');
+          socket.off('disconnect');
           socketService.leaveRoom('order-updated');
+          setSocketConnected(false);
         };
       } catch (error) {
         console.error('Failed to setup Socket.IO:', error);
+        setSocketConnected(false);
       }
     };
 
     setupSocketIO();
-  }, []);
+  }, [filters, pagination.current_page]); // Re-setup when filters or page changes
 
   return (
     <ErrorBoundary>
@@ -289,6 +426,13 @@ function Orders() {
                   </svg>
                 </button>
                 <h1 className="text-2xl font-bold text-white">Orders Management</h1>
+                {/* Real-time connection indicator */}
+                <div className="flex items-center ml-4">
+                  <div className={`w-2 h-2 rounded-full mr-2 ${socketConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                  <span className="text-xs text-gray-400">
+                    {socketConnected ? 'Live Updates' : 'Offline'}
+                  </span>
+                </div>
               </div>
               <div className="flex space-x-3">
                 <button 
@@ -297,6 +441,7 @@ function Orders() {
                 >
                   New Order
                 </button>
+             
               </div>
             </div>
           </div>
@@ -456,11 +601,20 @@ function Orders() {
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                                 {order.supplier_name || '—'}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusConfig.bg} ${statusConfig.text}`}>
-                                  {statusConfig.label}
-                                </span>
-                              </td>
+                                          <td className="px-6 py-4 whitespace-nowrap">
+                                            <select
+                                              value={order.status}
+                                              onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                                              className="px-3 py-1 text-xs font-medium rounded-lg border border-gray-600 bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-700 transition-colors duration-200"
+                                            >
+                                              <option value="ordered">Ordered</option>
+                                              <option value="on_delivery">On Delivery</option>
+                                              <option value="delivered">Delivered</option>
+                                              <option value="completed">Completed</option>
+                                              <option value="cancelled">Cancelled</option>
+                                              <option value="returned">Returned</option>
+                                            </select>
+                                          </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                                 {formatCurrency(order.total_price)}
                               </td>
@@ -482,7 +636,7 @@ function Orders() {
                                     Edit
                                   </button>
                                   <button 
-                                    onClick={() => handleDeleteOrder(order.id)}
+                                    onClick={() => handleDeleteOrder(order)}
                                     className="text-red-400 hover:text-red-300"
                                   >
                                     Delete
@@ -658,6 +812,14 @@ function Orders() {
         isOpen={isNewOrderModalOpen}
         onClose={handleCloseNewOrderModal}
         onOrderCreated={handleOrderCreated}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={cancelDeleteOrder}
+        onConfirm={confirmDeleteOrder}
+        order={orderToDelete}
       />
       </div>
     </ErrorBoundary>

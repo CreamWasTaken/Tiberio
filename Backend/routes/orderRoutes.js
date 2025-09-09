@@ -18,6 +18,9 @@ router.post("/", authenticateToken, orderController.createOrder);
 // Update order
 router.put("/:id", authenticateToken, orderController.updateOrder);
 
+// Update order status
+router.patch("/:id/status", authenticateToken, orderController.updateOrderStatus);
+
 // Delete order
 router.delete("/:id", authenticateToken, orderController.deleteOrder);
 

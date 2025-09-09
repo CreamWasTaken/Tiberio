@@ -53,27 +53,14 @@ class SocketService {
     }
   }
 
-  joinRoom(room) {
-    if (!this.socket) {
-      console.log(`🔌 No socket available, connecting...`);
-      this.connect();
-    }
-    
-    if (this.socket && this.isConnected) {
+  async joinRoom(room) {
+    try {
+      const socket = await this.waitForConnection();
       console.log(`🔌 Joining Socket.IO room: ${room}`);
-      this.socket.emit('join-room', room);
+      socket.emit('join-room', room);
       console.log(`🔌 Room join request sent for: ${room}`);
-    } else {
-      console.log(`❌ Cannot join room ${room}: socket not connected`);
-      console.log(`🔌 Socket status:`, this.getConnectionStatus());
-      // Try to wait for connection and then join
-      this.waitForConnection().then(() => {
-        console.log(`🔌 Connection established, now joining room: ${room}`);
-        this.socket.emit('join-room', room);
-        console.log(`🔌 Room join request sent for: ${room} (delayed)`);
-      }).catch(error => {
-        console.error(`🔌 Failed to establish connection for room ${room}:`, error);
-      });
+    } catch (error) {
+      console.error(`🔌 Failed to join room ${room}:`, error);
     }
   }
 

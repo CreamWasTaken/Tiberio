@@ -121,6 +121,29 @@ export const updateOrder = async (id, orderData) => {
   }
 };
 
+// Update order status
+export const updateOrderStatus = async (id, status) => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.patch(`${API_URL}/api/orders/${id}/status`, 
+      { status },
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    if (error.response) {
+      throw new Error(error.response.data.message || 'Failed to update order status');
+    } else if (error.request) {
+      throw new Error('No response from server');
+    } else {
+      throw new Error(error.message);
+    }
+  }
+};
+
 // Delete order
 export const deleteOrder = async (id) => {
   try {

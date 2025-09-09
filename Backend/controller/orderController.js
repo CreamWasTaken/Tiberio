@@ -215,12 +215,12 @@ const createOrder = async (req, res) => {
     }
     
     // Insert order
-    const orderQuery = `
+    const insertOrderQuery = `
       INSERT INTO orders (supplier_id, description, status, total_price, receipt_number)
       VALUES (?, ?, 'ordered', ?, ?)
     `;
     
-    const [orderResult] = await connection.execute(orderQuery, [
+    const [orderResult] = await connection.execute(insertOrderQuery, [
       supplier_id,
       description || null,
       total_price,
@@ -246,17 +246,64 @@ const createOrder = async (req, res) => {
     
     await connection.commit();
     
-    // Fetch and return the created order
-    const createdOrder = await getOrderById({ params: { id: orderId } }, res);
+    // Fetch the created order data
+    const fetchOrderQuery = `
+      SELECT 
+        o.id,
+        o.supplier_id,
+        o.description,
+        o.status,
+        o.total_price,
+        o.receipt_number,
+        o.created_at,
+        o.updated_at,
+        s.name as supplier_name,
+        s.contact_person,
+        s.contact_number,
+        s.email,
+        s.address as supplier_address
+      FROM orders o
+      LEFT JOIN suppliers s ON o.supplier_id = s.id
+      WHERE o.id = ? AND o.is_deleted = 0
+    `;
+    
+    const [orders] = await connection.execute(fetchOrderQuery, [orderId]);
+    const createdOrder = orders[0];
+    
+    // Get order items
+    const itemsQuery = `
+      SELECT 
+        oi.id,
+        oi.order_id,
+        oi.item_id,
+        oi.qty,
+        oi.unit_price,
+        oi.status,
+        p.code as product_code,
+        p.description as product_description,
+        p.pc_price,
+        p.pc_cost
+      FROM order_items oi
+      LEFT JOIN products p ON oi.item_id = p.id
+      WHERE oi.order_id = ? AND p.is_deleted = 0
+    `;
+    
+    const [orderItems] = await connection.execute(itemsQuery, [orderId]);
+    createdOrder.items = orderItems;
     
     // Emit real-time update
     const io = req.app.get('io');
     if (io) {
+      console.log('🔌 Emitting order-updated event for new order:', orderId);
       io.to('order-updated').emit('order-updated', {
         type: 'added',
         order: createdOrder
       });
+    } else {
+      console.log('❌ Socket.IO not available for order-updated event');
     }
+    
+    res.json(createdOrder);
     
   } catch (error) {
     await connection.rollback();
@@ -278,13 +325,13 @@ const updateOrder = async (req, res) => {
     const { supplier_id, description, status, items, receipt_number } = req.body;
     
     // Update order
-    const orderQuery = `
+    const updateOrderQuery = `
       UPDATE orders 
       SET supplier_id = ?, description = ?, status = ?, receipt_number = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND is_deleted = 0
     `;
     
-    await connection.execute(orderQuery, [
+    await connection.execute(updateOrderQuery, [
       supplier_id,
       description,
       status || 'ordered',
@@ -363,10 +410,15 @@ const deleteOrder = async (req, res) => {
     // Emit real-time update
     const io = req.app.get('io');
     if (io) {
+      console.log('🔌 Emitting order-updated event for delete:', id);
+      console.log('🔌 Room members in order-updated:', io.sockets.adapter.rooms.get('order-updated')?.size || 0);
       io.to('order-updated').emit('order-updated', {
         type: 'deleted',
-        orderId: id
+        orderId: parseInt(id)
       });
+      console.log('🔌 Delete event emitted successfully');
+    } else {
+      console.log('❌ Socket.IO not available for order-updated event');
     }
     
     res.json({ message: 'Order deleted successfully' });
@@ -398,11 +450,105 @@ const getOrderStats = async (req, res) => {
   }
 };
 
+// Update order status
+const updateOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Validate status
+    const validStatuses = ['ordered', 'on_delivery', 'delivered', 'completed', 'cancelled', 'returned'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        message: 'Invalid status. Must be one of: ' + validStatuses.join(', ') 
+      });
+    }
+
+    // Check if order exists
+    const checkQuery = 'SELECT id FROM orders WHERE id = ? AND is_deleted = 0';
+    const [existingOrder] = await db.execute(checkQuery, [id]);
+    
+    if (existingOrder.length === 0) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Update order status
+    const updateQuery = 'UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+    await db.execute(updateQuery, [status, id]);
+
+    // Get the updated order with supplier info
+    const fetchUpdatedOrderQuery = `
+      SELECT 
+        o.id,
+        o.supplier_id,
+        o.description,
+        o.status,
+        o.total_price,
+        o.receipt_number,
+        o.created_at,
+        o.updated_at,
+        s.name as supplier_name,
+        s.contact_person,
+        s.contact_number,
+        s.email,
+        s.address as supplier_address
+      FROM orders o
+      LEFT JOIN suppliers s ON o.supplier_id = s.id
+      WHERE o.id = ? AND o.is_deleted = 0
+    `;
+    
+    const [orders] = await db.execute(fetchUpdatedOrderQuery, [id]);
+    const updatedOrder = orders[0];
+    
+    // Get order items
+    const itemsQuery = `
+      SELECT 
+        oi.id,
+        oi.order_id,
+        oi.item_id,
+        oi.qty,
+        oi.unit_price,
+        oi.status,
+        p.code as product_code,
+        p.description as product_description,
+        p.pc_price,
+        p.pc_cost
+      FROM order_items oi
+      LEFT JOIN products p ON oi.item_id = p.id
+      WHERE oi.order_id = ? AND p.is_deleted = 0
+    `;
+    
+    const [items] = await db.execute(itemsQuery, [id]);
+    updatedOrder.items = items;
+
+    // Emit real-time update
+    const io = req.app.get('io');
+    if (io) {
+      console.log('🔌 Emitting order-updated event for status update:', id);
+      io.to('order-updated').emit('order-updated', {
+        type: 'updated',
+        order: updatedOrder
+      });
+    } else {
+      console.log('❌ Socket.IO not available for order-updated event');
+    }
+
+    res.json({
+      message: 'Order status updated successfully',
+      order: updatedOrder
+    });
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    res.status(500).json({ message: 'Failed to update order status', error: error.message });
+  }
+};
+
 module.exports = {
   getOrders,
   getOrderById,
   createOrder,
   updateOrder,
+  updateOrderStatus,
   deleteOrder,
   getOrderStats
 };
