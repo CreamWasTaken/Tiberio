@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 09, 2025 at 07:26 AM
+-- Generation Time: Sep 09, 2025 at 07:33 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -174,7 +174,7 @@ CREATE TABLE `orders` (
   `id` int(11) NOT NULL,
   `supplier_id` int(11) NOT NULL,
   `description` text DEFAULT NULL,
-  `status` varchar(50) DEFAULT NULL,
+  `status` enum('ordered','on_delivery','delivered','completed','cancelled','returned') DEFAULT 'ordered',
   `total_price` decimal(12,2) DEFAULT NULL,
   `receipt_number` varchar(100) DEFAULT NULL,
   `is_deleted` tinyint(1) DEFAULT 0,
