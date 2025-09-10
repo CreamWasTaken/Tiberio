@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 10, 2025 at 06:29 AM
+-- Generation Time: Sep 10, 2025 at 09:53 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -67,6 +67,47 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `update_order_status` (IN `o_id` INT
 
     ELSE
         UPDATE orders SET status = 'ordered' WHERE id = o_id; -- default to pending/ordered
+    END IF;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `update_transaction_status` (IN `tx_id` INT)   BEGIN
+    DECLARE total_items INT;
+    DECLARE fulfilled_items INT;
+    DECLARE refunded_items INT;
+    DECLARE partial_items INT;
+    DECLARE new_final DECIMAL(10,2);
+
+    -- Count statuses
+    SELECT COUNT(*), 
+           SUM(status = 'fulfilled'),
+           SUM(status = 'refunded'),
+           SUM(status = 'partially_refunded')
+    INTO total_items, fulfilled_items, refunded_items, partial_items
+    FROM transaction_items
+    WHERE transaction_id = tx_id;
+
+    -- Recalculate final price (exclude refunded qty)
+    SELECT COALESCE(SUM(((quantity - refunded_quantity) * unit_price) - discount),0)
+    INTO new_final
+    FROM transaction_items
+    WHERE transaction_id = tx_id;
+
+    UPDATE transactions
+    SET final_price = new_final
+    WHERE id = tx_id;
+
+    -- Decide transaction status
+    IF total_items = fulfilled_items THEN
+        UPDATE transactions SET status = 'fulfilled' WHERE id = tx_id;
+
+    ELSEIF total_items = refunded_items THEN
+        UPDATE transactions SET status = 'refunded' WHERE id = tx_id;
+
+    ELSEIF partial_items > 0 OR (refunded_items > 0 AND fulfilled_items > 0) THEN
+        UPDATE transactions SET status = 'partially_refunded' WHERE id = tx_id;
+
+    ELSE
+        UPDATE transactions SET status = 'pending' WHERE id = tx_id;
     END IF;
 END$$
 
@@ -191,7 +232,7 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `supplier_id`, `description`, `status`, `total_price`, `receipt_number`, `is_deleted`, `created_at`, `updated_at`) VALUES
-(16, 4, NULL, 'partially_returned', 13.00, '3615', 0, '2025-09-10 04:13:50', '2025-09-10 04:24:55');
+(18, 4, NULL, 'partially_returned', 63.00, '43352', 0, '2025-09-10 07:29:18', '2025-09-10 07:29:29');
 
 -- --------------------------------------------------------
 
@@ -207,15 +248,16 @@ CREATE TABLE `order_items` (
   `refunded_qty` int(11) DEFAULT 0,
   `unit_price` decimal(12,2) NOT NULL,
   `status` enum('pending','received','returned','partially_returned') DEFAULT 'pending',
-  `refunded_at` timestamp NULL DEFAULT NULL
+  `refunded_at` timestamp NULL DEFAULT NULL,
+  `refund_reason` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `order_items`
 --
 
-INSERT INTO `order_items` (`id`, `order_id`, `item_id`, `qty`, `refunded_qty`, `unit_price`, `status`, `refunded_at`) VALUES
-(21, 16, 15, 15, 2, 1.00, 'partially_returned', '2025-09-10 12:24:55');
+INSERT INTO `order_items` (`id`, `order_id`, `item_id`, `qty`, `refunded_qty`, `unit_price`, `status`, `refunded_at`, `refund_reason`) VALUES
+(23, 18, 17, 10, 3, 9.00, 'partially_returned', '2025-09-10 15:29:29', 'guba');
 
 --
 -- Triggers `order_items`
@@ -266,7 +308,8 @@ INSERT INTO `patients` (`id`, `first_name`, `middle_name`, `last_name`, `sex`, `
 (8, 'Rachel', '', 'Rivera', 'female', '2003-12-05', 21, 'Talisay', '099123123', '', '', 1, NULL, '2025-08-26 08:53:48', '2025-08-26 08:53:48'),
 (9, 'John ', 'D', 'Doe', 'male', '1999-03-03', 26, 'Somewhere', '099', '123', '', 1, NULL, '2025-08-26 09:18:39', '2025-08-26 09:18:39'),
 (10, 'Jane ', 'D.', 'Dane', 'female', '1999-04-17', 26, 'Earth', '09', '123', '', 2, NULL, '2025-08-26 09:34:19', '2025-08-26 09:34:19'),
-(11, 'Jane', 'D.', 'Doe', 'female', '2015-01-01', 10, 'Adress', '099123', '123', '', 1, NULL, '2025-08-27 06:39:16', '2025-08-27 06:39:16');
+(11, 'Jane', 'D.', 'Doe', 'female', '2015-01-01', 10, 'Adress', '099123', '123', '', 1, NULL, '2025-08-27 06:39:16', '2025-08-27 06:39:16'),
+(12, 'Stephen John', 'S.', 'Sapalo', 'male', '1998-06-24', 27, 'Technological University of The Philippines - Visayas, Capt. Sabi Street, Zone 12 , Talisay City, Negros Occidental', '9553344804', '', '', 1, NULL, '2025-09-10 07:43:09', '2025-09-10 07:43:09');
 
 -- --------------------------------------------------------
 
@@ -350,7 +393,7 @@ CREATE TABLE `products` (
 INSERT INTO `products` (`id`, `subcategory_id`, `supplier_id`, `code`, `description`, `pc_price`, `pc_cost`, `stock`, `low_stock_threshold`, `stock_status`, `attributes`, `is_deleted`) VALUES
 (15, 13, 4, '1', 'SV 1', 1.00, 1.00, 70, 1, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0),
 (16, 14, 5, '1', 'DV 1', 2.00, 2.00, 51, 1, 'normal', '{}', 0),
-(17, 15, 4, '1', 'Progressive 1', 10.00, 10.00, 95, 10, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0);
+(17, 15, 4, '1', 'Progressive 1', 10.00, 10.00, 99, 10, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0);
 
 --
 -- Triggers `products`
@@ -479,7 +522,8 @@ INSERT INTO `transactions` (`id`, `user_id`, `patient_id`, `receipt_number`, `su
 (20, 2, 7, '5342675', 3.00, 0.00, 3.00, 0.00, 'fulfilled', '2025-09-09 07:32:45', '2025-09-05 10:00:40', '2025-09-09 07:32:45'),
 (21, 1, 7, '45657', 20.00, 0.00, 20.00, 0.00, 'fulfilled', '2025-09-09 07:32:44', '2025-09-08 02:20:16', '2025-09-09 07:32:44'),
 (22, 2, 7, '4575432', 10.00, 0.00, 10.00, 0.00, 'fulfilled', '2025-09-09 07:32:42', '2025-09-09 07:28:26', '2025-09-09 07:32:42'),
-(23, 2, 8, '8659', 50.00, 0.00, 40.00, 0.00, 'partially_refunded', '2025-09-09 07:32:49', '2025-09-09 07:31:47', '2025-09-09 07:32:49');
+(23, 2, 8, '8659', 50.00, 0.00, 40.00, 0.00, 'partially_refunded', '2025-09-09 07:32:49', '2025-09-09 07:31:47', '2025-09-09 07:32:49'),
+(28, 1, 12, '6472', 40.00, 0.00, 40.00, 0.00, 'pending', NULL, '2025-09-10 07:53:16', '2025-09-10 07:53:16');
 
 -- --------------------------------------------------------
 
@@ -517,7 +561,8 @@ INSERT INTO `transaction_items` (`id`, `transaction_id`, `product_id`, `status`,
 (28, 20, 15, 'fulfilled', 1, 1.00, 0.00, 0, NULL, '2025-09-05 10:00:40', '2025-09-08 02:15:06'),
 (29, 21, 15, 'fulfilled', 20, 1.00, 0.00, 0, NULL, '2025-09-08 02:20:16', '2025-09-08 02:20:20'),
 (30, 22, 17, 'fulfilled', 1, 10.00, 0.00, 0, NULL, '2025-09-09 07:28:26', '2025-09-09 07:28:33'),
-(31, 23, 17, 'partially_refunded', 5, 10.00, 0.00, 1, '2025-09-09 15:32:05', '2025-09-09 07:31:47', '2025-09-09 07:32:05');
+(31, 23, 17, 'partially_refunded', 5, 10.00, 0.00, 1, '2025-09-09 15:32:05', '2025-09-09 07:31:47', '2025-09-09 07:32:05'),
+(36, 28, 17, 'pending', 4, 10.00, 0.00, 0, NULL, '2025-09-10 07:53:16', '2025-09-10 07:53:16');
 
 --
 -- Triggers `transaction_items`
@@ -700,19 +745,19 @@ ALTER TABLE `logs`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `patients`
 --
 ALTER TABLE `patients`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `price_categories`
@@ -748,13 +793,13 @@ ALTER TABLE `suppliers`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT for table `transaction_items`
 --
 ALTER TABLE `transaction_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT for table `users`
