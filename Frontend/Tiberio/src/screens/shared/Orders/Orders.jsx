@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../components/Sidebar';
-import { getOrders, getOrderStats, deleteOrder, updateOrderStatus, updateOrderItemStatus } from '../../../services/order';
+import { getOrders, getOrderStats, deleteOrder, updateOrderStatus, updateOrderItemStatus, returnOrderItem } from '../../../services/order';
 import socketService from '../../../services/socket';
 import { NewOrderModal, ErrorBoundary, Pagination, OrderFilters, DeleteConfirmationModal } from './components';
 
@@ -45,6 +45,12 @@ function Orders() {
   // Delete Confirmation Modal State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState(null);
+  
+  // Return/Refund Modal State
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [returnItem, setReturnItem] = useState(null);
+  const [returnQuantity, setReturnQuantity] = useState(1);
+  const [isProcessingReturn, setIsProcessingReturn] = useState(false);
   
   // Socket.IO Connection State
   const [socketConnected, setSocketConnected] = useState(false);
@@ -191,6 +197,55 @@ function Orders() {
     setOrderToDelete(null);
   };
 
+  // Handle item return/refund
+  const handleItemReturn = (item) => {
+    setReturnItem(item);
+    setReturnQuantity(1);
+    setIsReturnModalOpen(true);
+  };
+
+  // Close return modal
+  const closeReturnModal = () => {
+    setIsReturnModalOpen(false);
+    setReturnItem(null);
+    setReturnQuantity(1);
+  };
+
+  // Process item return/refund
+  const processItemReturn = async () => {
+    if (!returnItem || !returnQuantity || returnQuantity === '' || returnQuantity <= 0) {
+      alert('Please enter a valid return quantity');
+      return;
+    }
+
+    const availableQuantity = returnItem.qty - (returnItem.refunded_qty || 0);
+    if (returnQuantity > availableQuantity) {
+      alert(`Return quantity cannot exceed available quantity (${availableQuantity})`);
+      return;
+    }
+
+    setIsProcessingReturn(true);
+    try {
+      // Use the new return API that tracks quantity
+      const response = await returnOrderItem(selectedOrder.id, returnItem.id, returnQuantity);
+      
+      // Update the selected order in the modal to reflect the change
+      setSelectedOrder(response.order);
+
+      // Refresh orders list
+      fetchOrders();
+      fetchOrderStats();
+      
+      closeReturnModal();
+      alert(`Item returned successfully! ${returnQuantity} items returned.`);
+    } catch (err) {
+      console.error('Error processing return:', err);
+      alert('Failed to process return: ' + err.message);
+    } finally {
+      setIsProcessingReturn(false);
+    }
+  };
+
   // Handle order status change
   const handleStatusChange = async (orderId, newStatus) => {
     try {
@@ -263,6 +318,67 @@ function Orders() {
     };
     
     const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-800', label: status };
+    return config;
+  };
+
+  // Get item status badge styling
+  const getItemStatusBadge = (status, refundedQty, totalQty) => {
+    // Check if it's partially returned based on refunded quantity
+    const isPartiallyReturned = refundedQty > 0 && refundedQty < totalQty;
+    const isFullyReturned = refundedQty > 0 && refundedQty >= totalQty;
+    
+    const statusConfig = {
+      'pending': { 
+        bg: 'bg-yellow-100', 
+        text: 'text-yellow-800', 
+        label: 'Pending',
+        icon: '⏳'
+      },
+      'received': { 
+        bg: 'bg-green-100', 
+        text: 'text-green-800', 
+        label: 'Received',
+        icon: '✅'
+      },
+      'returned': { 
+        bg: 'bg-red-100', 
+        text: 'text-red-800', 
+        label: 'Returned',
+        icon: '↩️'
+      },
+      'partially_returned': { 
+        bg: 'bg-orange-100', 
+        text: 'text-orange-800', 
+        label: `Partially Returned (${refundedQty || 0}/${totalQty})`,
+        icon: '🔄'
+      }
+    };
+    
+    // Handle cases where status might not be set correctly but we have refunded quantity
+    if (isPartiallyReturned && status !== 'partially_returned') {
+      return {
+        bg: 'bg-orange-100',
+        text: 'text-orange-800',
+        label: `Partially Returned (${refundedQty}/${totalQty})`,
+        icon: '🔄'
+      };
+    }
+    
+    if (isFullyReturned && status !== 'returned') {
+      return {
+        bg: 'bg-red-100',
+        text: 'text-red-800',
+        label: 'Returned',
+        icon: '↩️'
+      };
+    }
+    
+    const config = statusConfig[status] || { 
+      bg: 'bg-gray-100', 
+      text: 'text-gray-800', 
+      label: status || 'Unknown',
+      icon: '❓'
+    };
     return config;
   };
 
@@ -625,18 +741,9 @@ function Orders() {
                                 {order.supplier_name || '—'}
                               </td>
                                           <td className="px-6 py-4 whitespace-nowrap">
-                                            <select
-                                              value={order.status}
-                                              onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                                              className="px-3 py-1 text-xs font-medium rounded-lg border border-gray-600 bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-700 transition-colors duration-200"
-                                            >
-                                              <option value="ordered">Ordered</option>
-                                              <option value="on_delivery">On Delivery</option>
-                                              <option value="delivered">Delivered</option>
-                                              <option value="completed">Completed</option>
-                                              <option value="cancelled">Cancelled</option>
-                                              <option value="returned">Returned</option>
-                                            </select>
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(order.status).bg} ${getStatusBadge(order.status).text}`}>
+                                              {getStatusBadge(order.status).label}
+                                            </span>
                                           </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                                 {formatCurrency(order.total_price)}
@@ -771,6 +878,9 @@ function Orders() {
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                             Status
                           </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="bg-gray-800/50 divide-y divide-gray-700">
@@ -784,7 +894,14 @@ function Orders() {
                                 {item.product_description || item.product_code || 'Unknown Product'}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
-                                {item.qty}
+                                <div>
+                                  <div className="font-medium">{item.qty}</div>
+                                  {item.refunded_qty > 0 && (
+                                    <div className="text-xs text-orange-400">
+                                      Returned: {item.refunded_qty}
+                                    </div>
+                                  )}
+                                </div>
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
                                 {formatCurrency(item.unit_price)}
@@ -793,34 +910,52 @@ function Orders() {
                                 {formatCurrency((item.qty || 0) * (item.unit_price || 0))}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap">
+                                {(() => {
+                                  const badge = getItemStatusBadge(item.status, item.refunded_qty, item.qty);
+                                  console.log('Item status debug:', {
+                                    id: item.id,
+                                    status: item.status,
+                                    refunded_qty: item.refunded_qty,
+                                    qty: item.qty,
+                                    badge: badge
+                                  });
+                                  return (
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
+                                      <span className="mr-1">{badge.icon}</span>
+                                      {badge.label}
+                                    </span>
+                                  );
+                                })()}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
                                 <div className="flex space-x-2">
-                                  {/* Debug: Show current status */}
-                                  <span className="text-xs text-gray-400 mr-2">Status: {item.status || 'null'}</span>
-                                  
                                   {(item.status === 'pending' || !item.status || item.status === null) && (
                                     <>
                                       <button
                                         onClick={() => handleItemStatusChange(selectedOrder.id, item.id, 'received')}
-                                        className="px-3 py-1 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200"
+                                        className="px-3 py-1 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 flex items-center"
+                                        title="Mark as received"
                                       >
+                                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
                                         Complete
                                       </button>
                                       <button
-                                        onClick={() => handleItemStatusChange(selectedOrder.id, item.id, 'returned')}
-                                        className="px-3 py-1 text-xs font-medium bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors duration-200"
+                                        onClick={() => handleItemReturn(item)}
+                                        className="px-3 py-1 text-xs font-medium bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors duration-200 flex items-center"
+                                        title="Return items"
                                       >
+                                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m5 14v-5a2 2 0 00-2-2H6a2 2 0 00-2 2v5a2 2 0 002 2h12a2 2 0 002-2z" />
+                                        </svg>
                                         Return
                                       </button>
                                     </>
                                   )}
-                                  {item.status === 'received' && (
-                                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                      Received
-                                    </span>
-                                  )}
-                                  {item.status === 'returned' && (
-                                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
-                                      Returned
+                                  {(item.status === 'received' || item.status === 'returned' || item.status === 'partially_returned') && (
+                                    <span className="text-xs text-gray-400 italic">
+                                      No actions available
                                     </span>
                                   )}
                                 </div>
@@ -829,7 +964,7 @@ function Orders() {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan="6" className="px-4 py-8 text-center text-gray-400">
+                            <td colSpan="7" className="px-4 py-8 text-center text-gray-400">
                               No items found for this order
                             </td>
                           </tr>
@@ -868,6 +1003,92 @@ function Orders() {
         onConfirm={confirmDeleteOrder}
         order={orderToDelete}
       />
+
+      {/* Return/Refund Modal */}
+      {isReturnModalOpen && returnItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={closeReturnModal}></div>
+          <div className="relative w-full max-w-md mx-4 shadow-2xl">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m5 14v-5a2 2 0 00-2-2H6a2 2 0 00-2 2v5a2 2 0 002 2h12a2 2 0 002-2z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-white">Return Item</h3>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-gray-300 mb-2">
+                  <strong>Product:</strong> {returnItem.product_description || returnItem.product_code || 'Unknown Product'}
+                </p>
+                <p className="text-gray-300 mb-2">
+                  <strong>Ordered Quantity:</strong> {returnItem.qty}
+                </p>
+                {returnItem.refunded_qty > 0 && (
+                  <p className="text-orange-400 mb-2">
+                    <strong>Already Returned:</strong> {returnItem.refunded_qty}
+                  </p>
+                )}
+                <p className="text-gray-300 mb-2">
+                  <strong>Available for Return:</strong> {returnItem.qty - (returnItem.refunded_qty || 0)}
+                </p>
+                <p className="text-gray-300 mb-2">
+                  <strong>Unit Price:</strong> {formatCurrency(returnItem.unit_price)}
+                </p>
+                <p className="text-gray-300 mb-4">
+                  <strong>Total Value:</strong> {formatCurrency((returnItem.qty || 0) * (returnItem.unit_price || 0))}
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Return Quantity
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max={returnItem.qty - (returnItem.refunded_qty || 0)}
+                  value={returnQuantity}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      setReturnQuantity('');
+                    } else {
+                      const numValue = parseInt(value);
+                      if (!isNaN(numValue)) {
+                        setReturnQuantity(numValue);
+                      }
+                    }
+                  }}
+                  className="w-full px-3 py-2 bg-gray-900/60 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Maximum: {returnItem.qty - (returnItem.refunded_qty || 0)} items
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200"
+                  onClick={closeReturnModal}
+                  disabled={isProcessingReturn}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors duration-200 disabled:opacity-50"
+                  onClick={processItemReturn}
+                  disabled={isProcessingReturn}
+                >
+                  {isProcessingReturn ? 'Processing...' : 'Return Item'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </ErrorBoundary>
   );

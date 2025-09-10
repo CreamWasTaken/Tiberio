@@ -167,6 +167,29 @@ export const updateOrderItemStatus = async (orderId, itemId, status) => {
   }
 };
 
+// Return order item with quantity
+export const returnOrderItem = async (orderId, itemId, returnedQuantity) => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.patch(`${API_URL}/api/orders/${orderId}/items/${itemId}/return`, 
+      { returned_quantity: returnedQuantity },
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error returning order item:', error);
+    if (error.response) {
+      throw new Error(error.response.data.message || 'Failed to return order item');
+    } else if (error.request) {
+      throw new Error('No response from server');
+    } else {
+      throw new Error(error.message);
+    }
+  }
+};
+
 // Delete order
 export const deleteOrder = async (id) => {
   try {

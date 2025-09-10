@@ -644,6 +644,135 @@ const updateOrderItemStatus = async (req, res) => {
   }
 };
 
+// Return order item with quantity
+const returnOrderItem = async (req, res) => {
+  try {
+    const { orderId, itemId } = req.params;
+    const { returned_quantity } = req.body;
+
+    // Validate returned quantity
+    if (!returned_quantity || returned_quantity <= 0) {
+      return res.status(400).json({ 
+        message: 'Returned quantity must be greater than 0' 
+      });
+    }
+
+    // Check if order exists
+    const orderCheckQuery = 'SELECT id FROM orders WHERE id = ? AND is_deleted = 0';
+    const [orderExists] = await db.execute(orderCheckQuery, [orderId]);
+    
+    if (orderExists.length === 0) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Check if order item exists and get current data
+    const itemCheckQuery = `
+      SELECT id, qty, refunded_qty, status, item_id 
+      FROM order_items 
+      WHERE id = ? AND order_id = ?
+    `;
+    const [itemExists] = await db.execute(itemCheckQuery, [itemId, orderId]);
+    
+    if (itemExists.length === 0) {
+      return res.status(404).json({ message: 'Order item not found' });
+    }
+
+    const item = itemExists[0];
+    const currentRefundedQty = item.refunded_qty || 0;
+    const totalQty = item.qty;
+    const newRefundedQty = currentRefundedQty + returned_quantity;
+
+    // Check if returned quantity exceeds available quantity
+    if (newRefundedQty > totalQty) {
+      return res.status(400).json({ 
+        message: `Cannot return ${returned_quantity} items. Only ${totalQty - currentRefundedQty} items available for return.` 
+      });
+    }
+
+    // Update the item refunded quantity and status
+    const newStatus = newRefundedQty === totalQty ? 'returned' : 'partially_returned';
+    
+    const updateQuery = `
+      UPDATE order_items 
+      SET refunded_qty = ?, status = ?, refunded_at = CONVERT_TZ(NOW(), '+00:00', '+08:00')
+      WHERE id = ? AND order_id = ?
+    `;
+    
+    await db.execute(updateQuery, [newRefundedQty, newStatus, itemId, orderId]);
+
+    // Re-update the item status to partially_returned if needed (after trigger runs)
+    if (newStatus === 'partially_returned') {
+      await db.execute(
+        'UPDATE order_items SET status = ? WHERE id = ? AND order_id = ?',
+        ['partially_returned', itemId, orderId]
+      );
+    }
+
+    // Restore stock for the returned quantity
+    await db.execute(
+      "UPDATE products SET stock = stock + ? WHERE id = ?",
+      [returned_quantity, item.item_id]
+    );
+
+    // Get the updated order with items
+    const fetchUpdatedOrderQuery = `
+      SELECT 
+        o.id,
+        o.supplier_id,
+        o.description,
+        o.status,
+        o.total_price,
+        o.receipt_number,
+        o.created_at,
+        o.updated_at,
+        s.name as supplier_name,
+        s.contact_person,
+        s.contact_number,
+        s.email,
+        s.address as supplier_address
+      FROM orders o
+      LEFT JOIN suppliers s ON o.supplier_id = s.id
+      WHERE o.id = ? AND o.is_deleted = 0
+    `;
+    
+    const [orders] = await db.execute(fetchUpdatedOrderQuery, [orderId]);
+    const updatedOrder = orders[0];
+    
+    // Get order items
+    const itemsQuery = `
+      SELECT 
+        oi.id,
+        oi.order_id,
+        oi.item_id,
+        oi.qty,
+        oi.refunded_qty,
+        oi.unit_price,
+        oi.status,
+        oi.refunded_at,
+        p.code as product_code,
+        p.description as product_description,
+        p.pc_price,
+        p.pc_cost
+      FROM order_items oi
+      LEFT JOIN products p ON oi.item_id = p.id
+      WHERE oi.order_id = ? AND p.is_deleted = 0
+    `;
+    
+    const [items] = await db.execute(itemsQuery, [orderId]);
+    updatedOrder.items = items;
+
+    res.json({
+      message: 'Item returned successfully',
+      order: updatedOrder,
+      returned_quantity: newRefundedQty
+    });
+
+  } catch (error) {
+    console.error('Error returning order item:', error);
+    res.status(500).json({ message: 'Failed to return order item', error: error.message });
+  }
+};
+
 module.exports = {
   getOrders,
   getOrderById,
@@ -651,6 +780,7 @@ module.exports = {
   updateOrder,
   updateOrderStatus,
   updateOrderItemStatus,
+  returnOrderItem,
   deleteOrder,
   getOrderStats
 };

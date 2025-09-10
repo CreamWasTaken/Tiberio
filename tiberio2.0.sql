@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 09, 2025 at 09:56 AM
+-- Generation Time: Sep 10, 2025 at 06:29 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -25,44 +25,48 @@ DELIMITER $$
 --
 -- Procedures
 --
-CREATE DEFINER=`root`@`localhost` PROCEDURE `update_transaction_status` (IN `tx_id` INT)   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `update_order_status` (IN `o_id` INT)   BEGIN
     DECLARE total_items INT;
-    DECLARE fulfilled_items INT;
-    DECLARE refunded_items INT;
+    DECLARE received_items INT;
+    DECLARE returned_items INT;
     DECLARE partial_items INT;
-    DECLARE new_final DECIMAL(10,2);
 
-    -- Count statuses
-    SELECT COUNT(*), 
-           SUM(status = 'fulfilled'),
-           SUM(status = 'refunded'),
-           SUM(status = 'partially_refunded')
-    INTO total_items, fulfilled_items, refunded_items, partial_items
-    FROM transaction_items
-    WHERE transaction_id = tx_id;
+    -- Count items
+    SELECT COUNT(*),
+           SUM(status = 'received'),
+           SUM(status = 'returned'),
+           SUM(status = 'partially_returned')
+    INTO total_items, received_items, returned_items, partial_items
+    FROM order_items
+    WHERE order_id = o_id;
 
-    -- Recalculate final price (exclude refunded qty)
-    SELECT COALESCE(SUM(((quantity - refunded_quantity) * unit_price) - discount),0)
-    INTO new_final
-    FROM transaction_items
-    WHERE transaction_id = tx_id;
+    -- Recalculate total price (exclude refunded_qty)
+    UPDATE orders o
+    SET o.total_price = (
+        SELECT COALESCE(SUM((oi.qty - oi.refunded_qty) * oi.unit_price),0)
+        FROM order_items oi
+        WHERE oi.order_id = o_id
+    )
+    WHERE o.id = o_id;
 
-    UPDATE transactions
-    SET final_price = new_final
-    WHERE id = tx_id;
+    -- Decide order status
+    IF total_items = received_items THEN
+        UPDATE orders SET status = 'completed' WHERE id = o_id;
 
-    -- Decide transaction status
-    IF total_items = fulfilled_items THEN
-        UPDATE transactions SET status = 'fulfilled' WHERE id = tx_id;
+    ELSEIF total_items = returned_items THEN
+        UPDATE orders SET status = 'returned' WHERE id = o_id;
 
-    ELSEIF total_items = refunded_items THEN
-        UPDATE transactions SET status = 'refunded' WHERE id = tx_id;
+    ELSEIF total_items = partial_items THEN
+        UPDATE orders SET status = 'partially_returned' WHERE id = o_id;
 
-    ELSEIF partial_items > 0 OR (refunded_items > 0 AND fulfilled_items > 0) THEN
-        UPDATE transactions SET status = 'partially_refunded' WHERE id = tx_id;
+    ELSEIF partial_items > 0 OR (received_items > 0 AND returned_items > 0) THEN
+        UPDATE orders SET status = 'partially_returned' WHERE id = o_id;
+
+    ELSEIF received_items > 0 THEN
+        UPDATE orders SET status = 'on_delivery' WHERE id = o_id;
 
     ELSE
-        UPDATE transactions SET status = 'pending' WHERE id = tx_id;
+        UPDATE orders SET status = 'ordered' WHERE id = o_id; -- default to pending/ordered
     END IF;
 END$$
 
@@ -174,7 +178,7 @@ CREATE TABLE `orders` (
   `id` int(11) NOT NULL,
   `supplier_id` int(11) NOT NULL,
   `description` text DEFAULT NULL,
-  `status` enum('ordered','on_delivery','delivered','completed','cancelled','returned') DEFAULT 'ordered',
+  `status` enum('ordered','on_delivery','delivered','completed','cancelled','returned','partially_returned') DEFAULT 'ordered',
   `total_price` decimal(12,2) DEFAULT NULL,
   `receipt_number` varchar(100) DEFAULT NULL,
   `is_deleted` tinyint(1) DEFAULT 0,
@@ -187,11 +191,7 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `supplier_id`, `description`, `status`, `total_price`, `receipt_number`, `is_deleted`, `created_at`, `updated_at`) VALUES
-(4, 5, NULL, 'ordered', 100.00, '123', 1, '2025-09-09 06:42:57', '2025-09-09 07:10:14'),
-(5, 5, 'test 2', 'on_delivery', 100.00, '563', 1, '2025-09-09 07:02:21', '2025-09-09 07:12:24'),
-(6, 5, NULL, 'ordered', 10.00, '123524', 1, '2025-09-09 07:15:43', '2025-09-09 07:22:26'),
-(7, 5, NULL, 'ordered', 10.00, '59170', 1, '2025-09-09 07:22:15', '2025-09-09 07:22:24'),
-(8, 5, NULL, 'ordered', 10.00, '435', 0, '2025-09-09 07:42:06', '2025-09-09 07:42:06');
+(16, 4, NULL, 'partially_returned', 13.00, '3615', 0, '2025-09-10 04:13:50', '2025-09-10 04:24:55');
 
 -- --------------------------------------------------------
 
@@ -204,20 +204,34 @@ CREATE TABLE `order_items` (
   `order_id` int(11) NOT NULL,
   `item_id` int(11) NOT NULL,
   `qty` int(11) NOT NULL,
+  `refunded_qty` int(11) DEFAULT 0,
   `unit_price` decimal(12,2) NOT NULL,
-  `status` enum('pending','received','returned') DEFAULT 'pending'
+  `status` enum('pending','received','returned','partially_returned') DEFAULT 'pending',
+  `refunded_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `order_items`
 --
 
-INSERT INTO `order_items` (`id`, `order_id`, `item_id`, `qty`, `unit_price`, `status`) VALUES
-(4, 4, 15, 10, 10.00, 'pending'),
-(5, 5, 16, 10, 10.00, 'pending'),
-(6, 6, 15, 10, 1.00, 'pending'),
-(7, 7, 15, 10, 1.00, 'pending'),
-(8, 8, 16, 10, 1.00, 'pending');
+INSERT INTO `order_items` (`id`, `order_id`, `item_id`, `qty`, `refunded_qty`, `unit_price`, `status`, `refunded_at`) VALUES
+(21, 16, 15, 15, 2, 1.00, 'partially_returned', '2025-09-10 12:24:55');
+
+--
+-- Triggers `order_items`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_order_items_after_insert` AFTER INSERT ON `order_items` FOR EACH ROW BEGIN
+    CALL update_order_status(NEW.order_id);
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_order_items_after_update` AFTER UPDATE ON `order_items` FOR EACH ROW BEGIN
+    CALL update_order_status(NEW.order_id);
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -334,7 +348,7 @@ CREATE TABLE `products` (
 --
 
 INSERT INTO `products` (`id`, `subcategory_id`, `supplier_id`, `code`, `description`, `pc_price`, `pc_cost`, `stock`, `low_stock_threshold`, `stock_status`, `attributes`, `is_deleted`) VALUES
-(15, 13, 4, '1', 'SV 1', 1.00, 1.00, 65, 1, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0),
+(15, 13, 4, '1', 'SV 1', 1.00, 1.00, 70, 1, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0),
 (16, 14, 5, '1', 'DV 1', 2.00, 2.00, 51, 1, 'normal', '{}', 0),
 (17, 15, 4, '1', 'Progressive 1', 10.00, 10.00, 95, 10, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0);
 
@@ -686,13 +700,13 @@ ALTER TABLE `logs`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `patients`

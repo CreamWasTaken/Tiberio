@@ -24,6 +24,9 @@ router.patch("/:id/status", authenticateToken, orderController.updateOrderStatus
 // Update order item status
 router.patch("/:orderId/items/:itemId/status", authenticateToken, orderController.updateOrderItemStatus);
 
+// Return order item with quantity
+router.patch("/:orderId/items/:itemId/return", authenticateToken, orderController.returnOrderItem);
+
 // Delete order
 router.delete("/:id", authenticateToken, orderController.deleteOrder);
 

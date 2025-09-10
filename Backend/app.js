@@ -105,4 +105,8 @@ const PORT = process.env.PORT || 3000;
 
 //change database to be like transaction in orders where you can return qty number of items
 
+//add when completing order, the order items status will be changed to received and qty will be added to stocks
+
+//add when returning order, the order items status will be changed to returned
+
 
