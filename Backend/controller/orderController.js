@@ -99,8 +99,11 @@ const getOrders = async (req, res) => {
           oi.order_id,
           oi.item_id,
           oi.qty,
+          oi.refunded_qty,
           oi.unit_price,
           oi.status,
+          oi.refunded_at,
+          oi.refund_reason,
           p.code as product_code,
           p.description as product_description,
           p.pc_price,
@@ -173,8 +176,11 @@ const getOrderById = async (req, res) => {
         oi.order_id,
         oi.item_id,
         oi.qty,
+        oi.refunded_qty,
         oi.unit_price,
         oi.status,
+        oi.refunded_at,
+        oi.refund_reason,
         p.code as product_code,
         p.description as product_description,
         p.pc_price,
@@ -277,8 +283,11 @@ const createOrder = async (req, res) => {
         oi.order_id,
         oi.item_id,
         oi.qty,
+        oi.refunded_qty,
         oi.unit_price,
         oi.status,
+        oi.refunded_at,
+        oi.refund_reason,
         p.code as product_code,
         p.description as product_description,
         p.pc_price,
@@ -507,8 +516,11 @@ const updateOrderStatus = async (req, res) => {
         oi.order_id,
         oi.item_id,
         oi.qty,
+        oi.refunded_qty,
         oi.unit_price,
         oi.status,
+        oi.refunded_at,
+        oi.refund_reason,
         p.code as product_code,
         p.description as product_description,
         p.pc_price,
@@ -608,8 +620,11 @@ const updateOrderItemStatus = async (req, res) => {
         oi.order_id,
         oi.item_id,
         oi.qty,
+        oi.refunded_qty,
         oi.unit_price,
         oi.status,
+        oi.refunded_at,
+        oi.refund_reason,
         p.code as product_code,
         p.description as product_description,
         p.pc_price,
@@ -644,16 +659,23 @@ const updateOrderItemStatus = async (req, res) => {
   }
 };
 
-// Return order item with quantity
+// Return order item with quantity and reason
 const returnOrderItem = async (req, res) => {
   try {
     const { orderId, itemId } = req.params;
-    const { returned_quantity } = req.body;
+    const { returned_quantity, refund_reason } = req.body;
 
     // Validate returned quantity
     if (!returned_quantity || returned_quantity <= 0) {
       return res.status(400).json({ 
         message: 'Returned quantity must be greater than 0' 
+      });
+    }
+
+    // Validate refund reason
+    if (!refund_reason || refund_reason.trim() === '') {
+      return res.status(400).json({ 
+        message: 'Refund reason is required' 
       });
     }
 
@@ -689,16 +711,16 @@ const returnOrderItem = async (req, res) => {
       });
     }
 
-    // Update the item refunded quantity and status
+    // Update the item refunded quantity, status, and refund reason
     const newStatus = newRefundedQty === totalQty ? 'returned' : 'partially_returned';
     
     const updateQuery = `
       UPDATE order_items 
-      SET refunded_qty = ?, status = ?, refunded_at = CONVERT_TZ(NOW(), '+00:00', '+08:00')
+      SET refunded_qty = ?, status = ?, refund_reason = ?, refunded_at = CONVERT_TZ(NOW(), '+00:00', '+08:00')
       WHERE id = ? AND order_id = ?
     `;
     
-    await db.execute(updateQuery, [newRefundedQty, newStatus, itemId, orderId]);
+    await db.execute(updateQuery, [newRefundedQty, newStatus, refund_reason.trim(), itemId, orderId]);
 
     // Re-update the item status to partially_returned if needed (after trigger runs)
     if (newStatus === 'partially_returned') {
@@ -749,6 +771,7 @@ const returnOrderItem = async (req, res) => {
         oi.unit_price,
         oi.status,
         oi.refunded_at,
+        oi.refund_reason,
         p.code as product_code,
         p.description as product_description,
         p.pc_price,

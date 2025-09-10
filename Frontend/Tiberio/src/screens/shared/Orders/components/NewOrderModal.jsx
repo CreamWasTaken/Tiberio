@@ -58,6 +58,9 @@ const NewOrderModal = ({ isOpen, onClose, onOrderCreated }) => {
       setSuppliers(suppliersData || []);
       setProducts(productsData || []);
       
+      
+ 
+      
       // Reset form
       setNewOrderForm({
         supplier_id: '',
@@ -109,7 +112,7 @@ const NewOrderModal = ({ isOpen, onClose, onOrderCreated }) => {
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
     
-    console.log('Submitting order with data:', newOrderForm);
+ 
     
     if (!newOrderForm.supplier_id) {
       showAlert('Validation Error', 'Please select a supplier', 'warning');
@@ -292,7 +295,7 @@ const NewOrderModal = ({ isOpen, onClose, onOrderCreated }) => {
                               </button>
                             </div>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                               <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-1">
                                   Product *
@@ -327,10 +330,12 @@ const NewOrderModal = ({ isOpen, onClose, onOrderCreated }) => {
                                   disabled={isSubmittingOrder}
                                 />
                               </div>
+                            </div>
 
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-1">
-                                  Unit Price *
+                                  Supplier Price *
                                 </label>
                                 <input
                                   type="number"
@@ -342,6 +347,23 @@ const NewOrderModal = ({ isOpen, onClose, onOrderCreated }) => {
                                   required
                                   disabled={isSubmittingOrder}
                                   placeholder="0.00"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">
+                                  PC Price
+                                </label>
+                                <input
+                                  type="text"
+                                  value={(() => {
+                                    const selectedProduct = products.find(p => p.id == item.item_id);
+                                
+                                    return selectedProduct ? (selectedProduct.pc_price || '') : '';
+                                  })()}
+                                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-300 cursor-not-allowed"
+                                  disabled
+                                  readOnly
                                 />
                               </div>
                             </div>

@@ -167,12 +167,15 @@ export const updateOrderItemStatus = async (orderId, itemId, status) => {
   }
 };
 
-// Return order item with quantity
-export const returnOrderItem = async (orderId, itemId, returnedQuantity) => {
+// Return order item with quantity and reason
+export const returnOrderItem = async (orderId, itemId, returnedQuantity, refundReason) => {
   try {
     const token = localStorage.getItem('authToken');
     const response = await axios.patch(`${API_URL}/api/orders/${orderId}/items/${itemId}/return`, 
-      { returned_quantity: returnedQuantity },
+      { 
+        returned_quantity: returnedQuantity,
+        refund_reason: refundReason
+      },
       {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       }

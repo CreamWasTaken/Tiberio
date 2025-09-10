@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../components/Sidebar';
-import { getOrders, getOrderStats, deleteOrder, updateOrderStatus, updateOrderItemStatus, returnOrderItem } from '../../../services/order';
+import { getOrders, getOrderStats, deleteOrder, updateOrderItemStatus, returnOrderItem } from '../../../services/order';
 import socketService from '../../../services/socket';
 import { NewOrderModal, ErrorBoundary, Pagination, OrderFilters, DeleteConfirmationModal } from './components';
 
@@ -50,7 +50,12 @@ function Orders() {
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const [returnItem, setReturnItem] = useState(null);
   const [returnQuantity, setReturnQuantity] = useState(1);
+  const [returnReason, setReturnReason] = useState('');
   const [isProcessingReturn, setIsProcessingReturn] = useState(false);
+  
+  // Refund Reason View Modal State
+  const [isRefundReasonModalOpen, setIsRefundReasonModalOpen] = useState(false);
+  const [refundReasonItem, setRefundReasonItem] = useState(null);
   
   // Socket.IO Connection State
   const [socketConnected, setSocketConnected] = useState(false);
@@ -201,6 +206,7 @@ function Orders() {
   const handleItemReturn = (item) => {
     setReturnItem(item);
     setReturnQuantity(1);
+    setReturnReason('');
     setIsReturnModalOpen(true);
   };
 
@@ -209,12 +215,30 @@ function Orders() {
     setIsReturnModalOpen(false);
     setReturnItem(null);
     setReturnQuantity(1);
+    setReturnReason('');
+  };
+
+  // Handle viewing refund reason
+  const handleViewRefundReason = (item) => {
+    setRefundReasonItem(item);
+    setIsRefundReasonModalOpen(true);
+  };
+
+  // Close refund reason modal
+  const closeRefundReasonModal = () => {
+    setIsRefundReasonModalOpen(false);
+    setRefundReasonItem(null);
   };
 
   // Process item return/refund
   const processItemReturn = async () => {
     if (!returnItem || !returnQuantity || returnQuantity === '' || returnQuantity <= 0) {
       alert('Please enter a valid return quantity');
+      return;
+    }
+
+    if (!returnReason.trim()) {
+      alert('Please provide a reason for returning this item');
       return;
     }
 
@@ -226,8 +250,8 @@ function Orders() {
 
     setIsProcessingReturn(true);
     try {
-      // Use the new return API that tracks quantity
-      const response = await returnOrderItem(selectedOrder.id, returnItem.id, returnQuantity);
+      // Use the new return API that tracks quantity and reason
+      const response = await returnOrderItem(selectedOrder.id, returnItem.id, returnQuantity, returnReason.trim());
       
       // Update the selected order in the modal to reflect the change
       setSelectedOrder(response.order);
@@ -243,21 +267,6 @@ function Orders() {
       alert('Failed to process return: ' + err.message);
     } finally {
       setIsProcessingReturn(false);
-    }
-  };
-
-  // Handle order status change
-  const handleStatusChange = async (orderId, newStatus) => {
-    try {
-      await updateOrderStatus(orderId, newStatus);
-      // Fallback refresh in case Socket.IO doesn't work
-      setTimeout(() => {
-        fetchOrders();
-        fetchOrderStats();
-      }, 500);
-    } catch (err) {
-      console.error('Error updating order status:', err);
-      alert('Failed to update order status: ' + err.message);
     }
   };
 
@@ -762,9 +771,7 @@ function Orders() {
                                   >
                                     View
                                   </button>
-                                  <button className="text-green-400 hover:text-green-300">
-                                    Edit
-                                  </button>
+
                                   <button 
                                     onClick={() => handleDeleteOrder(order)}
                                     className="text-red-400 hover:text-red-300"
@@ -953,7 +960,25 @@ function Orders() {
                                       </button>
                                     </>
                                   )}
-                                  {(item.status === 'received' || item.status === 'returned' || item.status === 'partially_returned') && (
+                                  {(item.status === 'received') && (
+                                    <span className="text-xs text-gray-400 italic">
+                                      No actions available
+                                    </span>
+                                  )}
+                                  {(item.status === 'returned' || item.status === 'partially_returned') && item.refund_reason && (
+                                    <button
+                                      onClick={() => handleViewRefundReason(item)}
+                                      className="px-3 py-1 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex items-center"
+                                      title="View refund reason"
+                                    >
+                                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                      </svg>
+                                      View Reason
+                                    </button>
+                                  )}
+                                  {(item.status === 'returned' || item.status === 'partially_returned') && !item.refund_reason && (
                                     <span className="text-xs text-gray-400 italic">
                                       No actions available
                                     </span>
@@ -1069,6 +1094,22 @@ function Orders() {
                 </p>
               </div>
 
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Reason for Return <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                  placeholder="Please provide a detailed reason for returning this item..."
+                  rows={4}
+                  className="w-full px-3 py-2 bg-gray-900/60 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  This information will be stored for record keeping purposes.
+                </p>
+              </div>
+
               <div className="flex justify-end gap-3">
                 <button
                   className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200"
@@ -1083,6 +1124,58 @@ function Orders() {
                   disabled={isProcessingReturn}
                 >
                   {isProcessingReturn ? 'Processing...' : 'Return Item'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Refund Reason View Modal */}
+      {isRefundReasonModalOpen && refundReasonItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={closeRefundReasonModal}></div>
+          <div className="relative w-full max-w-md mx-4 shadow-2xl">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-white">Refund Reason</h3>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-gray-300 mb-2">
+                  <strong>Product:</strong> {refundReasonItem.product_description || refundReasonItem.product_code || 'Unknown Product'}
+                </p>
+                <p className="text-gray-300 mb-2">
+                  <strong>Returned Quantity:</strong> {refundReasonItem.refunded_qty || 0} / {refundReasonItem.qty}
+                </p>
+                <p className="text-gray-300 mb-2">
+                  <strong>Returned Date:</strong> {refundReasonItem.refunded_at ? formatDate(refundReasonItem.refunded_at) : '—'}
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Reason for Return
+                </label>
+                <div className="bg-gray-900/60 border border-gray-700 rounded-lg p-3 min-h-[100px]">
+                  <p className="text-gray-300 text-sm whitespace-pre-wrap">
+                    {refundReasonItem.refund_reason || 'No reason provided'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200"
+                  onClick={closeRefundReasonModal}
+                >
+                  Close
                 </button>
               </div>
             </div>
