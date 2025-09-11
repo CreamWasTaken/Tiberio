@@ -261,7 +261,8 @@ function Orders() {
       fetchOrderStats();
       
       closeReturnModal();
-      alert(`Item returned successfully! ${returnQuantity} items returned.`);
+      const unreturnedQuantity = returnItem.qty - (returnItem.refunded_qty || 0) - returnQuantity;
+      alert(`Item returned successfully! ${returnQuantity} items returned. ${unreturnedQuantity} unreturned items have been added to stock.`);
     } catch (err) {
       console.error('Error processing return:', err);
       alert('Failed to process return: ' + err.message);
@@ -1062,9 +1063,14 @@ function Orders() {
                 <p className="text-gray-300 mb-2">
                   <strong>Unit Price:</strong> {formatCurrency(returnItem.unit_price)}
                 </p>
-                <p className="text-gray-300 mb-4">
+                <p className="text-gray-300 mb-2">
                   <strong>Total Value:</strong> {formatCurrency((returnItem.qty || 0) * (returnItem.unit_price || 0))}
                 </p>
+                <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-3 mb-4">
+                  <p className="text-blue-300 text-sm">
+                    <strong>ℹ️ Stock Information:</strong> When you return items, the unreturned quantity will be automatically added to the product's stock inventory.
+                  </p>
+                </div>
               </div>
 
               <div className="mb-6">

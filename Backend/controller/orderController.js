@@ -797,10 +797,11 @@ const returnOrderItem = async (req, res) => {
       );
     }
 
-    // Restore stock for the returned quantity
+    // Add unreturned quantity to stock (total quantity - returned quantity)
+    const unreturnedQuantity = totalQty - newRefundedQty;
     await db.execute(
       "UPDATE products SET stock = stock + ? WHERE id = ?",
-      [returned_quantity, item.item_id]
+      [unreturnedQuantity, item.item_id]
     );
 
     // Emit Socket.IO event for inventory update
@@ -841,7 +842,7 @@ const returnOrderItem = async (req, res) => {
             reason: 'order_item_returned',
             order_id: orderId,
             item_id: itemId,
-            quantity_added: returned_quantity
+            quantity_added: unreturnedQuantity
           });
         }
       } catch (socketError) {
