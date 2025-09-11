@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../components/Sidebar';
+import Alert from '../../../components/Alert';
 import { getOrders, getOrderStats, deleteOrder, updateOrderItemStatus, returnOrderItem } from '../../../services/order';
 import socketService from '../../../services/socket';
 import { NewOrderModal, ErrorBoundary, Pagination, OrderFilters, DeleteConfirmationModal } from './components';
@@ -57,6 +58,19 @@ function Orders() {
   const [isRefundReasonModalOpen, setIsRefundReasonModalOpen] = useState(false);
   const [refundReasonItem, setRefundReasonItem] = useState(null);
   
+  // Alert State
+  const [alert, setAlert] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+    onConfirm: null,
+    onCancel: null,
+    confirmText: 'OK',
+    cancelText: 'Cancel',
+    showCancel: false
+  });
+  
   // Socket.IO Connection State
   const [socketConnected, setSocketConnected] = useState(false);
   
@@ -69,6 +83,33 @@ function Orders() {
     localStorage.removeItem('userId');
     localStorage.removeItem('name');
     navigate('/');
+  };
+
+  // Alert helper functions
+  const showAlert = (title, message, type = 'info', options = {}) => {
+    setAlert({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm: options.onConfirm || (() => setAlert(prev => ({ ...prev, isOpen: false }))),
+      onCancel: options.onCancel || (() => setAlert(prev => ({ ...prev, isOpen: false }))),
+      confirmText: options.confirmText || 'OK',
+      cancelText: options.cancelText || 'Cancel',
+      showCancel: options.showCancel || false
+    });
+  };
+
+  const showSuccessAlert = (title, message, options = {}) => {
+    showAlert(title, message, 'success', options);
+  };
+
+  const showErrorAlert = (title, message, options = {}) => {
+    showAlert(title, message, 'error', options);
+  };
+
+  const showWarningAlert = (title, message, options = {}) => {
+    showAlert(title, message, 'warning', options);
   };
 
   const handleViewOrder = (order) => {
@@ -233,18 +274,30 @@ function Orders() {
   // Process item return/refund
   const processItemReturn = async () => {
     if (!returnItem || !returnQuantity || returnQuantity === '' || returnQuantity <= 0) {
-      alert('Please enter a valid return quantity');
+      showWarningAlert(
+        'Invalid Return Quantity',
+        'Please enter a valid return quantity greater than 0.',
+        { confirmText: 'Try Again' }
+      );
       return;
     }
 
     if (!returnReason.trim()) {
-      alert('Please provide a reason for returning this item');
+      showWarningAlert(
+        'Missing Return Reason',
+        'Please provide a detailed reason for returning this item.',
+        { confirmText: 'Add Reason' }
+      );
       return;
     }
 
     const availableQuantity = returnItem.qty - (returnItem.refunded_qty || 0);
     if (returnQuantity > availableQuantity) {
-      alert(`Return quantity cannot exceed available quantity (${availableQuantity})`);
+      showErrorAlert(
+        'Quantity Exceeded',
+        `Return quantity cannot exceed available quantity. You can only return up to ${availableQuantity} items.`,
+        { confirmText: 'Adjust Quantity' }
+      );
       return;
     }
 
@@ -262,10 +315,18 @@ function Orders() {
       
       closeReturnModal();
       const unreturnedQuantity = returnItem.qty - (returnItem.refunded_qty || 0) - returnQuantity;
-      alert(`Item returned successfully! ${returnQuantity} items returned. ${unreturnedQuantity} unreturned items have been added to stock.`);
+      showSuccessAlert(
+        'Return Successful!',
+        `${returnQuantity} items have been returned successfully. ${unreturnedQuantity} unreturned items have been automatically added to stock inventory.`,
+        { confirmText: 'Great!' }
+      );
     } catch (err) {
       console.error('Error processing return:', err);
-      alert('Failed to process return: ' + err.message);
+      showErrorAlert(
+        'Return Failed',
+        `Failed to process return: ${err.message}. Please try again or contact support if the issue persists.`,
+        { confirmText: 'Try Again' }
+      );
     } finally {
       setIsProcessingReturn(false);
     }
@@ -291,7 +352,11 @@ function Orders() {
       }, 500);
     } catch (err) {
       console.error('Error updating item status:', err);
-      alert('Failed to update item status: ' + err.message);
+      showErrorAlert(
+        'Status Update Failed',
+        `Failed to update item status: ${err.message}. Please try again or contact support if the issue persists.`,
+        { confirmText: 'Try Again' }
+      );
     }
   };
 
@@ -1188,6 +1253,19 @@ function Orders() {
           </div>
         </div>
       )}
+
+      {/* Custom Alert Component */}
+      <Alert
+        isOpen={alert.isOpen}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onConfirm={alert.onConfirm}
+        onCancel={alert.onCancel}
+        confirmText={alert.confirmText}
+        cancelText={alert.cancelText}
+        showCancel={alert.showCancel}
+      />
       </div>
     </ErrorBoundary>
   );
