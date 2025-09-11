@@ -577,17 +577,84 @@ const updateOrderItemStatus = async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    // Check if order item exists
-    const itemCheckQuery = 'SELECT id FROM order_items WHERE id = ? AND order_id = ?';
+    // Check if order item exists and get item details
+    const itemCheckQuery = 'SELECT id, qty, item_id, status FROM order_items WHERE id = ? AND order_id = ?';
     const [itemExists] = await db.execute(itemCheckQuery, [itemId, orderId]);
     
     if (itemExists.length === 0) {
       return res.status(404).json({ message: 'Order item not found' });
     }
 
+    const item = itemExists[0];
+    const previousStatus = item.status;
+
     // Update the item status
     const updateQuery = 'UPDATE order_items SET status = ? WHERE id = ? AND order_id = ?';
     await db.execute(updateQuery, [status, itemId, orderId]);
+
+    // If status is changing to 'received', add stock to the product
+    if (status === 'received' && previousStatus !== 'received') {
+      try {
+        await db.execute(
+          "UPDATE products SET stock = stock + ? WHERE id = ?",
+          [item.qty, item.item_id]
+        );
+        console.log(`✅ Added ${item.qty} units to stock for product ID ${item.item_id}`);
+        
+        // Emit Socket.IO event for inventory update
+        const io = req.app.get('io');
+        if (io) {
+          try {
+            // Get updated product data for socket emission
+            const [updatedProduct] = await db.execute(
+              `SELECT p.*, s.name as supplier_name, 
+                      JSON_UNQUOTE(p.attributes) as attributes_json
+               FROM products p
+               LEFT JOIN suppliers s ON p.supplier_id = s.id
+               WHERE p.id = ? AND p.is_deleted = 0`,
+              [item.item_id]
+            );
+            
+            if (updatedProduct.length > 0) {
+              const product = updatedProduct[0];
+              // Parse attributes if it's a string
+              if (product.attributes_json && typeof product.attributes_json === 'string') {
+                try {
+                  product.attributes = JSON.parse(product.attributes_json);
+                } catch (e) {
+                  product.attributes = {};
+                }
+              } else {
+                product.attributes = product.attributes_json || {};
+              }
+              
+              // Ensure stock and low_stock_threshold are in attributes for frontend compatibility
+              product.attributes.stock = product.stock;
+              product.attributes.low_stock_threshold = product.low_stock_threshold;
+              
+              console.log('🔌 Emitting inventory-updated event for stock update:', product.id, 'Stock:', product.stock);
+              io.to('inventory-updated').emit('inventory-updated', {
+                type: 'stock_updated',
+                item: product,
+                reason: 'order_item_completed',
+                order_id: orderId,
+                item_id: itemId,
+                quantity_added: item.qty
+              });
+            }
+          } catch (socketError) {
+            console.error('Error emitting inventory update event:', socketError);
+            // Don't fail the operation if socket emission fails
+          }
+        } else {
+          console.log('❌ Socket.IO not available for inventory-updated event');
+        }
+      } catch (stockError) {
+        console.error('Error updating stock:', stockError);
+        // Don't fail the entire operation if stock update fails
+        // The item status is already updated, so we'll continue
+      }
+    }
 
     // Get the updated order with items
     const fetchUpdatedOrderQuery = `
@@ -735,6 +802,55 @@ const returnOrderItem = async (req, res) => {
       "UPDATE products SET stock = stock + ? WHERE id = ?",
       [returned_quantity, item.item_id]
     );
+
+    // Emit Socket.IO event for inventory update
+    const io = req.app.get('io');
+    if (io) {
+      try {
+        // Get updated product data for socket emission
+        const [updatedProduct] = await db.execute(
+          `SELECT p.*, s.name as supplier_name, 
+                  JSON_UNQUOTE(p.attributes) as attributes_json
+           FROM products p
+           LEFT JOIN suppliers s ON p.supplier_id = s.id
+           WHERE p.id = ? AND p.is_deleted = 0`,
+          [item.item_id]
+        );
+        
+        if (updatedProduct.length > 0) {
+          const product = updatedProduct[0];
+          // Parse attributes if it's a string
+          if (product.attributes_json && typeof product.attributes_json === 'string') {
+            try {
+              product.attributes = JSON.parse(product.attributes_json);
+            } catch (e) {
+              product.attributes = {};
+            }
+          } else {
+            product.attributes = product.attributes_json || {};
+          }
+          
+          // Ensure stock and low_stock_threshold are in attributes for frontend compatibility
+          product.attributes.stock = product.stock;
+          product.attributes.low_stock_threshold = product.low_stock_threshold;
+          
+          console.log('🔌 Emitting inventory-updated event for stock return:', product.id, 'Stock:', product.stock);
+          io.to('inventory-updated').emit('inventory-updated', {
+            type: 'stock_updated',
+            item: product,
+            reason: 'order_item_returned',
+            order_id: orderId,
+            item_id: itemId,
+            quantity_added: returned_quantity
+          });
+        }
+      } catch (socketError) {
+        console.error('Error emitting inventory update event for return:', socketError);
+        // Don't fail the operation if socket emission fails
+      }
+    } else {
+      console.log('❌ Socket.IO not available for inventory-updated event (return)');
+    }
 
     // Get the updated order with items
     const fetchUpdatedOrderQuery = `
