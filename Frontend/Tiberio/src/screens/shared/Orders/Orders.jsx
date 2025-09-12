@@ -838,12 +838,14 @@ function Orders() {
                                     View
                                   </button>
 
-                                  <button 
-                                    onClick={() => handleDeleteOrder(order)}
-                                    className="text-red-400 hover:text-red-300"
-                                  >
-                                    Delete
-                                  </button>
+                                  {userRole === 'admin' && (
+                                    <button 
+                                      onClick={() => handleDeleteOrder(order)}
+                                      className="text-red-400 hover:text-red-300"
+                                    >
+                                      Delete
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             </tr>

@@ -16,6 +16,7 @@ function AddTransactionModal({
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [receiptNumber, setReceiptNumber] = useState('');
   const [customerName, setCustomerName] = useState('');
+  const [paymentAmount, setPaymentAmount] = useState('');
   
   // Dynamic data states
   const [inventory, setInventory] = useState([]);
@@ -140,6 +141,10 @@ function AddTransactionModal({
   const overallDiscountAmount = itemDiscounts; // Same as item discounts since that's the total discount
   
   const total = subtotal - itemDiscounts;
+  
+  // Calculate change
+  const payment = parseFloat(paymentAmount) || 0;
+  const change = payment - total;
 
   // Handle form submission
   const handleSubmit = (e) => {
@@ -167,6 +172,17 @@ function AddTransactionModal({
       return;
     }
 
+    if (payment < total) {
+      setAlertConfig({
+        isOpen: true,
+        title: 'Insufficient Payment',
+        message: `Payment amount (₱${payment.toLocaleString()}) is less than total amount (₱${total.toLocaleString()})`,
+        type: 'warning',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, isOpen: false }))
+      });
+      return;
+    }
+
     // Prepare transaction data
     const transactionData = {
       receipt_number: receiptNumber,
@@ -180,7 +196,9 @@ function AddTransactionModal({
       overall_discount: overallDiscountPercentage,
       overall_discount_amount: overallDiscountAmount,
       total,
-      customer_name: customerName
+      customer_name: customerName,
+      payment_amount: payment,
+      change_amount: change
     };
 
     // Call the parent onSubmit function
@@ -191,7 +209,7 @@ function AddTransactionModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-1 sm:p-2">
-      <div className="bg-gray-800 rounded-lg w-full max-w-[95vw] h-[95vh] sm:h-[95vh] lg:max-w-[95vw] lg:h-[95vh] xl:max-w-[90vw] xl:h-[90vh] overflow-hidden">
+      <div className="bg-gray-800 rounded-lg w-full max-w-[95vw] h-[95vh] sm:h-[95vh] lg:max-w-[95vw] lg:h-[95vh] xl:max-w-[90vw] xl:h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="bg-gray-700 px-3 sm:px-4 lg:px-6 xl:px-8 py-3 sm:py-4 lg:py-5 xl:py-6 flex items-center justify-between">
           <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-white">
@@ -330,6 +348,26 @@ function AddTransactionModal({
                   ✓ Auto-filled with selected patient: {selectedPatient.displayName}
                 </p>
               )}
+              
+              {/* Payment Amount */}
+              <div className="mt-2 sm:mt-3">
+                <label className="block text-xs font-medium text-gray-300 mb-1">
+                  Payment Amount *
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400 text-sm">₱</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    required
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Cart Items */}
@@ -427,6 +465,27 @@ function AddTransactionModal({
                   <span>Total:</span>
                   <span>₱{total.toLocaleString()}</span>
                 </div>
+                
+                {/* Payment and Change Display */}
+                {paymentAmount && (
+                  <div className="mt-2 space-y-1">
+                    <div className="flex justify-between text-gray-300 text-xs sm:text-sm">
+                      <span>Payment:</span>
+                      <span>₱{payment.toLocaleString()}</span>
+                    </div>
+                    <div className={`flex justify-between text-sm sm:text-base font-bold ${
+                      change >= 0 ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      <span>Change:</span>
+                      <span>₱{change.toLocaleString()}</span>
+                    </div>
+                    {change < 0 && (
+                      <p className="text-red-400 text-xs">
+                        Insufficient payment amount
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -435,6 +494,7 @@ function AddTransactionModal({
                   type="button"
                   onClick={() => {
                     setCart([]);
+                    setPaymentAmount('');
                     // Reset customer name to selected patient's name if available
                     if (selectedPatient && selectedPatient.displayName) {
                       setCustomerName(selectedPatient.displayName);
@@ -448,7 +508,7 @@ function AddTransactionModal({
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={cart.length === 0 || isSavingTransaction}
+                  disabled={cart.length === 0 || isSavingTransaction || !paymentAmount || payment < total}
                   className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs sm:text-sm font-medium"
                 >
                   {isSavingTransaction ? 'Processing...' : 'Complete Sale'}

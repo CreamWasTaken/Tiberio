@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../components/Sidebar';
-import { getTransactions } from '../../../services/transaction';
+import { getTransactions, getTransactionById } from '../../../services/transaction';
 import socketService from '../../../services/socket';
 
 function Transactions() {
@@ -26,6 +26,11 @@ function Transactions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  // Modal state
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  
   // Get user role from localStorage
   const userRole = localStorage.getItem('userRole') || 'employee';
 
@@ -35,6 +40,27 @@ function Transactions() {
     localStorage.removeItem('userId');
     localStorage.removeItem('name');
     navigate('/');
+  };
+
+  // Handle viewing transaction details
+  const handleViewTransaction = async (transactionId) => {
+    try {
+      setModalLoading(true);
+      const transactionData = await getTransactionById(transactionId);
+      setSelectedTransaction(transactionData);
+      setIsViewModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching transaction details:', error);
+      setError('Failed to load transaction details');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Close modal
+  const handleCloseModal = () => {
+    setIsViewModalOpen(false);
+    setSelectedTransaction(null);
   };
 
   // Fetch transactions from API
@@ -501,25 +527,27 @@ function Transactions() {
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Items
                       </th>
-                     
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-gray-800 divide-y divide-gray-600">
                     {loading ? (
                       <tr>
-                        <td colSpan="6" className="px-6 py-8 text-center text-gray-400">
+                        <td colSpan="7" className="px-6 py-8 text-center text-gray-400">
                           Loading transactions...
                         </td>
                       </tr>
                     ) : error ? (
                       <tr>
-                        <td colSpan="6" className="px-6 py-8 text-center text-red-400">
+                        <td colSpan="7" className="px-6 py-8 text-center text-red-400">
                           Error: {error}
                         </td>
                       </tr>
                     ) : currentTransactions.length === 0 ? (
                       <tr>
-                        <td colSpan="6" className="px-6 py-8 text-center text-gray-400">
+                        <td colSpan="7" className="px-6 py-8 text-center text-gray-400">
                           No fulfilled or partially refunded transactions found
                         </td>
                       </tr>
@@ -547,6 +575,18 @@ function Transactions() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                               {itemCount}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                              <button
+                                onClick={() => handleViewTransaction(transaction.id)}
+                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                              >
+                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                View
+                              </button>
                             </td>
                           </tr>
                         );
@@ -597,6 +637,159 @@ function Transactions() {
           </div>
         </main>
       </div>
+
+      {/* View Transaction Modal */}
+      {isViewModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">
+                Transaction Details - {selectedTransaction?.receipt_number}
+              </h3>
+              <button
+                onClick={handleCloseModal}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {modalLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  <span className="ml-2 text-gray-400">Loading transaction details...</span>
+                </div>
+              ) : selectedTransaction ? (
+                <div className="space-y-6">
+                  {/* Transaction Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-gray-700 rounded-lg p-4">
+                      <h4 className="text-sm font-medium text-gray-300 mb-2">Transaction Information</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Receipt Number:</span>
+                          <span className="text-white font-medium">{selectedTransaction.receipt_number}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Date:</span>
+                          <span className="text-white">
+                            {selectedTransaction.created_at ? new Date(selectedTransaction.created_at).toLocaleString() : '—'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Status:</span>
+                          <span className="text-white">{getStatusBadge(selectedTransaction.status)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-700 rounded-lg p-4">
+                      <h4 className="text-sm font-medium text-gray-300 mb-2">Patient Information</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Name:</span>
+                          <span className="text-white">
+                            {selectedTransaction.patient_first_name || selectedTransaction.patient_last_name 
+                              ? `${selectedTransaction.patient_first_name || ''} ${selectedTransaction.patient_last_name || ''}`.trim()
+                              : 'No Patient'
+                            }
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Cashier:</span>
+                          <span className="text-white">
+                            {selectedTransaction.user_first_name || selectedTransaction.user_last_name
+                              ? `${selectedTransaction.user_first_name || ''} ${selectedTransaction.user_last_name || ''}`.trim()
+                              : 'Unknown'
+                            }
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Items List */}
+                  <div className="bg-gray-700 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-gray-300 mb-4">Items Purchased</h4>
+                    {selectedTransaction.items && selectedTransaction.items.length > 0 ? (
+                      <div className="space-y-3">
+                        {selectedTransaction.items.map((item, index) => (
+                          <div key={index} className="bg-gray-800 rounded-lg p-4 border border-gray-600">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <span className="text-gray-400">Product:</span>
+                                <p className="text-white font-medium">{item.product_description || 'Unknown Product'}</p>
+                                <p className="text-gray-500 text-xs">Code: {item.product_code || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Quantity:</span>
+                                <p className="text-white">{item.quantity}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Unit Price:</span>
+                                <p className="text-white">₱{parseFloat(item.unit_price || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Total:</span>
+                                <p className="text-white font-medium">
+                                  ₱{parseFloat((item.quantity * item.unit_price) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                                {item.discount > 0 && (
+                                  <p className="text-red-400 text-xs">Discount: ₱{parseFloat(item.discount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-400 text-center py-4">No items found for this transaction.</p>
+                    )}
+                  </div>
+
+                  {/* Transaction Summary */}
+                  <div className="bg-gray-700 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-gray-300 mb-4">Transaction Summary</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Subtotal:</span>
+                        <span className="text-white">₱{parseFloat(selectedTransaction.subtotal_price || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Total Discount:</span>
+                        <span className="text-red-400">-₱{parseFloat(selectedTransaction.total_discount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-gray-600 pt-2">
+                        <span className="text-gray-300 font-medium">Final Amount:</span>
+                        <span className="text-white font-bold text-lg">₱{parseFloat(selectedTransaction.final_price || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <p>Failed to load transaction details.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-gray-700 flex justify-end">
+              <button
+                onClick={handleCloseModal}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-md transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
