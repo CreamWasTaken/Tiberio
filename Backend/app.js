@@ -104,8 +104,8 @@ const PORT = process.env.PORT || 3000;
 //to do
 
 
-//add when completing order, the order items status will be changed to received and qty will be added to stocks
-
-//add when returning order, the order items status will be changed to returned
+// Add patient modal
+// check checkups double entry and delete(might be socket.io) //updating server nodejs to 24.5.0 might fix some issues
+//socket.io automatically adds on different patient when i add check up
 
 
