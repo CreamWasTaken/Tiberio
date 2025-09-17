@@ -651,37 +651,40 @@ function Patients() {
 
   // Socket.IO real-time updates for transactions
   useEffect(() => {
+    let currentTransactionRoom = null;
+    let socket = null;
+
     const setupTransactionSocketIO = async () => {
       try {
         // Wait for Socket.IO connection to be established
-        const socket = await socketService.waitForConnection();
+        socket = await socketService.waitForConnection();
         
-        // Join transaction update room
-        socketService.joinRoom('transaction-updated');
+        // Clear previous transaction data when switching patients
+        setTransactions([]);
+        
+        // Leave all patient-specific rooms first to avoid conflicts
+        socketService.leaveAllPatientRooms();
+        
+        // Join patient-specific transaction room if a patient is selected
+        if (selectedPatient) {
+          const roomName = `patient-${selectedPatient.id}-transactions`;
+          currentTransactionRoom = roomName;
+          socketService.joinRoom(roomName);
+          console.log(`🔌 Joined patient-specific transaction room: ${roomName}`);
+        }
         
         // Listen for transaction updates
         const handleTransactionUpdate = (data) => {
           console.log('🔌 Real-time transaction update received:', data);
           console.log('🔌 Event type:', data.type);
+          console.log('🔌 Current room:', currentTransactionRoom);
           console.log('🔌 Selected patient ID:', selectedPatient?.id);
           
-          if (data.type === 'added') {
-            // Add new transaction to the list if it belongs to the currently selected patient
-            if (selectedPatient && data.transaction.patient_id === selectedPatient.id) {
-              setTransactions(prevTransactions => [data.transaction, ...prevTransactions]);
-            }
-          } else if (data.type === 'updated') {
-            // Update existing transaction in the list
-            if (selectedPatient && data.transaction.patient_id === selectedPatient.id) {
-              setTransactions(prevTransactions => 
-                prevTransactions.map(transaction => 
-                  transaction.id === data.transaction.id ? data.transaction : transaction
-                )
-              );
-            }
-          } else if (data.type === 'deleted') {
+          // For deletion events, we don't have transaction data, so we process them directly
+          if (data.type === 'deleted') {
             // Remove deleted transaction from the list
             console.log('🔌 Removing deleted transaction:', data.transaction_id);
+            console.log('🔌 Deletion data:', data);
             setTransactions(prevTransactions => {
               const filtered = prevTransactions.filter(transaction => {
                 // Convert both to numbers for comparison to handle string/number mismatch
@@ -694,30 +697,59 @@ function Patients() {
               console.log(`🔌 Transactions before: ${prevTransactions.length}, after: ${filtered.length}`);
               return filtered;
             });
-          } else if (data.type === 'item_fulfilled' || data.type === 'item_refunded') {
-            // Refresh transactions for the currently selected patient
-            if (selectedPatient) {
-              const refreshTransactions = async () => {
-                try {
-                  const data = await getTransactions();
-                  const patientTransactions = (data || []).filter(transaction => 
-                    transaction.patient_id === selectedPatient.id
-                  );
-                  setTransactions(patientTransactions);
-                } catch (err) {
-                  console.error('Failed to refresh transactions:', err);
+          } else if (selectedPatient && data.transaction && data.transaction.patient_id === selectedPatient.id) {
+            if (data.type === 'added') {
+              // Add new transaction to the list, but check for duplicates first
+              setTransactions(prevTransactions => {
+                const exists = prevTransactions.some(transaction => transaction.id === data.transaction.id);
+                if (exists) {
+                  console.log('🔌 Duplicate transaction detected, ignoring:', data.transaction.id);
+                  return prevTransactions;
                 }
-              };
-              refreshTransactions();
+                console.log('🔌 Adding new transaction:', data.transaction.id, 'at', data.timestamp);
+                return [data.transaction, ...prevTransactions];
+              });
+            } else if (data.type === 'updated') {
+              // Update existing transaction in the list
+              setTransactions(prevTransactions => 
+                prevTransactions.map(transaction => 
+                  transaction.id === data.transaction.id ? data.transaction : transaction
+                )
+              );
+            } else if (data.type === 'item_fulfilled' || data.type === 'item_refunded') {
+              // Refresh transactions for the currently selected patient
+              if (selectedPatient) {
+                const refreshTransactions = async () => {
+                  try {
+                    const data = await getTransactions();
+                    const patientTransactions = (data || []).filter(transaction => 
+                      transaction.patient_id === selectedPatient.id
+                    );
+                    setTransactions(patientTransactions);
+                  } catch (err) {
+                    console.error('Failed to refresh transactions:', err);
+                  }
+                };
+                refreshTransactions();
+              }
             }
+          } else {
+            console.log('🔌 Ignoring transaction update for different patient:', data.transaction?.patient_id);
           }
         };
 
+        // Remove any existing listeners first
+        socket.off('transaction-updated');
         socket.on('transaction-updated', handleTransactionUpdate);
 
         return () => {
-          socket.off('transaction-updated', handleTransactionUpdate);
-          socketService.leaveRoom('transaction-updated');
+          if (socket) {
+            socket.off('transaction-updated', handleTransactionUpdate);
+          }
+          if (currentTransactionRoom) {
+            socketService.leaveRoom(currentTransactionRoom);
+            console.log(`🔌 Left patient-specific transaction room: ${currentTransactionRoom}`);
+          }
         };
       } catch (error) {
         console.error('Failed to setup transaction Socket.IO:', error);

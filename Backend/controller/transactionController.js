@@ -139,11 +139,23 @@ exports.createTransaction = async (req, res) => {
       const completeTransaction = newTransaction[0];
       completeTransaction.items = transactionItems;
 
-      // Emit Socket.IO event for real-time updates
-      emitSocketEvent(req, 'transaction-updated', {
-        type: 'added',
-        transaction: completeTransaction
-      });
+      // Emit Socket.IO event for real-time updates to patient-specific room
+      const io = req.app.get('io');
+      if (io) {
+        const roomName = `patient-${patient_id}-transactions`;
+        console.log(`🔌 Emitting transaction-updated event for patient ${patient_id}`);
+        console.log(`🔌 Room name: ${roomName}`);
+        console.log(`🔌 Clients in room:`, io.sockets.adapter.rooms.get(roomName)?.size || 0);
+        io.to(roomName).emit('transaction-updated', {
+          type: 'added',
+          transaction: completeTransaction,
+          timestamp: new Date().toISOString(),
+          roomName: roomName
+        });
+        console.log(`🔌 Event emitted to room: ${roomName}`);
+      } else {
+        console.log(`❌ Socket.IO not available for transaction-updated event`);
+      }
 
       res.status(201).json({
         message: "Transaction created successfully",
@@ -356,9 +368,9 @@ exports.deleteTransaction = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Check if transaction exists
+    // Check if transaction exists and get patient_id before deletion
     const [existingTransaction] = await db.execute(
-      "SELECT id FROM transactions WHERE id = ? AND deleted_at IS NULL",
+      "SELECT id, patient_id FROM transactions WHERE id = ? AND deleted_at IS NULL",
       [id]
     );
 
@@ -366,17 +378,31 @@ exports.deleteTransaction = async (req, res) => {
       return res.status(404).json({ error: "Transaction not found" });
     }
 
+    const patient_id = existingTransaction[0].patient_id;
+
     // Soft delete transaction
     await db.execute(
       "UPDATE transactions SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?",
       [id]
     );
 
-    // Emit Socket.IO event for real-time updates
-    emitSocketEvent(req, 'transaction-updated', {
-      type: 'deleted',
-      transaction_id: id
-    });
+    // Emit Socket.IO event for real-time updates to patient-specific room
+    const io = req.app.get('io');
+    if (io) {
+      const roomName = `patient-${patient_id}-transactions`;
+      console.log(`🔌 Emitting transaction-updated event for patient ${patient_id} (deletion)`);
+      console.log(`🔌 Room name: ${roomName}`);
+      console.log(`🔌 Clients in room:`, io.sockets.adapter.rooms.get(roomName)?.size || 0);
+      io.to(roomName).emit('transaction-updated', {
+        type: 'deleted',
+        transaction_id: id,
+        timestamp: new Date().toISOString(),
+        roomName: roomName
+      });
+      console.log(`🔌 Event emitted to room: ${roomName}`);
+    } else {
+      console.log(`❌ Socket.IO not available for transaction-updated event`);
+    }
 
     res.json({ message: "Transaction deleted successfully" });
 
@@ -497,15 +523,31 @@ exports.fulfillTransactionItem = async (req, res) => {
           item_id: itemId
         });
 
-        // Emit transaction update for the patients/transactions page
-        emitSocketEvent(req, 'transaction-updated', {
-          type: 'item_fulfilled',
-          transaction_id: item.transaction_id,
-          item_id: itemId,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          all_items_fulfilled: remainingItems[0].pending_count === 0
-        });
+        // Emit transaction update for the patients/transactions page to patient-specific room
+        const io = req.app.get('io');
+        if (io) {
+          // Get patient_id from the transaction
+          const [transactionData] = await db.execute(
+            "SELECT patient_id FROM transactions WHERE id = ?",
+            [item.transaction_id]
+          );
+          
+          if (transactionData.length > 0) {
+            const patient_id = transactionData[0].patient_id;
+            const roomName = `patient-${patient_id}-transactions`;
+            console.log(`🔌 Emitting transaction-updated event for patient ${patient_id} (fulfillment)`);
+            io.to(roomName).emit('transaction-updated', {
+              type: 'item_fulfilled',
+              transaction_id: item.transaction_id,
+              item_id: itemId,
+              product_id: item.product_id,
+              quantity: item.quantity,
+              all_items_fulfilled: remainingItems[0].pending_count === 0,
+              timestamp: new Date().toISOString(),
+              roomName: roomName
+            });
+          }
+        }
       }
 
       res.json({ 
@@ -628,17 +670,33 @@ exports.refundTransactionItem = async (req, res) => {
           refunded_quantity: refunded_quantity
         });
 
-        // Emit transaction update for the patients/transactions page
-        emitSocketEvent(req, 'transaction-updated', {
-          type: 'item_refunded',
-          transaction_id: item.transaction_id,
-          item_id: itemId,
-          product_id: item.product_id,
-          refunded_quantity: refunded_quantity,
-          total_refunded_quantity: newRefundedQuantity,
-          total_quantity: totalQuantity,
-          status: newStatus
-        });
+        // Emit transaction update for the patients/transactions page to patient-specific room
+        const io = req.app.get('io');
+        if (io) {
+          // Get patient_id from the transaction
+          const [transactionData] = await db.execute(
+            "SELECT patient_id FROM transactions WHERE id = ?",
+            [item.transaction_id]
+          );
+          
+          if (transactionData.length > 0) {
+            const patient_id = transactionData[0].patient_id;
+            const roomName = `patient-${patient_id}-transactions`;
+            console.log(`🔌 Emitting transaction-updated event for patient ${patient_id} (refund)`);
+            io.to(roomName).emit('transaction-updated', {
+              type: 'item_refunded',
+              transaction_id: item.transaction_id,
+              item_id: itemId,
+              product_id: item.product_id,
+              refunded_quantity: refunded_quantity,
+              total_refunded_quantity: newRefundedQuantity,
+              total_quantity: totalQuantity,
+              status: newStatus,
+              timestamp: new Date().toISOString(),
+              roomName: roomName
+            });
+          }
+        }
       }
 
       res.json({ 
