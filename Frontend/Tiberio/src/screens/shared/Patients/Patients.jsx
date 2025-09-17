@@ -1702,7 +1702,7 @@ function Patients() {
                       min="1"
                       max={refundItem.quantity - (refundItem.refunded_quantity || 0)}
                       value={refundQuantity}
-                      onChange={(e) => setRefundQuantity(parseInt(e.target.value) || 1)}
+                      onChange={(e) => setRefundQuantity(parseInt(e.target.value))}
                       className="w-full px-3 py-2 bg-gray-900/60 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
                     />
                   </div>
