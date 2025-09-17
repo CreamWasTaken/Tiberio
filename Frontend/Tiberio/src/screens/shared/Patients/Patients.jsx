@@ -565,50 +565,81 @@ function Patients() {
 
   // Socket.IO real-time updates for checkups
   useEffect(() => {
+    let currentRoom = null;
+    let socket = null;
+
     const setupSocketIO = async () => {
       try {
         // Wait for Socket.IO connection to be established
-        const socket = await socketService.waitForConnection();
+        socket = await socketService.waitForConnection();
         
-        // Join checkup update room
-        socketService.joinRoom('checkup-updated');
+        // Clear previous checkup data when switching patients
+        setCheckups([]);
+        
+        // Leave all patient-specific rooms first to avoid conflicts
+        socketService.leaveAllPatientRooms();
+        
+        // Join patient-specific checkup room if a patient is selected
+        if (selectedPatient) {
+          const roomName = `patient-${selectedPatient.id}-checkups`;
+          currentRoom = roomName;
+          socketService.joinRoom(roomName);
+          console.log(`🔌 Joined patient-specific checkup room: ${roomName}`);
+        }
         
         // Listen for checkup updates
         const handleCheckupUpdate = (data) => {
           console.log('🔌 Real-time checkup update received:', data);
+          console.log('🔌 Current room:', currentRoom);
+          console.log('🔌 Selected patient ID:', selectedPatient?.id);
           
-          if (data.type === 'added') {
-            // Add new checkup to the list if it belongs to the currently selected patient
-            if (selectedPatient && data.checkup.patient_id === selectedPatient.id) {
-              setCheckups(prevCheckups => [...prevCheckups, data.checkup]);
+          // Double-check that this update is for the currently selected patient
+          if (selectedPatient && data.checkup && data.checkup.patient_id === selectedPatient.id) {
+            if (data.type === 'added') {
+              // Add new checkup to the list, but check for duplicates first
+              setCheckups(prevCheckups => {
+                const exists = prevCheckups.some(checkup => checkup.id === data.checkup.id);
+                if (exists) {
+                  console.log('🔌 Duplicate checkup detected, ignoring:', data.checkup.id);
+                  return prevCheckups;
+                }
+                console.log('🔌 Adding new checkup:', data.checkup.id, 'at', data.timestamp);
+                return [...prevCheckups, data.checkup];
+              });
               // Update total checkups count
               setTotalCheckups(prev => prev + 1);
-            }
-          } else if (data.type === 'updated') {
-            // Update existing checkup in the list
-            if (selectedPatient && data.checkup.patient_id === selectedPatient.id) {
+            } else if (data.type === 'updated') {
+              // Update existing checkup in the list
               setCheckups(prevCheckups => 
                 prevCheckups.map(checkup => 
                   checkup.id === data.checkup.id ? data.checkup : checkup
                 )
               );
+            } else if (data.type === 'deleted') {
+              // Remove deleted checkup from the list
+              setCheckups(prevCheckups => 
+                prevCheckups.filter(checkup => checkup.id !== data.checkup.id)
+              );
+              // Update total checkups count
+              setTotalCheckups(prev => Math.max(0, prev - 1));
             }
-          } else if (data.type === 'deleted') {
-            // Remove deleted checkup from the list
-            // Use data.checkup.id since backend now sends complete checkup data
-            setCheckups(prevCheckups => 
-              prevCheckups.filter(checkup => checkup.id !== data.checkup.id)
-            );
-            // Update total checkups count
-            setTotalCheckups(prev => Math.max(0, prev - 1));
+          } else {
+            console.log('🔌 Ignoring checkup update for different patient:', data.checkup?.patient_id);
           }
         };
 
+        // Remove any existing listeners first
+        socket.off('checkup-updated');
         socket.on('checkup-updated', handleCheckupUpdate);
 
         return () => {
-          socket.off('checkup-updated', handleCheckupUpdate);
-          socketService.leaveRoom('checkup-updated');
+          if (socket) {
+            socket.off('checkup-updated', handleCheckupUpdate);
+          }
+          if (currentRoom) {
+            socketService.leaveRoom(currentRoom);
+            console.log(`🔌 Left patient-specific checkup room: ${currentRoom}`);
+          }
         };
       } catch (error) {
         console.error('Failed to setup Socket.IO:', error);
