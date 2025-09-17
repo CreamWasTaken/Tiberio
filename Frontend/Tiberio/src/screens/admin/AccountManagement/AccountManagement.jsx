@@ -704,22 +704,22 @@ function AccountManagement() {
 
       {/* Add User Modal */}
       {showAddUserModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-gray-900/95 backdrop-blur-xl border border-gray-600 rounded-2xl p-8 w-full max-w-lg mx-4 shadow-2xl animate-slideUp">
+        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn overflow-auto">
+        <div className="bg-gray-900/95 backdrop-blur-xl border border-gray-600 rounded-3xl p-4 w-150  q max-w-lg mx-2 shadow-2xl animate-slideUp">
             {/* Header */}
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-7 h-7 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold text-white mb-2">Add New User</h3>
-              <p className="text-gray-400">Create a new user account</p>
+              <h3 className="text-1xl font-bold text-white mb-1">Add New User</h3>
+              <p className="text-gray-300">Create a new user account</p>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleAddUserSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleAddUserSubmit} className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">First Name</label>
                   <input
@@ -728,7 +728,7 @@ function AccountManagement() {
                     value={addUserForm.first_name}
                     onChange={handleAddUserInputChange}
                     placeholder="Enter first name"
-                    className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                    className="w-full px-4 py-1 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
                     required
                   />
                 </div>
@@ -740,7 +740,7 @@ function AccountManagement() {
                     value={addUserForm.last_name}
                     onChange={handleAddUserInputChange}
                     placeholder="Enter last name"
-                    className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                    className="w-full px-4 py-1 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
                     required
                   />
                 </div>
@@ -754,7 +754,7 @@ function AccountManagement() {
                   value={addUserForm.username}
                   onChange={handleAddUserInputChange}
                   placeholder="Enter username"
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                  className="w-full px-4 py-1 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
                   required
                 />
               </div>
@@ -768,7 +768,7 @@ function AccountManagement() {
                     value={addUserForm.password}
                     onChange={handleAddUserInputChange}
                     placeholder="Enter password"
-                    className="w-full px-4 py-3 pr-12 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                    className="w-full px-4 py-1 pr-12 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
                     required
                   />
                   <button
