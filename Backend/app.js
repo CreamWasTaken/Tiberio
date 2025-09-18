@@ -10,7 +10,7 @@ const checkUpRoutes = require("./routes/checkUpRoutes");
 const supplierRoutes = require("./routes/supplierRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
-const { testSocketEvent } = require("./test-socket-endpoint");
+const { testSocketEvent, testSpecificEvent, getSocketStatus } = require("./test-socket-endpoint");
 const orderRoutes = require("./routes/orderRoutes");
 
 const app = express();
@@ -43,8 +43,10 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/orders", orderRoutes);
 
-// Test endpoint for Socket.IO
+// Socket.IO Test endpoints
 app.get("/api/test-socket", testSocketEvent);
+app.post("/api/test-socket/event", testSpecificEvent);
+app.get("/api/socket-status", getSocketStatus);
 
 // Socket.IO connection handling
 io.on("connection", (socket) => {

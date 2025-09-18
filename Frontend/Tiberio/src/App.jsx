@@ -7,6 +7,7 @@ import { Pricelist } from './screens/shared/PriceList'
 import { Inventory } from './screens/shared/Inventory'
 import { Orders } from './screens/shared/Orders'
 import { Transactions } from './screens/shared/Transanctions'
+import SocketTestComponent from './components/SocketTestComponent'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -57,6 +58,11 @@ function App() {
         <Route path="/transactions" element={
           <ProtectedRoute requiredRole={['admin', 'employee']}>
             <Transactions />
+          </ProtectedRoute>
+        } />
+        <Route path="/socket-test" element={
+          <ProtectedRoute requiredRole={['admin', 'employee']}>
+            <SocketTestComponent />
           </ProtectedRoute>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
