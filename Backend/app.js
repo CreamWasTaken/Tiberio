@@ -106,6 +106,6 @@ const PORT = process.env.PORT || 3000;
 
 // Add patient modal
 // check checkups double entry and delete(might be socket.io) //updating server nodejs to 24.5.0 might fix some issues
-//socket.io automatically adds on different patient when i add check up
 
+// fix fulfill socket
 
