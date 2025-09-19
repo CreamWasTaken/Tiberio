@@ -107,11 +107,11 @@ const PORT = process.env.PORT;
 
 // fix fulfill socket
 
-// add specs on cart 
+//fix ui for cart
 
-// search on specs cart
 
-// edit on patient name both admin employee
 
-// search on items base in specs on cart
+
+
+
 
