@@ -7,5 +7,5 @@ if not defined HIDDEN_WINDOW (
 )
 
 :: Please replace the path with your path of the backend 
-cd /d "C:\Users\Jamin\Desktop\Tiberio\Backend"
+cd /d "C:\Users\Administrator\Desktop\New System\Tiberio\Backend"
 call npm run dev
