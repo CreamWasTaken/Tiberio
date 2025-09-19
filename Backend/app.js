@@ -116,7 +116,5 @@ const PORT = process.env.PORT || 3000;
 
 // edit on patient name both admin employee
 
-// hide cmd when opening
-
-// search on items base in specs
+// search on items base in specs on cart
 

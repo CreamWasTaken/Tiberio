@@ -5,5 +5,6 @@ const {authenticateToken} = require("../middleware/authenticateToken");
 
 router.post("/add-patient", authenticateToken, patientController.addPatient);
 router.get("/get-patients", patientController.getPatients);
+router.get("/check-duplicate", patientController.checkDuplicatePatient);
 
 module.exports = router;
