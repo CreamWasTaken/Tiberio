@@ -56,10 +56,10 @@ function AddPatientModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-auto">
-      <div className="absolute inset-0  bg-black/60" onClick={onClose}></div>
-      <div className="relative w-full max-w-2xl mx-2 shadow-2xl">
-        <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 rounded-t-xl border border-gray-700 p-3 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
+      <div className="relative w-full max-w-2xl max-h-[90vh] shadow-2xl flex flex-col">
+        <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 rounded-t-xl border border-gray-700 p-3 flex items-center justify-between flex-shrink-0">
           <h2 className="text-medium font-semibold text-white">Add New Patient</h2>
           <button className="text-blue-100 hover:text-white" onClick={onClose} aria-label="Close add form">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,7 +67,7 @@ function AddPatientModal({
             </svg>
           </button>
         </div>
-        <div className="bg-gray-800 border-x border-b border-gray-700 rounded-b-xl p-2">
+        <div className="bg-gray-800 border-x border-b border-gray-700 rounded-b-xl p-2 overflow-y-auto flex-1">
           {formError && (
             <div className="mb-4 text-sm text-red-400">{formError}</div>
           )}
@@ -96,7 +96,9 @@ function AddPatientModal({
                       </div>
                       <div>
                         <span className="text-gray-400">Birthdate:</span>
-                        <span className="text-white ml-2">{duplicateWarning.birthdate}</span>
+                        <span className="text-white ml-2">
+                          {duplicateWarning.birthdate ? new Date(duplicateWarning.birthdate).toISOString().split('T')[0] : '—'}
+                        </span>
                       </div>
                       <div>
                         <span className="text-gray-400">Contact:</span>

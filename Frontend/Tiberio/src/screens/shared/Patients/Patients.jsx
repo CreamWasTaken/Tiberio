@@ -451,7 +451,7 @@ function Patients() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingCheckupId, setEditingCheckupId] = useState(null);
   const initialCheckupForm = {
-    checkup_date: '',
+    checkup_date: new Date().toISOString().split('T')[0], // Sets today's date in YYYY-MM-DD format
     notes: '',
     diagnosis: '',
     binocular_pd: '',
