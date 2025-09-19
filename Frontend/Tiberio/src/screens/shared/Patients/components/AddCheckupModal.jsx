@@ -164,7 +164,21 @@ function AddCheckupModal({
 
             <div className="flex justify-end gap-2 mt-2">
               <button type="button" className="px-3 py-1.5 bg-gray-700 text-white rounded-lg text-sm" onClick={onClose} disabled={isSavingCheckup}>Cancel</button>
-              <button type="submit" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm" disabled={isSavingCheckup}>{isSavingCheckup ? 'Saving...' : (mode === 'edit' ? 'Update' : 'Save')}</button>
+              <button 
+                type="submit" 
+                className={`p-1.5 ${mode === 'edit' ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-lg text-sm flex items-center justify-center`} 
+                disabled={isSavingCheckup}
+              >
+                {isSavingCheckup ? (
+                  'Saving...'
+                ) : mode === 'edit' ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                ) : (
+                  'Save'
+                )}
+              </button>
             </div>
           </form>
         </div>

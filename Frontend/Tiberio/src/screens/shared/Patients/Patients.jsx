@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
-import { getPatients as fetchPatientsApi, addPatient as addPatientApi, getPatientCheckups, addCheckup as addCheckupApi, updateCheckup as updateCheckupApi, deleteCheckup as deleteCheckupApi, getTotalCheckupsCount } from '../../../services/patient';
+import { getPatients as fetchPatientsApi, addPatient as addPatientApi, updatePatient as updatePatientApi, getPatientCheckups, addCheckup as addCheckupApi, updateCheckup as updateCheckupApi, deleteCheckup as deleteCheckupApi, getTotalCheckupsCount } from '../../../services/patient';
 import { createTransaction, getTransactions, fulfillTransactionItem, refundTransactionItem, deleteTransaction } from '../../../services/transaction';
 import Sidebar from '../../../components/Sidebar';
 import AddPatientModal from './components/AddPatientModal';
+import EditPatientModal from './components/EditPatientModal';
 import AddCheckupModal from './components/AddCheckupModal';
 import socketService from '../../../services/socket';
 import AddTransactionModal from './components/AddTransactionModal';
@@ -466,6 +467,7 @@ function Patients() {
   const [checkupForm, setCheckupForm] = useState(initialCheckupForm);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
   const [form, setForm] = useState({
@@ -1099,13 +1101,13 @@ function Patients() {
                       <div className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center">
                         <span className="text-white font-bold text-lg">{(selectedPatient.displayName || '').split(' ').map(n => n[0]).join('')}</span>
                       </div>
-                        <div>
-                          <div className="text-white font-semibold text-base">
-                            {selectedPatient.displayName}
-                          </div>
-                          <div className="text-gray-300 text-sm">
-                            Age: {selectedPatient.age}
-                          </div>
+                      <div>
+                        <div className="text-white font-semibold text-base">
+                          {selectedPatient.displayName}
+                        </div>
+                        <div className="text-gray-300 text-sm">
+                          Age: {selectedPatient.age}
+                        </div>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-sm">
@@ -1139,6 +1141,33 @@ function Patients() {
                         <p className="text-white mt-1">{formatDateYMDSlash(selectedPatient.created_at)}</p>
                       </div>
                     </div>
+                    {(userRole === 'admin' || userRole === 'employee') && (
+                      <div className="mt-4 pt-3 border-t border-gray-700 flex justify-end">
+                        <button
+                          onClick={() => {
+                            setForm({
+                              first_name: selectedPatient.first_name || '',
+                              middle_name: selectedPatient.middle_name || '',
+                              last_name: selectedPatient.last_name || '',
+                              sex: selectedPatient.sex || '',
+                              birthdate: selectedPatient.birthdate || '',
+                              address: selectedPatient.address || '',
+                              contact_number: selectedPatient.contact_number || '',
+                              telephone_number: selectedPatient.telephone_number || '',
+                              senior_number: selectedPatient.senior_number || ''
+                            });
+                            setFormError(null);
+                            setIsEditOpen(true);
+                          }}
+                          className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg transition-colors duration-200"
+                          title="Edit Patient"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1516,6 +1545,46 @@ function Patients() {
                 setIsAddOpen(false);
               } catch (err) {
                 setFormError(err.message || 'Failed to add patient');
+              } finally {
+                setIsSubmitting(false);
+              }
+            }}
+          />
+
+          {/* Edit Patient Modal */}
+          <EditPatientModal
+            isOpen={isEditOpen}
+            onClose={() => setIsEditOpen(false)}
+            patient={selectedPatient}
+            form={form}
+            setForm={setForm}
+            formError={formError}
+            isSubmitting={isSubmitting}
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setFormError(null);
+              setIsSubmitting(true);
+              try {
+                const payload = {
+                  ...form,
+                  birthdate: form.birthdate || ''
+                };
+                await updatePatientApi(selectedPatient.id, payload);
+                const data = await fetchPatientsApi();
+                setPatients(data || []);
+                
+                // Update the selected patient with new data
+                const updatedPatient = data.find(p => p.id === selectedPatient.id);
+                if (updatedPatient) {
+                  const displayName = `${updatedPatient.first_name || ''} ${updatedPatient.last_name || ''}`.trim() || `Patient ${updatedPatient.id}`;
+                  const phone = updatedPatient.contact_number || updatedPatient.telephone_number || '—';
+                  const birthdate = formatDateYMD(updatedPatient.birthdate);
+                  setSelectedPatient({ ...updatedPatient, displayName, phone, birthdate, status: updatedPatient.status || 'Active' });
+                }
+                
+                setIsEditOpen(false);
+              } catch (err) {
+                setFormError(err.message || 'Failed to update patient');
               } finally {
                 setIsSubmitting(false);
               }

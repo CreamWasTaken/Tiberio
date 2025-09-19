@@ -83,7 +83,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: "Something went wrong!" });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 
 (async () => {
@@ -105,10 +105,7 @@ const PORT = process.env.PORT || 3000;
 
 //to do
 
-
 // fix fulfill socket
-
-//automatic date today on add check up
 
 // add specs on cart 
 
