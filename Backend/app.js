@@ -106,8 +106,17 @@ const PORT = process.env.PORT || 3000;
 //to do
 
 
-// Add patient modal
-// check checkups double entry and delete(might be socket.io) //updating server nodejs to 24.5.0 might fix some issues
-
 // fix fulfill socket
+
+//automatic date today on add check up
+
+// add specs on cart 
+
+// search on specs cart
+
+// edit on patient name both admin employee
+
+// hide cmd when opening
+
+// search on items base in specs
 
