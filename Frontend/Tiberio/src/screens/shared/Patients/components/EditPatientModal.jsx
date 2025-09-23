@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { checkDuplicatePatient } from '../../../../services/patient';
 
-function AddPatientModal({
+function EditPatientModal({
   isOpen,
   onClose,
+  patient,
   form,
   setForm,
   formError,
@@ -13,28 +14,36 @@ function AddPatientModal({
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
 
-  // Check for duplicates when form fields change
+  // Check for duplicates when form fields change (excluding current patient)
   useEffect(() => {
     const checkForDuplicates = async () => {
-      if (form.first_name && form.last_name && form.birthdate) {
-        setIsCheckingDuplicate(true);
-        try {
-          const result = await checkDuplicatePatient(
-            form.first_name.trim(),
-            form.last_name.trim(),
-            form.birthdate
-          );
-          
-          if (result.isDuplicate) {
-            setDuplicateWarning(result.duplicatePatient);
-          } else {
+      if (form.first_name && form.last_name && form.birthdate && patient) {
+        // Only check for duplicates if the name or birthdate has changed
+        const nameChanged = form.first_name !== patient.first_name || form.last_name !== patient.last_name;
+        const birthdateChanged = form.birthdate !== patient.birthdate;
+        
+        if (nameChanged || birthdateChanged) {
+          setIsCheckingDuplicate(true);
+          try {
+            const result = await checkDuplicatePatient(
+              form.first_name.trim(),
+              form.last_name.trim(),
+              form.birthdate
+            );
+            
+            if (result.isDuplicate) {
+              setDuplicateWarning(result.duplicatePatient);
+            } else {
+              setDuplicateWarning(null);
+            }
+          } catch (error) {
+            console.error('Error checking for duplicates:', error);
             setDuplicateWarning(null);
+          } finally {
+            setIsCheckingDuplicate(false);
           }
-        } catch (error) {
-          console.error('Error checking for duplicates:', error);
+        } else {
           setDuplicateWarning(null);
-        } finally {
-          setIsCheckingDuplicate(false);
         }
       } else {
         setDuplicateWarning(null);
@@ -44,7 +53,7 @@ function AddPatientModal({
     // Debounce the duplicate check
     const timeoutId = setTimeout(checkForDuplicates, 500);
     return () => clearTimeout(timeoutId);
-  }, [form.first_name, form.last_name, form.birthdate]);
+  }, [form.first_name, form.last_name, form.birthdate, patient]);
 
   // Clear duplicate warning when modal closes
   useEffect(() => {
@@ -53,15 +62,15 @@ function AddPatientModal({
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !patient) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
       <div className="relative w-full max-w-2xl max-h-[90vh] shadow-2xl flex flex-col">
-        <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 rounded-t-xl border border-gray-700 p-3 flex items-center justify-between flex-shrink-0">
-          <h2 className="text-medium font-semibold text-white">Add New Patient</h2>
-          <button className="text-blue-100 hover:text-white" onClick={onClose} aria-label="Close add form">
+        <div className="bg-gradient-to-r from-green-700 via-green-600 to-emerald-700 rounded-t-xl border border-gray-700 p-3 flex items-center justify-between flex-shrink-0">
+          <h2 className="text-medium font-semibold text-white">Edit Patient Details</h2>
+          <button className="text-green-100 hover:text-white" onClick={onClose} aria-label="Close edit form">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -111,7 +120,7 @@ function AddPatientModal({
                     </div>
                   </div>
                   <p className="text-xs text-yellow-300 mt-2">
-                    Please verify if this is the same patient or if you want to create a new record.
+                    Please verify if this is the same patient or if you want to update the current record.
                   </p>
                 </div>
               </div>
@@ -125,6 +134,7 @@ function AddPatientModal({
               Checking for existing patients...
             </div>
           )}
+          
           <form onSubmit={onSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-gray-300 mb-1">First Name</label>
@@ -209,11 +219,11 @@ function AddPatientModal({
                 className={`px-4 py-2 text-white rounded-lg transition-colors duration-200 ${
                   duplicateWarning 
                     ? 'bg-yellow-600 hover:bg-yellow-700' 
-                    : 'bg-blue-600 hover:bg-blue-700'
+                    : 'bg-green-600 hover:bg-green-700'
                 }`}
                 disabled={isSubmitting || isCheckingDuplicate}
               >
-                {isSubmitting ? 'Saving...' : duplicateWarning ? 'Save Anyway' : 'Save'}
+                {isSubmitting ? 'Updating...' : duplicateWarning ? 'Update Anyway' : 'Update Patient'}
               </button>
             </div>
           </form>
@@ -223,6 +233,4 @@ function AddPatientModal({
   );
 }
 
-export default AddPatientModal;
-
-
+export default EditPatientModal;

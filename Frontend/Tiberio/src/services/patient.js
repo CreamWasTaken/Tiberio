@@ -128,4 +128,45 @@ export const getTotalCheckupsCount = async () => {
   }
 };
 
+export const updatePatient = async (patientId, patientData) => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.put(`${API_URL}/api/patients/update-patient/${patientId}`, patientData, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data.error || 'Failed to update patient');
+    } else if (error.request) {
+      throw new Error('No response from server');
+    } else {
+      throw new Error(error.message);
+    }
+  }
+};
+
+export const checkDuplicatePatient = async (first_name, last_name, birthdate) => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.get(`${API_URL}/api/patients/check-duplicate`, {
+      params: {
+        first_name,
+        last_name,
+        birthdate
+      },
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data.error || 'Failed to check for duplicate patient');
+    } else if (error.request) {
+      throw new Error('No response from server');
+    } else {
+      throw new Error(error.message);
+    }
+  }
+};
+
 
