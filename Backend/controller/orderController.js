@@ -303,7 +303,7 @@ const createOrder = async (req, res) => {
     // Emit real-time update
     const io = req.app.get('io');
     if (io) {
-      console.log('🔌 Emitting order-updated event for new order:', orderId);
+    
       io.to('order-updated').emit('order-updated', {
         type: 'added',
         order: createdOrder
@@ -419,13 +419,11 @@ const deleteOrder = async (req, res) => {
     // Emit real-time update
     const io = req.app.get('io');
     if (io) {
-      console.log('🔌 Emitting order-updated event for delete:', id);
-      console.log('🔌 Room members in order-updated:', io.sockets.adapter.rooms.get('order-updated')?.size || 0);
+   
       io.to('order-updated').emit('order-updated', {
         type: 'deleted',
         orderId: parseInt(id)
       });
-      console.log('🔌 Delete event emitted successfully');
     } else {
       console.log('❌ Socket.IO not available for order-updated event');
     }
@@ -536,7 +534,6 @@ const updateOrderStatus = async (req, res) => {
     // Emit real-time update
     const io = req.app.get('io');
     if (io) {
-      console.log('🔌 Emitting order-updated event for status update:', id);
       io.to('order-updated').emit('order-updated', {
         type: 'updated',
         order: updatedOrder
@@ -599,7 +596,6 @@ const updateOrderItemStatus = async (req, res) => {
           "UPDATE products SET stock = stock + ? WHERE id = ?",
           [item.qty, item.item_id]
         );
-        console.log(`✅ Added ${item.qty} units to stock for product ID ${item.item_id}`);
         
         // Emit Socket.IO event for inventory update
         const io = req.app.get('io');
@@ -632,7 +628,6 @@ const updateOrderItemStatus = async (req, res) => {
               product.attributes.stock = product.stock;
               product.attributes.low_stock_threshold = product.low_stock_threshold;
               
-              console.log('🔌 Emitting inventory-updated event for stock update:', product.id, 'Stock:', product.stock);
               io.to('inventory-updated').emit('inventory-updated', {
                 type: 'stock_updated',
                 item: product,
@@ -707,7 +702,6 @@ const updateOrderItemStatus = async (req, res) => {
     // Emit real-time update
     const io = req.app.get('io');
     if (io) {
-      console.log('🔌 Emitting order-updated event for item status update:', orderId);
       io.to('order-updated').emit('order-updated', {
         type: 'updated',
         order: updatedOrder
@@ -835,7 +829,6 @@ const returnOrderItem = async (req, res) => {
           product.attributes.stock = product.stock;
           product.attributes.low_stock_threshold = product.low_stock_threshold;
           
-          console.log('🔌 Emitting inventory-updated event for stock return:', product.id, 'Stock:', product.stock);
           io.to('inventory-updated').emit('inventory-updated', {
             type: 'stock_updated',
             item: product,

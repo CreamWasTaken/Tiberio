@@ -372,7 +372,6 @@ function Patients() {
         
         // Listen for patient updates
         const handlePatientUpdate = (data) => {
-          console.log('🔌 Real-time patient update received:', data);
           
           if (data.type === 'added') {
             // Add new patient to the list
@@ -586,14 +585,10 @@ function Patients() {
           const roomName = `patient-${selectedPatient.id}-checkups`;
           currentRoom = roomName;
           socketService.joinRoom(roomName);
-          console.log(`🔌 Joined patient-specific checkup room: ${roomName}`);
         }
         
         // Listen for checkup updates
         const handleCheckupUpdate = (data) => {
-          console.log('🔌 Real-time checkup update received:', data);
-          console.log('🔌 Current room:', currentRoom);
-          console.log('🔌 Selected patient ID:', selectedPatient?.id);
           
           // Double-check that this update is for the currently selected patient
           if (selectedPatient && data.checkup && data.checkup.patient_id === selectedPatient.id) {
@@ -602,10 +597,8 @@ function Patients() {
               setCheckups(prevCheckups => {
                 const exists = prevCheckups.some(checkup => checkup.id === data.checkup.id);
                 if (exists) {
-                  console.log('🔌 Duplicate checkup detected, ignoring:', data.checkup.id);
                   return prevCheckups;
                 }
-                console.log('🔌 Adding new checkup:', data.checkup.id, 'at', data.timestamp);
                 return [...prevCheckups, data.checkup];
               });
               // Update total checkups count
@@ -625,8 +618,6 @@ function Patients() {
               // Update total checkups count
               setTotalCheckups(prev => Math.max(0, prev - 1));
             }
-          } else {
-            console.log('🔌 Ignoring checkup update for different patient:', data.checkup?.patient_id);
           }
         };
 
@@ -640,7 +631,6 @@ function Patients() {
           }
           if (currentRoom) {
             socketService.leaveRoom(currentRoom);
-            console.log(`🔌 Left patient-specific checkup room: ${currentRoom}`);
           }
         };
       } catch (error) {
@@ -672,31 +662,22 @@ function Patients() {
           const roomName = `patient-${selectedPatient.id}-transactions`;
           currentTransactionRoom = roomName;
           socketService.joinRoom(roomName);
-          console.log(`🔌 Joined patient-specific transaction room: ${roomName}`);
         }
         
         // Listen for transaction updates
         const handleTransactionUpdate = (data) => {
-          console.log('🔌 Real-time transaction update received:', data);
-          console.log('🔌 Event type:', data.type);
-          console.log('🔌 Current room:', currentTransactionRoom);
-          console.log('🔌 Selected patient ID:', selectedPatient?.id);
           
           // For deletion events, we don't have transaction data, so we process them directly
           if (data.type === 'deleted') {
             // Remove deleted transaction from the list
-            console.log('🔌 Removing deleted transaction:', data.transaction_id);
-            console.log('🔌 Deletion data:', data);
             setTransactions(prevTransactions => {
               const filtered = prevTransactions.filter(transaction => {
                 // Convert both to numbers for comparison to handle string/number mismatch
                 const transactionId = Number(transaction.id);
                 const deletedId = Number(data.transaction_id);
                 const shouldKeep = transactionId !== deletedId;
-                console.log(`🔌 Transaction ${transactionId} vs deleted ${deletedId}: ${shouldKeep ? 'keep' : 'remove'}`);
                 return shouldKeep;
               });
-              console.log(`🔌 Transactions before: ${prevTransactions.length}, after: ${filtered.length}`);
               return filtered;
             });
           } else if (selectedPatient && data.transaction && data.transaction.patient_id === selectedPatient.id) {
@@ -705,10 +686,8 @@ function Patients() {
               setTransactions(prevTransactions => {
                 const exists = prevTransactions.some(transaction => transaction.id === data.transaction.id);
                 if (exists) {
-                  console.log('🔌 Duplicate transaction detected, ignoring:', data.transaction.id);
                   return prevTransactions;
                 }
-                console.log('🔌 Adding new transaction:', data.transaction.id, 'at', data.timestamp);
                 return [data.transaction, ...prevTransactions];
               });
             } else if (data.type === 'updated') {
@@ -735,8 +714,6 @@ function Patients() {
                 refreshTransactions();
               }
             }
-          } else {
-            console.log('🔌 Ignoring transaction update for different patient:', data.transaction?.patient_id);
           }
         };
 
@@ -750,7 +727,6 @@ function Patients() {
           }
           if (currentTransactionRoom) {
             socketService.leaveRoom(currentTransactionRoom);
-            console.log(`🔌 Left patient-specific transaction room: ${currentTransactionRoom}`);
           }
         };
       } catch (error) {

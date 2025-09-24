@@ -55,6 +55,7 @@ function Pricelist() {
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [addToInventory, setAddToInventory] = useState(false);
   const [suppliers, setSuppliers] = useState([]);
+  const [suppliersLoading, setSuppliersLoading] = useState(false);
   const [subcategoryFormData, setSubcategoryFormData] = useState({
     name: '',
     description: '',
@@ -79,6 +80,9 @@ function Pricelist() {
     cylFr: '',
     cylTo: '',
     tp: '',
+    // Single Vision specific fields
+    sphere: '',
+    cylinder: '',
     // Contact Lens fields
     steps: '',
     addFr: '',
@@ -202,7 +206,6 @@ function Pricelist() {
         
         // Listen for item updates
         const handleItemUpdate = (data) => {
-          console.log('🔌 Real-time item update received:', data);
           
           if (data.type === 'added' || data.type === 'updated' || data.type === 'deleted') {
             // Refresh items for the currently selected subcategory
@@ -267,12 +270,15 @@ function Pricelist() {
   // Function to fetch suppliers (for inventory add)
   const fetchSuppliers = useCallback(async () => {
     try {
+      setSuppliersLoading(true);
       const fetchedSuppliers = await getSuppliers(abortControllerRef.current?.signal);
       setSuppliers(fetchedSuppliers || []);
     } catch (err) {
       if (err.name !== 'AbortError' && err.message !== 'Request cancelled') {
         console.error('Error fetching suppliers:', err);
       }
+    } finally {
+      setSuppliersLoading(false);
     }
   }, []);
 
@@ -340,7 +346,7 @@ function Pricelist() {
   };
 
   // Item handlers
-  const handleAddPriceItem = () => {
+  const handleAddPriceItem = async () => {
     setItemFormData({ 
       description: '', 
       code: '', 
@@ -359,6 +365,8 @@ function Pricelist() {
       cylFr: '',
       cylTo: '',
       tp: '',
+      sphere: '',
+      cylinder: '',
       steps: '',
       addFr: '',
       addTo: '',
@@ -368,10 +376,14 @@ function Pricelist() {
       volume: '',
       set_cost: ''
     });
+    
+    // Always fetch suppliers to ensure they're available
+    await fetchSuppliers();
+    
     setIsItemModalOpen(true);
   };
 
-  const handleEditPriceItem = (item) => {
+  const handleEditPriceItem = async (item) => {
     // Merge item data with attributes
     const formData = {
       ...item,
@@ -383,6 +395,10 @@ function Pricelist() {
     };
     setItemFormData(formData);
     setEditingItem(item);
+    
+    // Always fetch suppliers to ensure they're available
+    await fetchSuppliers();
+    
     setIsItemModalOpen(true);
   };
 
@@ -390,9 +406,7 @@ function Pricelist() {
     if (window.confirm('Are you sure you want to delete this item?')) {
       try {
         await deleteItem(id);
-        if (selectedSubcategory) {
-          fetchItems(selectedSubcategory.id);
-        }
+        // Socket.IO will handle real-time updates automatically
       } catch (error) {
         console.error('Error deleting item:', error);
       }
@@ -429,19 +443,28 @@ function Pricelist() {
     }
     
     try {
-      // Require supplier if adding to inventory
-      if (addToInventory && !itemFormData.supplier_id) {
-        alert('Please select a supplier to add this item to inventory.');
+      // Require supplier for all price list items
+      if (!itemFormData.supplier_id) {
+        alert('Please select a supplier for this price list item.');
         return;
       }
+      
+      // Require stock and threshold if adding to inventory
       if (addToInventory && (itemFormData.stock === '' || itemFormData.low_stock_threshold === '')) {
         alert('Please provide Stock and Low stock threshold to add this item to inventory.');
         return;
       }
+      
+      // Prepare form data with addToInventory flag
+      const formData = {
+        ...itemFormData,
+        addToInventory: addToInventory
+      };
+      
       if (editingItem) {
-        await updateItem(editingItem.id, itemFormData);
+        await updateItem(editingItem.id, formData);
       } else {
-        await addItem(itemFormData);
+        await addItem(formData);
       }
       setIsItemModalOpen(false);
       setEditingItem(null);
@@ -456,9 +479,7 @@ function Pricelist() {
         stock: '',
         low_stock_threshold: ''
       });
-      if (selectedSubcategory) {
-        fetchItems(selectedSubcategory.id);
-      }
+      // Socket.IO will handle real-time updates automatically
     } catch (error) {
       console.error('Error saving item:', error);
       // Handle specific error for duplicate description
@@ -499,6 +520,16 @@ function Pricelist() {
     }
     
     return 'default';
+  };
+
+  // Function to check if current category is Single Vision
+  const isSingleVision = () => {
+    if (!activeTab) return false;
+    
+    const category = categories.find(cat => cat.id.toString() === activeTab);
+    if (!category) return false;
+    
+    return category.name.toLowerCase().includes('single vision');
   };
 
   // Handle tab change with proper event handling
@@ -1080,6 +1111,7 @@ function Pricelist() {
                   </div>
                 )}
 
+
                 {getFormType() === 'contact' && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
@@ -1229,18 +1261,39 @@ function Pricelist() {
                 </div>
                 </div>
 
+                {/* Supplier Field - Always Required */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Supplier <span className="text-red-400">*</span></label>
+                  <select
+                    value={itemFormData.supplier_id || ''}
+                    onChange={(e) => {
+                      const supplierId = e.target.value;
+                      setItemFormData({ ...itemFormData, supplier_id: supplierId });
+                    }}
+                    required
+                    disabled={suppliersLoading}
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">
+                      {suppliersLoading ? 'Loading suppliers...' : 'Select supplier'}
+                    </option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                  {suppliersLoading && (
+                    <p className="text-blue-400 text-sm mt-1">Loading suppliers...</p>
+                  )}
+                </div>
+
                 {/* Inventory toggle */}
                 <div className="flex items-center gap-3">
                   <input
                     id="addToInventory"
                     type="checkbox"
                     checked={addToInventory}
-                    onChange={async (e) => {
-                      const checked = e.target.checked;
-                      setAddToInventory(checked);
-                      if (checked && suppliers.length === 0) {
-                        await fetchSuppliers();
-                      }
+                    onChange={(e) => {
+                      setAddToInventory(e.target.checked);
                     }}
                     className="h-4 w-4 text-blue-600 bg-gray-900 border-gray-700 rounded focus:ring-blue-500"
                   />
@@ -1253,7 +1306,7 @@ function Pricelist() {
                 {addToInventory && (
                   <>
                     <hr className="my-4 border-gray-700" />
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">Stock {addToInventory && <span className="text-red-400">*</span>}</label>
                         <input
@@ -1278,21 +1331,43 @@ function Pricelist() {
                           className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Supplier {addToInventory && <span className="text-red-400">*</span>}</label>
-                        <select
-                          value={itemFormData.supplier_id || ''}
-                          onChange={(e) => setItemFormData({ ...itemFormData, supplier_id: e.target.value })}
-                          required={addToInventory}
-                          className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select supplier</option>
-                          {suppliers.map((s) => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </select>
-                      </div>
                     </div>
+                    
+                    {/* Single Vision Specific Fields for Inventory */}
+                    {isSingleVision() && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">Sphere</label>
+                          <input
+                            type="text"
+                            placeholder="e.g., +2.50, -1.75"
+                            value={itemFormData.sphere}
+                            onChange={(e) => setItemFormData({...itemFormData, sphere: e.target.value})}
+                            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">Cylinder</label>
+                          <input
+                            type="text"
+                            placeholder="e.g., +0.50, -1.25"
+                            value={itemFormData.cylinder}
+                            onChange={(e) => setItemFormData({...itemFormData, cylinder: e.target.value})}
+                            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">Diameter</label>
+                          <input
+                            type="text"
+                            placeholder="e.g., 65, 70"
+                            value={itemFormData.diameter}
+                            onChange={(e) => setItemFormData({...itemFormData, diameter: e.target.value})}
+                            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
 
@@ -1337,6 +1412,8 @@ function Pricelist() {
                       cylFr: '',
                       cylTo: '',
                       tp: '',
+                      sphere: '',
+                      cylinder: '',
                       steps: '',
                       addFr: '',
                       addTo: '',

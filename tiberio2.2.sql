@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 10, 2025 at 09:53 AM
+-- Generation Time: Sep 23, 2025 at 10:23 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -146,7 +146,52 @@ INSERT INTO `checkups` (`id`, `user_id`, `patient_id`, `checkup_date`, `notes`, 
 (13, 1, 7, '2025-09-01', '12', '12', '11', '2025-09-01 05:27:58', '2025-09-01 05:28:32', 1),
 (14, 1, 7, '2025-09-01', '1', '1', NULL, '2025-09-01 05:29:47', '2025-09-01 05:33:25', 1),
 (15, 1, 7, '2025-09-02', '1', 'Diagnosis Update', '1', '2025-09-02 06:52:27', '2025-09-02 06:53:23', 1),
-(16, 1, 8, '2025-09-12', '123', '123', '1', '2025-09-05 08:13:19', '2025-09-05 08:13:19', 0);
+(16, 1, 8, '2025-09-12', '123', '123', '1', '2025-09-05 08:13:19', '2025-09-17 10:37:39', 1),
+(17, 1, 7, '2025-09-17', '123', '123', '1', '2025-09-17 07:43:24', '2025-09-17 08:02:49', 1),
+(18, 1, 13, '2025-09-17', '11', '11', '1', '2025-09-17 07:45:46', '2025-09-17 07:45:46', 0),
+(19, 1, 13, '2025-09-17', '123', 'example', '12', '2025-09-17 08:03:17', '2025-09-17 10:31:42', 1),
+(20, 1, 7, '2025-09-17', '123', '123', 'a', '2025-09-17 10:25:26', '2025-09-17 10:25:56', 1),
+(21, 1, 7, '2025-09-17', '123', '123', 'A', '2025-09-17 10:25:38', '2025-09-17 10:26:53', 1),
+(22, 1, 7, '2025-09-17', '1', '1', 'a', '2025-09-17 10:28:49', '2025-09-17 10:29:26', 1),
+(23, 1, 7, '2025-09-17', '1', '1', '1', '2025-09-17 10:34:23', '2025-09-17 10:34:35', 1),
+(24, 1, 7, '2025-09-17', '1', '1', NULL, '2025-09-17 10:36:31', '2025-09-17 10:38:29', 1),
+(25, 1, 8, '2025-09-17', '1', '1', NULL, '2025-09-17 10:37:46', '2025-09-17 10:39:50', 1),
+(26, 1, 7, '2025-09-05', '12', '12', NULL, '2025-09-17 10:38:18', '2025-09-17 10:38:27', 1),
+(27, 1, 7, '2025-09-17', '1', '1', NULL, '2025-09-17 10:38:42', '2025-09-17 10:39:03', 1),
+(28, 1, 7, '2025-09-17', '1', '1', '1', '2025-09-17 10:39:11', '2025-09-17 10:39:15', 1),
+(29, 1, 7, '2025-09-18', '1', '1', '1', '2025-09-17 10:39:31', '2025-09-17 10:39:35', 1),
+(30, 1, 8, '2025-09-17', '1', '1', '1', '2025-09-17 10:40:00', '2025-09-17 10:44:32', 1),
+(31, 1, 8, '2025-09-17', '1', '1', '1', '2025-09-17 10:44:41', '2025-09-17 10:47:54', 1),
+(32, 1, 7, '2025-09-17', '1', '1', '1', '2025-09-17 10:48:39', '2025-09-17 10:49:00', 1),
+(33, 1, 7, '2025-09-17', '1', '1', '1', '2025-09-17 10:49:12', '2025-09-17 10:49:24', 1),
+(34, 1, 7, '2025-09-17', '1', '1', '1', '2025-09-17 10:49:37', '2025-09-17 10:49:46', 1),
+(35, 1, 7, '2025-09-17', '1', '1', NULL, '2025-09-17 10:49:59', '2025-09-17 10:55:55', 1),
+(36, 1, 7, '2025-09-17', '1', '1', '1', '2025-09-17 10:58:23', '2025-09-17 10:58:32', 1),
+(37, 1, 7, '2025-09-17', '1', '1', '1', '2025-09-17 11:01:33', '2025-09-17 11:03:39', 1),
+(38, 1, 7, '2025-09-17', '1', '1', NULL, '2025-09-17 11:04:36', '2025-09-17 11:07:03', 1),
+(39, 1, 7, '2025-09-17', '1', '1', NULL, '2025-09-17 11:07:28', '2025-09-17 11:07:36', 1),
+(40, 1, 7, '2025-09-17', '12', '1', NULL, '2025-09-17 11:07:58', '2025-09-17 11:08:01', 1),
+(41, 1, 7, '2025-09-17', '1', '1', NULL, '2025-09-17 11:19:23', '2025-09-17 11:19:52', 1),
+(42, 1, 7, '2025-09-17', '1', '1', '1', '2025-09-17 11:20:13', '2025-09-17 11:21:39', 1),
+(43, 1, 7, '2025-09-17', '1', '1', '1', '2025-09-17 11:21:05', '2025-09-17 11:21:11', 1),
+(44, 1, 7, '2025-09-17', '1', '1', NULL, '2025-09-17 11:21:44', '2025-09-17 11:23:47', 1),
+(45, 1, 7, '2025-09-17', '2', '2', NULL, '2025-09-17 11:23:54', '2025-09-17 11:28:43', 1),
+(46, 1, 7, '2025-09-17', '1', '1', '1', '2025-09-17 11:28:56', '2025-09-17 11:29:26', 1),
+(47, 1, 7, '2025-09-17', '1', '1', '1', '2025-09-17 11:29:55', '2025-09-17 11:30:10', 1),
+(48, 1, 7, '2025-09-17', '1', '1', NULL, '2025-09-17 11:30:46', '2025-09-17 11:32:47', 1),
+(49, 1, 7, '2025-09-17', '1', '1', NULL, '2025-09-17 11:33:41', '2025-09-17 11:34:49', 1),
+(50, 1, 7, '2025-09-17', '1', '1', NULL, '2025-09-17 11:35:45', '2025-09-17 11:35:47', 1),
+(51, 1, 7, '2025-09-17', '1', '1', NULL, '2025-09-17 11:35:57', '2025-09-17 12:58:47', 1),
+(52, 1, 7, '2025-09-17', '123', '123', '1', '2025-09-17 12:59:21', '2025-09-17 12:59:29', 1),
+(53, 1, 7, '2025-09-17', '123', '123', '1', '2025-09-17 12:59:38', '2025-09-17 12:59:46', 1),
+(54, 1, 7, '2025-09-17', '1', '1', NULL, '2025-09-17 13:01:50', '2025-09-17 13:10:29', 1),
+(55, 1, 8, '2025-09-17', '1', '1', NULL, '2025-09-17 13:02:19', '2025-09-17 13:02:31', 1),
+(56, 1, 7, '2025-09-17', '1', '1', '1', '2025-09-17 13:10:45', '2025-09-17 13:11:31', 1),
+(57, 1, 7, '2025-09-17', '1', '1', NULL, '2025-09-17 13:11:17', '2025-09-17 13:11:28', 1),
+(58, 1, 7, '2025-09-17', '1', '1', NULL, '2025-09-17 13:11:38', '2025-09-17 13:15:45', 1),
+(59, 1, 7, '2025-09-17', '1', '1', NULL, '2025-09-17 13:15:55', '2025-09-17 13:20:00', 1),
+(60, 1, 7, '2025-09-17', '1', '1', '1', '2025-09-17 13:20:12', '2025-09-17 13:26:36', 1),
+(61, 1, 7, '2025-09-19', 'test', 'tets', NULL, '2025-09-19 07:59:58', '2025-09-19 08:00:01', 1);
 
 -- --------------------------------------------------------
 
@@ -185,7 +230,52 @@ INSERT INTO `contact_lens_prescriptions` (`contactId`, `checkupId`, `sphereRight
 (12, 13, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (13, 14, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (14, 15, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(15, 16, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+(15, 16, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(16, 17, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(17, 18, '1', '1', '1', '1', '1', '1', '+1', '1', '1', '1', '1', '1'),
+(18, 19, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(19, 20, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(20, 21, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(21, 22, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(22, 23, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(23, 24, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(24, 25, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(25, 26, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(26, 27, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(27, 28, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(28, 29, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(29, 30, '1', '1', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(30, 31, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(31, 32, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(32, 33, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(33, 34, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(34, 35, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(35, 36, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(36, 37, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(37, 38, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(38, 39, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(39, 40, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(40, 41, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(41, 42, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(42, 43, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(43, 44, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(44, 45, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(45, 46, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(46, 47, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(47, 48, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(48, 49, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(49, 50, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(50, 51, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(51, 52, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(52, 53, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(53, 54, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(54, 55, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(55, 56, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(56, 57, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(57, 58, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(58, 59, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(59, 60, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(60, 61, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -232,7 +322,16 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `supplier_id`, `description`, `status`, `total_price`, `receipt_number`, `is_deleted`, `created_at`, `updated_at`) VALUES
-(18, 4, NULL, 'partially_returned', 63.00, '43352', 0, '2025-09-10 07:29:18', '2025-09-10 07:29:29');
+(18, 4, NULL, 'partially_returned', 63.00, '43352', 1, '2025-09-10 07:29:18', '2025-09-11 05:01:22'),
+(19, 4, NULL, 'completed', 10.00, '12326', 1, '2025-09-11 04:58:26', '2025-09-11 05:01:19'),
+(20, 5, NULL, 'completed', 10.00, '7534', 1, '2025-09-11 05:00:51', '2025-09-11 05:01:16'),
+(21, 4, NULL, 'completed', 50.00, '7323', 1, '2025-09-11 05:01:55', '2025-09-11 05:04:11'),
+(22, 5, NULL, 'completed', 19.00, '15326', 1, '2025-09-11 05:04:58', '2025-09-11 05:09:40'),
+(23, 4, NULL, 'completed', 10.00, '5382', 1, '2025-09-11 05:09:21', '2025-09-11 05:09:38'),
+(24, 5, NULL, 'completed', 2.00, '8795', 1, '2025-09-11 05:10:04', '2025-09-11 05:10:19'),
+(25, 4, NULL, 'completed', 2.00, '5364', 0, '2025-09-11 05:10:49', '2025-09-11 05:10:53'),
+(26, 5, NULL, 'completed', 2.00, '643', 0, '2025-09-11 05:11:22', '2025-09-11 05:11:28'),
+(27, 5, NULL, 'partially_returned', 56.00, '2135', 0, '2025-09-11 08:23:02', '2025-09-11 08:23:31');
 
 -- --------------------------------------------------------
 
@@ -251,13 +350,6 @@ CREATE TABLE `order_items` (
   `refunded_at` timestamp NULL DEFAULT NULL,
   `refund_reason` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `order_items`
---
-
-INSERT INTO `order_items` (`id`, `order_id`, `item_id`, `qty`, `refunded_qty`, `unit_price`, `status`, `refunded_at`, `refund_reason`) VALUES
-(23, 18, 17, 10, 3, 9.00, 'partially_returned', '2025-09-10 15:29:29', 'guba');
 
 --
 -- Triggers `order_items`
@@ -304,12 +396,13 @@ CREATE TABLE `patients` (
 --
 
 INSERT INTO `patients` (`id`, `first_name`, `middle_name`, `last_name`, `sex`, `birthdate`, `age`, `address`, `contact_number`, `telephone_number`, `senior_number`, `user_id`, `client_code`, `created_at`, `updated_at`) VALUES
-(7, 'Jamin Paul', 'S', 'Sapalo', 'male', '2002-07-06', 23, 'Bacolod', '09954417332', '', '', 1, NULL, '2025-08-26 08:31:23', '2025-08-26 08:31:23'),
+(7, 'Jamin Paul', 'S', 'Sapalo', 'male', '2002-07-06', 23, 'Bacolod', '09954417332', '', '', 1, NULL, '2025-08-26 08:31:23', '2025-09-19 08:36:33'),
 (8, 'Rachel', '', 'Rivera', 'female', '2003-12-05', 21, 'Talisay', '099123123', '', '', 1, NULL, '2025-08-26 08:53:48', '2025-08-26 08:53:48'),
 (9, 'John ', 'D', 'Doe', 'male', '1999-03-03', 26, 'Somewhere', '099', '123', '', 1, NULL, '2025-08-26 09:18:39', '2025-08-26 09:18:39'),
 (10, 'Jane ', 'D.', 'Dane', 'female', '1999-04-17', 26, 'Earth', '09', '123', '', 2, NULL, '2025-08-26 09:34:19', '2025-08-26 09:34:19'),
 (11, 'Jane', 'D.', 'Doe', 'female', '2015-01-01', 10, 'Adress', '099123', '123', '', 1, NULL, '2025-08-27 06:39:16', '2025-08-27 06:39:16'),
-(12, 'Stephen John', 'S.', 'Sapalo', 'male', '1998-06-24', 27, 'Technological University of The Philippines - Visayas, Capt. Sabi Street, Zone 12 , Talisay City, Negros Occidental', '9553344804', '', '', 1, NULL, '2025-09-10 07:43:09', '2025-09-10 07:43:09');
+(12, 'Stephen John', 'S.', 'Sapalo', 'male', '1998-06-24', 27, 'Technological University of The Philippines - Visayas, Capt. Sabi Street, Zone 12 , Talisay City, Negros Occidental', '9553344804', '', '', 1, NULL, '2025-09-10 07:43:09', '2025-09-10 07:43:09'),
+(13, 'Joshua ', 'L', 'Lamis', 'male', '2000-02-02', 25, '', '', '', '', 1, NULL, '2025-09-17 07:45:07', '2025-09-17 07:45:07');
 
 -- --------------------------------------------------------
 
@@ -339,6 +432,26 @@ INSERT INTO `price_categories` (`id`, `name`, `description`, `is_deleted`, `crea
 (18, 'Accessories', 'Eyewear accessories', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12'),
 (19, 'Frames', 'Eyeglass frames', 0, '2025-08-29 04:10:12', '2025-08-29 04:10:12'),
 (20, 'Services', 'Checkups ETC', 0, '2025-08-29 05:16:40', '2025-08-29 05:16:48');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `price_list`
+--
+
+CREATE TABLE `price_list` (
+  `id` int(11) NOT NULL,
+  `supplier_id` int(11) NOT NULL,
+  `subcategory_id` int(11) NOT NULL,
+  `attributes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`attributes`)),
+  `description` varchar(255) DEFAULT NULL,
+  `pc_price` decimal(10,2) DEFAULT NULL,
+  `pc_cost` decimal(10,2) DEFAULT NULL,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `code` varchar(50) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -373,27 +486,13 @@ INSERT INTO `price_subcategories` (`id`, `category_id`, `name`, `description`, `
 
 CREATE TABLE `products` (
   `id` int(11) NOT NULL,
-  `subcategory_id` int(11) DEFAULT NULL,
-  `supplier_id` int(11) DEFAULT NULL,
-  `code` varchar(50) DEFAULT NULL,
-  `description` varchar(255) DEFAULT NULL,
-  `pc_price` decimal(10,2) DEFAULT NULL,
-  `pc_cost` decimal(10,2) DEFAULT NULL,
   `stock` int(11) DEFAULT 0,
   `low_stock_threshold` int(11) DEFAULT 5,
   `stock_status` varchar(20) NOT NULL DEFAULT 'normal' COMMENT 'normal, low, out-of-stock',
   `attributes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`attributes`)),
-  `is_deleted` tinyint(1) NOT NULL DEFAULT 0
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `price_list_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `products`
---
-
-INSERT INTO `products` (`id`, `subcategory_id`, `supplier_id`, `code`, `description`, `pc_price`, `pc_cost`, `stock`, `low_stock_threshold`, `stock_status`, `attributes`, `is_deleted`) VALUES
-(15, 13, 4, '1', 'SV 1', 1.00, 1.00, 70, 1, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0),
-(16, 14, 5, '1', 'DV 1', 2.00, 2.00, 51, 1, 'normal', '{}', 0),
-(17, 15, 4, '1', 'Progressive 1', 10.00, 10.00, 99, 10, 'normal', '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"1\",\"sphTo\":\"1\",\"cylFr\":\"1\",\"cylTo\":\"1\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 0);
 
 --
 -- Triggers `products`
@@ -460,7 +559,52 @@ INSERT INTO `spectacle_prescriptions` (`spectacleId`, `checkupId`, `sphereRight`
 (12, 13, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
 (13, 14, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (14, 15, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
-(15, 16, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1');
+(15, 16, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(16, 17, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(17, 18, '+1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(18, 19, '1', '2', '2', '2', '2', '2', '1', '2', '2', '2', '2', '2'),
+(19, 20, 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a'),
+(20, 21, 'A', 'A', 'AA', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A'),
+(21, 22, 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a'),
+(22, 23, '1', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(23, 24, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(24, 25, '1', '1', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(25, 26, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(26, 27, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(27, 28, '1', NULL, NULL, NULL, NULL, NULL, '1', NULL, NULL, NULL, NULL, NULL),
+(28, 29, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(29, 30, '1', NULL, NULL, NULL, NULL, NULL, '1', NULL, NULL, NULL, NULL, NULL),
+(30, 31, '1', NULL, NULL, NULL, NULL, NULL, '1', NULL, NULL, NULL, NULL, NULL),
+(31, 32, '1', NULL, NULL, NULL, NULL, NULL, '1', NULL, NULL, NULL, NULL, NULL),
+(32, 33, '1', NULL, NULL, NULL, NULL, NULL, '1', NULL, NULL, NULL, NULL, NULL),
+(33, 34, '1', NULL, NULL, NULL, NULL, NULL, '1', NULL, NULL, NULL, NULL, NULL),
+(34, 35, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(35, 36, '1', NULL, NULL, NULL, NULL, NULL, '1', NULL, NULL, NULL, NULL, NULL),
+(36, 37, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(37, 38, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(38, 39, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(39, 40, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(40, 41, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(41, 42, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(42, 43, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(43, 44, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(44, 45, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(45, 46, '1', '1', NULL, NULL, NULL, NULL, '1', '1', NULL, NULL, NULL, NULL),
+(46, 47, '1', NULL, NULL, NULL, NULL, NULL, '1', NULL, NULL, NULL, NULL, NULL),
+(47, 48, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(48, 49, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(49, 50, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(50, 51, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(51, 52, '1', NULL, NULL, NULL, NULL, NULL, '1', NULL, NULL, NULL, NULL, NULL),
+(52, 53, '1', NULL, NULL, NULL, NULL, NULL, '1', NULL, NULL, NULL, NULL, NULL),
+(53, 54, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(54, 55, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(55, 56, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(56, 57, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(57, 58, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(58, 59, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(59, 60, '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1'),
+(60, 61, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -523,7 +667,27 @@ INSERT INTO `transactions` (`id`, `user_id`, `patient_id`, `receipt_number`, `su
 (21, 1, 7, '45657', 20.00, 0.00, 20.00, 0.00, 'fulfilled', '2025-09-09 07:32:44', '2025-09-08 02:20:16', '2025-09-09 07:32:44'),
 (22, 2, 7, '4575432', 10.00, 0.00, 10.00, 0.00, 'fulfilled', '2025-09-09 07:32:42', '2025-09-09 07:28:26', '2025-09-09 07:32:42'),
 (23, 2, 8, '8659', 50.00, 0.00, 40.00, 0.00, 'partially_refunded', '2025-09-09 07:32:49', '2025-09-09 07:31:47', '2025-09-09 07:32:49'),
-(28, 1, 12, '6472', 40.00, 0.00, 40.00, 0.00, 'pending', NULL, '2025-09-10 07:53:16', '2025-09-10 07:53:16');
+(28, 1, 12, '6472', 40.00, 0.00, 40.00, 0.00, 'fulfilled', NULL, '2025-09-10 07:53:16', '2025-09-10 07:54:50'),
+(29, 2, 7, '2635', 100.00, 0.00, 100.00, 0.00, 'fulfilled', '2025-09-17 10:34:41', '2025-09-12 05:45:05', '2025-09-17 10:34:41'),
+(30, 2, 7, '4224', 50.00, 0.00, 50.00, 0.00, 'fulfilled', '2025-09-17 10:27:03', '2025-09-12 05:57:14', '2025-09-17 10:27:03'),
+(31, 1, 7, '12333', 25.00, 2.00, 23.00, 8.00, 'pending', '2025-09-17 10:26:27', '2025-09-12 06:26:55', '2025-09-17 10:26:27'),
+(32, 1, 7, '51809', 40.00, 0.00, 40.00, 0.00, 'pending', '2025-09-17 13:00:31', '2025-09-17 13:00:19', '2025-09-17 13:00:31'),
+(33, 1, 7, '23644', 30.00, 0.00, 30.00, 0.00, 'pending', '2025-09-17 13:00:51', '2025-09-17 13:00:49', '2025-09-17 13:00:51'),
+(34, 1, 7, '2364', 50.00, 0.00, 50.00, 0.00, 'pending', '2025-09-17 13:01:40', '2025-09-17 13:01:25', '2025-09-17 13:01:40'),
+(35, 1, 7, '48458', 40.00, 0.00, 40.00, 0.00, 'pending', '2025-09-17 13:23:36', '2025-09-17 13:17:01', '2025-09-17 13:23:36'),
+(36, 1, 7, '4845', 6.00, 0.00, 6.00, 0.00, 'pending', '2025-09-17 13:23:31', '2025-09-17 13:20:34', '2025-09-17 13:23:31'),
+(37, 1, 7, '364', 30.00, 0.00, 30.00, 0.00, 'pending', '2025-09-17 13:23:56', '2025-09-17 13:23:52', '2025-09-17 13:23:56'),
+(38, 1, 8, '6e4q72', 30.00, 0.00, 30.00, 0.00, 'pending', '2025-09-17 13:27:04', '2025-09-17 13:26:58', '2025-09-17 13:27:04'),
+(39, 1, 8, '64725', 100.00, 0.00, 100.00, 0.00, 'fulfilled', '2025-09-17 13:37:44', '2025-09-17 13:35:51', '2025-09-17 13:37:44'),
+(40, 1, 8, '2672', 100.00, 0.00, 100.00, 0.00, 'fulfilled', NULL, '2025-09-17 13:38:02', '2025-09-17 13:38:10'),
+(41, 1, 7, '5326', 4.00, 0.00, 4.00, 0.00, 'fulfilled', '2025-09-17 15:22:15', '2025-09-17 13:42:58', '2025-09-17 15:22:15'),
+(42, 1, 7, '724', 10.00, 0.00, 10.00, 0.00, 'fulfilled', '2025-09-17 15:24:22', '2025-09-17 15:22:28', '2025-09-17 15:24:22'),
+(43, 1, 7, '42643', 20.00, 0.00, 20.00, 0.00, 'fulfilled', '2025-09-17 15:25:22', '2025-09-17 15:24:33', '2025-09-17 15:25:22'),
+(44, 1, 7, '3647', 5.00, 0.00, 5.00, 0.00, 'fulfilled', '2025-09-17 15:29:55', '2025-09-17 15:26:13', '2025-09-17 15:29:55'),
+(45, 1, 7, '25364', 5.00, 0.00, 5.00, 0.00, 'fulfilled', '2025-09-17 15:35:59', '2025-09-17 15:30:05', '2025-09-17 15:35:59'),
+(46, 1, 7, '53642', 50.00, 0.00, 50.00, 0.00, 'fulfilled', '2025-09-17 15:38:46', '2025-09-17 15:36:09', '2025-09-17 15:38:46'),
+(47, 1, 7, 'qwe', 30.00, 0.00, 30.00, 0.00, 'fulfilled', '2025-09-18 00:46:07', '2025-09-17 15:39:04', '2025-09-18 00:46:07'),
+(48, 1, 7, '3754', 50.00, 0.00, 50.00, 0.00, 'fulfilled', NULL, '2025-09-18 02:48:46', '2025-09-18 02:48:50');
 
 -- --------------------------------------------------------
 
@@ -544,25 +708,6 @@ CREATE TABLE `transaction_items` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `transaction_items`
---
-
-INSERT INTO `transaction_items` (`id`, `transaction_id`, `product_id`, `status`, `quantity`, `unit_price`, `discount`, `refunded_quantity`, `refunded_at`, `created_at`, `updated_at`) VALUES
-(20, 15, 16, 'pending', 3, 2.00, 0.00, 0, NULL, '2025-09-05 08:30:41', '2025-09-05 08:30:41'),
-(21, 15, 15, 'pending', 2, 1.00, 0.00, 0, NULL, '2025-09-05 08:30:41', '2025-09-05 08:30:41'),
-(22, 16, 16, 'pending', 2, 2.00, 0.00, 0, NULL, '2025-09-05 08:51:15', '2025-09-05 08:51:15'),
-(23, 17, 15, 'pending', 2, 1.00, 0.00, 0, NULL, '2025-09-05 08:55:55', '2025-09-05 08:55:55'),
-(24, 18, 15, 'fulfilled', 1, 1.00, 0.00, 0, NULL, '2025-09-05 09:55:18', '2025-09-05 09:55:55'),
-(25, 18, 16, 'fulfilled', 1, 2.00, 0.00, 0, NULL, '2025-09-05 09:55:18', '2025-09-05 09:55:57'),
-(26, 19, 15, 'pending', 3, 1.00, 0.00, 0, NULL, '2025-09-05 09:57:33', '2025-09-05 09:57:33'),
-(27, 20, 16, 'fulfilled', 1, 2.00, 0.00, 0, NULL, '2025-09-05 10:00:40', '2025-09-08 02:15:05'),
-(28, 20, 15, 'fulfilled', 1, 1.00, 0.00, 0, NULL, '2025-09-05 10:00:40', '2025-09-08 02:15:06'),
-(29, 21, 15, 'fulfilled', 20, 1.00, 0.00, 0, NULL, '2025-09-08 02:20:16', '2025-09-08 02:20:20'),
-(30, 22, 17, 'fulfilled', 1, 10.00, 0.00, 0, NULL, '2025-09-09 07:28:26', '2025-09-09 07:28:33'),
-(31, 23, 17, 'partially_refunded', 5, 10.00, 0.00, 1, '2025-09-09 15:32:05', '2025-09-09 07:31:47', '2025-09-09 07:32:05'),
-(36, 28, 17, 'pending', 4, 10.00, 0.00, 0, NULL, '2025-09-10 07:53:16', '2025-09-10 07:53:16');
 
 --
 -- Triggers `transaction_items`
@@ -605,7 +750,8 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`id`, `first_name`, `last_name`, `username`, `password`, `type`, `status`, `created_at`, `updated_at`) VALUES
 (1, 'Jamin', 'Sapalo', 'Admin', '$2b$10$rvVn4wdqGvkOgq5oWnftRulfSLuBWC32/AUHUKI0ds/A6hrTSZEhG', 'admin', 'active', '2025-08-19 06:21:55', '2025-08-26 09:31:38'),
 (2, 'Ajay', 'Lim', 'Employee', '$2b$10$hPvfS0ojfxomkSd6VlQ3h.CyubZWIPqJ72VCkFBfCUbiAUm7e51v6', 'employee', 'active', '2025-08-20 02:17:44', '2025-08-27 17:22:14'),
-(4, 'Test', '1', '1', '$2b$10$4quO30T5ibTGz1I2LaEGGuiNL3odLtUfg6bqCPPdDgq9gz4VZFIHa', 'employee', 'active', '2025-08-27 19:45:10', '2025-08-27 19:45:10');
+(4, 'Test', '1', '1', '$2b$10$4quO30T5ibTGz1I2LaEGGuiNL3odLtUfg6bqCPPdDgq9gz4VZFIHa', 'employee', 'active', '2025-08-27 19:45:10', '2025-08-27 19:45:10'),
+(5, 'John D', 'Doe', 'JohnDoe', '$2b$10$iMQAU176lfV/VsnLf/jsxOkzfbbrUhrxRKIxJpW7cxUWy5Kli8vtu', 'employee', 'active', '2025-09-17 10:24:04', '2025-09-17 10:24:04');
 
 --
 -- Indexes for dumped tables
@@ -666,6 +812,14 @@ ALTER TABLE `price_categories`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `price_list`
+--
+ALTER TABLE `price_list`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_price_list_supplier` (`supplier_id`),
+  ADD KEY `fk_price_list_subcat` (`subcategory_id`);
+
+--
 -- Indexes for table `price_subcategories`
 --
 ALTER TABLE `price_subcategories`
@@ -677,8 +831,7 @@ ALTER TABLE `price_subcategories`
 --
 ALTER TABLE `products`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `products_subcategory_fk` (`subcategory_id`),
-  ADD KEY `products_supplier_fk` (`supplier_id`);
+  ADD KEY `fk_products_price_list` (`price_list_id`);
 
 --
 -- Indexes for table `spectacle_prescriptions`
@@ -727,13 +880,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `checkups`
 --
 ALTER TABLE `checkups`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
 
 --
 -- AUTO_INCREMENT for table `contact_lens_prescriptions`
 --
 ALTER TABLE `contact_lens_prescriptions`
-  MODIFY `contactId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `contactId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
 
 --
 -- AUTO_INCREMENT for table `logs`
@@ -745,25 +898,31 @@ ALTER TABLE `logs`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- AUTO_INCREMENT for table `patients`
 --
 ALTER TABLE `patients`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `price_categories`
 --
 ALTER TABLE `price_categories`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+
+--
+-- AUTO_INCREMENT for table `price_list`
+--
+ALTER TABLE `price_list`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `price_subcategories`
@@ -781,7 +940,7 @@ ALTER TABLE `products`
 -- AUTO_INCREMENT for table `spectacle_prescriptions`
 --
 ALTER TABLE `spectacle_prescriptions`
-  MODIFY `spectacleId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `spectacleId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
 
 --
 -- AUTO_INCREMENT for table `suppliers`
@@ -793,19 +952,19 @@ ALTER TABLE `suppliers`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
 
 --
 -- AUTO_INCREMENT for table `transaction_items`
 --
 ALTER TABLE `transaction_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- Constraints for dumped tables
@@ -850,6 +1009,13 @@ ALTER TABLE `patients`
   ADD CONSTRAINT `patients_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
+-- Constraints for table `price_list`
+--
+ALTER TABLE `price_list`
+  ADD CONSTRAINT `fk_price_list_subcat` FOREIGN KEY (`subcategory_id`) REFERENCES `price_subcategories` (`id`),
+  ADD CONSTRAINT `fk_price_list_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`);
+
+--
 -- Constraints for table `price_subcategories`
 --
 ALTER TABLE `price_subcategories`
@@ -859,8 +1025,7 @@ ALTER TABLE `price_subcategories`
 -- Constraints for table `products`
 --
 ALTER TABLE `products`
-  ADD CONSTRAINT `products_subcategory_fk` FOREIGN KEY (`subcategory_id`) REFERENCES `price_subcategories` (`id`),
-  ADD CONSTRAINT `products_supplier_fk` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`);
+  ADD CONSTRAINT `fk_products_price_list` FOREIGN KEY (`price_list_id`) REFERENCES `price_list` (`id`);
 
 --
 -- Constraints for table `spectacle_prescriptions`

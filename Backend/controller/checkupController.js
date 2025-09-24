@@ -120,16 +120,14 @@ exports.addCheckup = async (req, res) => {
     const io = req.app.get('io');
     if (io) {
       const roomName = `patient-${patient_id}-checkups`;
-      console.log(`🔌 Emitting checkup-updated event for patient ${patient_id}`);
-      console.log(`🔌 Room name: ${roomName}`);
-      console.log(`🔌 Clients in room:`, io.sockets.adapter.rooms.get(roomName)?.size || 0);
+     
       io.to(roomName).emit('checkup-updated', { 
         type: 'added', 
         checkup: enrichedCheckup,
         timestamp: new Date().toISOString(),
         roomName: roomName
       });
-      console.log(`🔌 Event emitted to room: ${roomName}`);
+      
     } else {
       console.log(`❌ Socket.IO not available for checkup-updated event`);
     }
@@ -347,12 +345,12 @@ exports.updateCheckup = async (req, res) => {
     // Emit Socket.IO event with complete data to patient-specific room
     const io = req.app.get('io');
     if (io) {
-      console.log(`🔌 Emitting checkup-updated event for patient ${existingCheckup[0].patient_id}`);
+ 
       io.to(`patient-${existingCheckup[0].patient_id}-checkups`).emit('checkup-updated', { 
         type: 'updated', 
         checkup: enrichedCheckup  // Send complete checkup data
       });
-      console.log(`🔌 Event emitted to room: patient-${existingCheckup[0].patient_id}-checkups`);
+     
     } else {
       console.log(`❌ Socket.IO not available for checkup-updated event`);
     }
@@ -408,13 +406,11 @@ exports.deleteCheckup = async (req, res) => {
     // Emit Socket.IO event with checkup data to patient-specific room
     const io = req.app.get('io');
     if (io) {
-      console.log(`🔌 Emitting checkup-updated event for patient ${checkupToDelete[0].patient_id}`);
       io.to(`patient-${checkupToDelete[0].patient_id}-checkups`).emit('checkup-updated', { 
         type: 'deleted', 
         checkupId: checkupId,
         checkup: checkupToDelete[0]  // Send the deleted checkup data
       });
-      console.log(`🔌 Event emitted to room: patient-${checkupToDelete[0].patient_id}-checkups`);
     } else {
       console.log(`❌ Socket.IO not available for checkup-updated event`);
     }

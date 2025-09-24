@@ -5,10 +5,7 @@ const db = require("../config/db");
 const emitSocketEvent = (req, event, data) => {
   const io = req.app.get('io');
   if (io) {
-    console.log(`🔌 Emitting Socket.IO event: ${event}`, data);
-    console.log(`🔌 Emitting to room: ${event}`);
     io.to(event).emit(event, data);
-    console.log(`🔌 Event emitted successfully`);
   } else {
     console.log(`❌ Socket.IO not available for event: ${event}`);
   }
@@ -143,16 +140,12 @@ exports.createTransaction = async (req, res) => {
       const io = req.app.get('io');
       if (io) {
         const roomName = `patient-${patient_id}-transactions`;
-        console.log(`🔌 Emitting transaction-updated event for patient ${patient_id}`);
-        console.log(`🔌 Room name: ${roomName}`);
-        console.log(`🔌 Clients in room:`, io.sockets.adapter.rooms.get(roomName)?.size || 0);
         io.to(roomName).emit('transaction-updated', {
           type: 'added',
           transaction: completeTransaction,
           timestamp: new Date().toISOString(),
           roomName: roomName
         });
-        console.log(`🔌 Event emitted to room: ${roomName}`);
       } else {
         console.log(`❌ Socket.IO not available for transaction-updated event`);
       }
@@ -390,16 +383,12 @@ exports.deleteTransaction = async (req, res) => {
     const io = req.app.get('io');
     if (io) {
       const roomName = `patient-${patient_id}-transactions`;
-      console.log(`🔌 Emitting transaction-updated event for patient ${patient_id} (deletion)`);
-      console.log(`🔌 Room name: ${roomName}`);
-      console.log(`🔌 Clients in room:`, io.sockets.adapter.rooms.get(roomName)?.size || 0);
       io.to(roomName).emit('transaction-updated', {
         type: 'deleted',
         transaction_id: id,
         timestamp: new Date().toISOString(),
         roomName: roomName
       });
-      console.log(`🔌 Event emitted to room: ${roomName}`);
     } else {
       console.log(`❌ Socket.IO not available for transaction-updated event`);
     }
@@ -509,12 +498,6 @@ exports.fulfillTransactionItem = async (req, res) => {
         delete productData.attributes_json;
         
         // Emit inventory update for the inventory page
-        console.log('🔌 Emitting inventory-updated event for fulfillment:', {
-          type: 'stock_updated',
-          item_id: productData.id,
-          new_stock: productData.stock,
-          reason: 'item_fulfilled'
-        });
         emitSocketEvent(req, 'inventory-updated', {
           type: 'stock_updated',
           item: productData,
@@ -535,7 +518,6 @@ exports.fulfillTransactionItem = async (req, res) => {
           if (transactionData.length > 0) {
             const patient_id = transactionData[0].patient_id;
             const roomName = `patient-${patient_id}-transactions`;
-            console.log(`🔌 Emitting transaction-updated event for patient ${patient_id} (fulfillment)`);
             io.to(roomName).emit('transaction-updated', {
               type: 'item_fulfilled',
               transaction_id: item.transaction_id,
@@ -654,13 +636,6 @@ exports.refundTransactionItem = async (req, res) => {
         delete productData.attributes_json;
         
         // Emit inventory update for the inventory page
-        console.log('🔌 Emitting inventory-updated event for refund:', {
-          type: 'stock_updated',
-          item_id: productData.id,
-          new_stock: productData.stock,
-          reason: 'item_refunded',
-          refunded_quantity: refunded_quantity
-        });
         emitSocketEvent(req, 'inventory-updated', {
           type: 'stock_updated',
           item: productData,
@@ -682,7 +657,6 @@ exports.refundTransactionItem = async (req, res) => {
           if (transactionData.length > 0) {
             const patient_id = transactionData[0].patient_id;
             const roomName = `patient-${patient_id}-transactions`;
-            console.log(`🔌 Emitting transaction-updated event for patient ${patient_id} (refund)`);
             io.to(roomName).emit('transaction-updated', {
               type: 'item_refunded',
               transaction_id: item.transaction_id,

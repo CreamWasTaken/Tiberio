@@ -518,9 +518,6 @@ function Orders() {
         
         // Listen for order updates
         const handleOrderUpdate = (data) => {
-          console.log('🔌 Real-time order update received:', data);
-          console.log('🔌 Current filters:', filters);
-          console.log('🔌 Current pagination:', pagination);
           
           if (data.type === 'added') {
             // Check if the new order matches current filters
@@ -561,9 +558,6 @@ function Orders() {
             // Always refresh stats when order is updated
             fetchOrderStats();
           } else if (data.type === 'deleted') {
-            console.log('🔌 Processing delete event for order ID:', data.orderId, typeof data.orderId);
-            console.log('🔌 Current orders before deletion:', orders.length);
-            console.log('🔌 Current order IDs:', orders.map(o => ({ id: o.id, type: typeof o.id })));
             // Remove deleted order from the list
             setOrders(prevOrders => {
               const filtered = prevOrders.filter(order => {
@@ -571,12 +565,9 @@ function Orders() {
                 const orderIdInt = parseInt(order.id);
                 const deleteOrderIdInt = parseInt(data.orderId);
                 const matches = orderIdInt !== deleteOrderIdInt;
-                if (!matches) {
-                  console.log('🔌 Found matching order to delete:', orderIdInt, 'vs', deleteOrderIdInt);
-                }
+                // Order matches the one to delete, will be filtered out
                 return matches;
               });
-              console.log('🔌 Orders after deletion:', filtered.length);
               return filtered;
             });
             // Always refresh stats when order is deleted
@@ -589,12 +580,10 @@ function Orders() {
         // Handle connection events
         socket.on('connect', () => {
           setSocketConnected(true);
-          console.log('🔌 Socket.IO connected');
         });
 
         socket.on('disconnect', () => {
           setSocketConnected(false);
-          console.log('🔌 Socket.IO disconnected');
         });
 
         return () => {

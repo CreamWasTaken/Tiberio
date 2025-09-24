@@ -12,7 +12,6 @@ class SocketService {
       return this.socket;
     }
 
-    console.log('🔌 Initializing Socket.IO connection...');
     this.socket = io(import.meta.env.VITE_SOCKET_URL, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
@@ -23,7 +22,6 @@ class SocketService {
     });
 
     this.socket.on('connect', () => {
-      console.log('🔌 Connected to Socket.IO server');
       this.isConnected = true;
       
       // Emit a test event to verify connection
@@ -34,7 +32,6 @@ class SocketService {
     });
 
     this.socket.on('disconnect', () => {
-      console.log('🔌 Disconnected from Socket.IO server');
       this.isConnected = false;
     });
 
@@ -57,11 +54,8 @@ class SocketService {
   async joinRoom(room) {
     try {
       const socket = await this.waitForConnection();
-      console.log(`🔌 Joining Socket.IO room: ${room}`);
       socket.emit('join-room', room);
       this.joinedRooms.add(room);
-      console.log(`🔌 Room join request sent for: ${room}`);
-      console.log(`🔌 Currently in rooms:`, Array.from(this.joinedRooms));
     } catch (error) {
       console.error(`🔌 Failed to join room ${room}:`, error);
     }
@@ -75,8 +69,6 @@ class SocketService {
     if (this.socket && this.isConnected) {
       this.socket.emit('leave-room', room);
       this.joinedRooms.delete(room);
-      console.log(`🔌 Left room: ${room}`);
-      console.log(`🔌 Currently in rooms:`, Array.from(this.joinedRooms));
     }
   }
 
@@ -86,7 +78,6 @@ class SocketService {
     }
     
     if (this.socket) {
-      console.log(`🔌 Registering listener for event: ${event}`);
       this.socket.on(event, callback);
     } else {
       console.log(`❌ Cannot register listener for ${event}: socket not available`);
@@ -156,7 +147,6 @@ class SocketService {
     patientRooms.forEach(room => {
       this.leaveRoom(room);
     });
-    console.log(`🔌 Left all patient rooms:`, patientRooms);
   }
 
   // Get connection status

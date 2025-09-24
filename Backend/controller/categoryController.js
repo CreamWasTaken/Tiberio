@@ -5,10 +5,9 @@ const db = require("../config/db");
 const emitSocketEvent = (req, event, data) => {
   const io = req.app.get('io');
   if (io) {
-    console.log(`🔌 Emitting Socket.IO event: ${event}`, data);
-    console.log(`🔌 Emitting to room: ${event}`);
+  
     io.to(event).emit(event, data);
-    console.log(`🔌 Event emitted successfully`);
+   
   } else {
     console.log(`❌ Socket.IO not available for event: ${event}`);
   }
@@ -154,54 +153,108 @@ exports.addItem = async (req, res) => {
         index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
         steps, addFr, addTo, modality, set, bc,
         volume, set_cost,
-        stock, low_stock_threshold
+        stock, low_stock_threshold,
+        sphere, cylinder, // Single Vision specific fields
+        addToInventory // Check if adding to inventory
     } = req.body;
     
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
         
-        // Create attributes object with all the additional fields (excluding stock and low_stock_threshold)
-        const attributes = {
+        // Create attributes object for price_list (without inventory-specific fields)
+        const priceListAttributes = {
             index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
             steps, addFr, addTo, modality, set, bc,
             volume, set_cost, service
         };
         
-        const [result] = await conn.query(
-            "INSERT INTO products (subcategory_id, supplier_id, code, description, pc_price, pc_cost, attributes, stock, low_stock_threshold) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 
-            [subcategory_id, supplier_id, code, description, pc_price, pc_cost, JSON.stringify(attributes), stock ?? 0, low_stock_threshold ?? 5]
+        // Insert into price_list table (supplier_id is required)
+        if (!supplier_id) {
+            await conn.rollback();
+            return res.status(400).json({
+                message: "Supplier is required for price list items",
+                error: "MISSING_SUPPLIER"
+            });
+        }
+        
+        // Validate that supplier exists
+        const [supplierCheck] = await conn.query(
+            "SELECT id FROM suppliers WHERE id = ? AND is_deleted = 0",
+            [supplier_id]
         );
+        
+        if (supplierCheck.length === 0) {
+            await conn.rollback();
+            return res.status(400).json({
+                message: "Invalid supplier selected",
+                error: "INVALID_SUPPLIER"
+            });
+        }
+        
+        const [result] = await conn.query(
+            "INSERT INTO price_list (supplier_id, subcategory_id, attributes, description, pc_price, pc_cost, code) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+            [supplier_id, subcategory_id, JSON.stringify(priceListAttributes), description, pc_price, pc_cost, code]
+        );
+        
+        const priceListId = result.insertId;
+        
+        // If adding to inventory, insert into products table
+        if (addToInventory) {
+            // Create attributes object for products table (inventory-specific fields)
+            const productAttributes = {
+                sphere, cylinder, diameter // Single Vision specific fields for products
+            };
+            
+            const [productResult] = await conn.query(
+                "INSERT INTO products (price_list_id, stock, low_stock_threshold, attributes) VALUES (?, ?, ?, ?)",
+                [priceListId, stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes)]
+            );
+            
+            // Inventory update will be emitted after we fetch the complete item data
+        }
+        
         await conn.commit();
         
-        // Fetch the newly created item data for socket emission
+        // Fetch the newly created item data for socket emission (same structure as getInventoryItems)
         const [newItemResult] = await conn.query(`
-            SELECT p.*, s.name as supplier_name, 
-                   JSON_UNQUOTE(p.attributes) as attributes_json
-            FROM products p
-            LEFT JOIN suppliers s ON p.supplier_id = s.id
-            WHERE p.id = ? AND p.is_deleted = 0
-        `, [result.insertId]);
+            SELECT pl.*, s.name as supplier_name, pc.name as category_name, ps.name as subcategory_name,
+                   p.stock, p.low_stock_threshold, p.attributes as product_attributes,
+                   JSON_UNQUOTE(pl.attributes) as attributes_json
+            FROM price_list pl
+            LEFT JOIN suppliers s ON pl.supplier_id = s.id
+            LEFT JOIN price_subcategories ps ON pl.subcategory_id = ps.id
+            LEFT JOIN price_categories pc ON ps.category_id = pc.id
+            LEFT JOIN products p ON pl.id = p.price_list_id AND p.is_deleted = 0
+            WHERE pl.id = ? AND pl.is_deleted = 0
+        `, [priceListId]);
         
         if (newItemResult.length > 0) {
-            const newItem = newItemResult[0];
-            // Parse attributes JSON
-            if (newItem.attributes_json) {
-                newItem.attributes = JSON.parse(newItem.attributes_json);
-            }
-            // Add stock and low_stock_threshold to attributes for frontend compatibility
-            newItem.attributes = {
-                ...newItem.attributes,
-                stock: newItem.stock,
-                low_stock_threshold: newItem.low_stock_threshold
+            const item = newItemResult[0];
+            // Parse attributes JSON (same logic as getInventoryItems)
+            const attributes = item.attributes_json ? JSON.parse(item.attributes_json) : {};
+            const productAttributes = item.product_attributes ? JSON.parse(item.product_attributes) : {};
+            
+            const newItem = {
+                ...item,
+                attributes: {
+                    ...attributes,
+                    // Include product attributes (sphere, cylinder, diameter) in the main attributes
+                    ...productAttributes,
+                    stock: item.stock || 0,
+                    low_stock_threshold: item.low_stock_threshold || 5
+                }
             };
+            
+            // Clean up the temporary fields
             delete newItem.attributes_json;
+            delete newItem.product_attributes;
             
             // Emit Socket.IO events with complete item data
             emitSocketEvent(req, 'item-updated', { type: 'added', item: newItem });
             
-            // If item has a supplier (meaning it's added to inventory), emit inventory event
-            if (supplier_id) {
+            // Also emit inventory update if this item was added to inventory
+            if (addToInventory) {
                 emitSocketEvent(req, 'inventory-updated', { type: 'added', item: newItem });
             }
         }
@@ -209,6 +262,8 @@ exports.addItem = async (req, res) => {
         res.status(201).json({message: "Item added successfully", item: result});
     } catch (error) {
         await conn.rollback();
+        console.error('Error adding item:', error);
+        console.error('Request body:', req.body);
         res.status(500).json({message: "Failed to add item", error: error.message});
     } finally {
         if (conn) {
@@ -222,17 +277,27 @@ exports.getItems = async (req, res) => {
     let conn;
     try {
         conn = await db.getConnection();
-        const [result] = await conn.query("SELECT * FROM products WHERE subcategory_id = ? AND is_deleted = 0", [subcategoryId]);
+        const [result] = await conn.query(`
+            SELECT pl.*, s.name as supplier_name, p.stock, p.low_stock_threshold, p.attributes as product_attributes
+            FROM price_list pl
+            LEFT JOIN suppliers s ON pl.supplier_id = s.id
+            LEFT JOIN products p ON pl.id = p.price_list_id AND p.is_deleted = 0
+            WHERE pl.subcategory_id = ? AND pl.is_deleted = 0
+        `, [subcategoryId]);
         
-        // Parse attributes JSON for each item and include stock from actual columns
+        // Parse attributes JSON for each item
         const items = result.map(item => {
             const attributes = item.attributes ? JSON.parse(item.attributes) : {};
+            const productAttributes = item.product_attributes ? JSON.parse(item.product_attributes) : {};
+            
             return {
                 ...item,
                 attributes: {
                     ...attributes,
-                    stock: item.stock, // Use the actual stock column
-                    low_stock_threshold: item.low_stock_threshold // Use the actual low_stock_threshold column
+                    // Include product attributes (sphere, cylinder, diameter) in the main attributes
+                    ...productAttributes,
+                    stock: item.stock || 0,
+                    low_stock_threshold: item.low_stock_threshold || 5
                 }
             };
         });
@@ -253,22 +318,28 @@ exports.getInventoryItems = async (req, res) => {
     try {
         conn = await db.getConnection();
         const [result] = await conn.query(
-            `SELECT p.*, s.name AS supplier_name, pc.name AS category_name, ps.name AS subcategory_name
-             FROM products p
-             LEFT JOIN suppliers s ON p.supplier_id = s.id
-             LEFT JOIN price_subcategories ps ON p.subcategory_id = ps.id
+            `SELECT pl.*, s.name AS supplier_name, pc.name AS category_name, ps.name AS subcategory_name,
+                    p.stock, p.low_stock_threshold, p.attributes as product_attributes
+             FROM price_list pl
+             LEFT JOIN suppliers s ON pl.supplier_id = s.id
+             LEFT JOIN price_subcategories ps ON pl.subcategory_id = ps.id
              LEFT JOIN price_categories pc ON ps.category_id = pc.id
-             WHERE p.is_deleted = 0 AND p.supplier_id IS NOT NULL`
+             INNER JOIN products p ON pl.id = p.price_list_id AND p.is_deleted = 0
+             WHERE pl.is_deleted = 0 AND pl.supplier_id IS NOT NULL`
         );
 
         const items = result.map(item => {
             const attributes = item.attributes ? JSON.parse(item.attributes) : {};
+            const productAttributes = item.product_attributes ? JSON.parse(item.product_attributes) : {};
+            
             return {
                 ...item,
                 attributes: {
                     ...attributes,
-                    stock: item.stock, // Use the actual stock column
-                    low_stock_threshold: item.low_stock_threshold // Use the actual low_stock_threshold column
+                    // Include product attributes (sphere, cylinder, diameter) in the main attributes
+                    ...productAttributes,
+                    stock: item.stock || 0,
+                    low_stock_threshold: item.low_stock_threshold || 5
                 }
             };
         });
@@ -290,93 +361,156 @@ exports.updateItem = async (req, res) => {
         index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
         steps, addFr, addTo, modality, set, bc,
         volume, set_cost,
-        stock, low_stock_threshold
+        stock, low_stock_threshold,
+        sphere, cylinder, // Single Vision specific fields
+        addToInventory, // Check if adding to inventory
+        inventoryOnlyUpdate // Flag to indicate this is an inventory-only update
     } = req.body;
     
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
         
-        // Check if this is a frame category (frames can have duplicate descriptions)
-        const [categoryResult] = await conn.query(
-            `SELECT pc.name as category_name 
-             FROM price_subcategories ps 
-             JOIN price_categories pc ON ps.category_id = pc.id 
-             WHERE ps.id = ?`, 
-            [subcategory_id]
-        );
-        
-        const categoryName = categoryResult[0]?.category_name?.toLowerCase() || '';
-        const isFrameCategory = categoryName.includes('frame');
-        
-        // If not a frame category, check for duplicate descriptions (excluding current item)
-        if (!isFrameCategory) {
-            const [duplicateResult] = await conn.query(
-                "SELECT id FROM products WHERE description = ? AND id != ? AND is_deleted = 0",
-                [description, id]
+        // If this is an inventory-only update, only update supplier_id in price_list table
+        if (inventoryOnlyUpdate) {
+            console.log('🔧 Performing inventory-only update for item:', id);
+            console.log('🔧 Price list attributes will NOT be modified');
+            
+            // For inventory-only updates, we still need to update supplier_id in price_list table
+            // This is the ONLY field we update in price_list table for inventory-only updates
+            if (supplier_id !== undefined) {
+                await conn.query(
+                    "UPDATE price_list SET supplier_id = ? WHERE id = ?", 
+                    [supplier_id, id]
+                );
+                console.log('🔧 Updated ONLY supplier_id in price_list table:', supplier_id);
+                console.log('🔧 All other price_list fields (description, attributes, etc.) remain unchanged');
+            }
+        } else {
+            // Check if this is a frame category (frames can have duplicate descriptions)
+            const [categoryResult] = await conn.query(
+                `SELECT pc.name as category_name 
+                 FROM price_subcategories ps 
+                 JOIN price_categories pc ON ps.category_id = pc.id 
+                 WHERE ps.id = ?`, 
+                [subcategory_id]
             );
             
-            if (duplicateResult.length > 0) {
-                await conn.rollback();
-                return res.status(400).json({
-                    message: "An item with this description already exists. Please use a different description.",
-                    error: "DUPLICATE_DESCRIPTION"
-                });
+            const categoryName = categoryResult[0]?.category_name?.toLowerCase() || '';
+            const isFrameCategory = categoryName.includes('frame');
+            
+            // If not a frame category, check for duplicate descriptions (excluding current item)
+            if (!isFrameCategory) {
+                const [duplicateResult] = await conn.query(
+                    "SELECT id FROM price_list WHERE description = ? AND id != ? AND is_deleted = 0",
+                    [description, id]
+                );
+                
+                if (duplicateResult.length > 0) {
+                    await conn.rollback();
+                    return res.status(400).json({
+                        message: "An item with this description already exists. Please use a different description.",
+                        error: "DUPLICATE_DESCRIPTION"
+                    });
+                }
             }
+            
+            // Create attributes object for price_list (without inventory-specific fields)
+            const priceListAttributes = {
+                index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
+                steps, addFr, addTo, modality, set, bc,
+                volume, set_cost, service
+            };
+            
+            // Update price_list table
+            const [result] = await conn.query(
+                "UPDATE price_list SET description = ?, code = ?, pc_price = ?, pc_cost = ?, subcategory_id = ?, supplier_id = ?, attributes = ? WHERE id = ?", 
+                [description, code, pc_price, pc_cost, subcategory_id, supplier_id, JSON.stringify(priceListAttributes), id]
+            );
         }
         
-        // Create attributes object with all the additional fields (excluding stock and low_stock_threshold)
-        const attributes = {
-            index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
-            steps, addFr, addTo, modality, set, bc,
-            volume, set_cost, service
-        };
+        // Handle products table update if adding to inventory
+        if (addToInventory) {
+            // Check if product already exists
+            const [existingProduct] = await conn.query(
+                "SELECT id FROM products WHERE price_list_id = ? AND is_deleted = 0",
+                [id]
+            );
+            
+            // Create attributes object for products table (inventory-specific fields)
+            const productAttributes = {
+                sphere, cylinder, diameter // Single Vision specific fields for products
+            };
+            
+            if (existingProduct.length > 0) {
+                // Update existing product
+                await conn.query(
+                    "UPDATE products SET stock = ?, low_stock_threshold = ?, attributes = ? WHERE price_list_id = ? AND is_deleted = 0",
+                    [stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes), id]
+                );
+            } else {
+                // Create new product entry
+                await conn.query(
+                    "INSERT INTO products (price_list_id, stock, low_stock_threshold, attributes) VALUES (?, ?, ?, ?)",
+                    [id, stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes)]
+                );
+            }
+            
+            // Inventory update will be emitted after we fetch the complete item data
+        } else {
+            // If not adding to inventory, soft delete any existing product entry
+            await conn.query(
+                "UPDATE products SET is_deleted = 1 WHERE price_list_id = ?",
+                [id]
+            );
+        }
         
-        const [result] = await conn.query(
-            "UPDATE products SET description = ?, code = ?, pc_price = ?, pc_cost = ?, subcategory_id = ?, supplier_id = ?, attributes = ?, stock = ?, low_stock_threshold = ? WHERE id = ?", 
-            [description, code, pc_price, pc_cost, subcategory_id, supplier_id, JSON.stringify(attributes), stock ?? 0, low_stock_threshold ?? 5, id]
-        );
         await conn.commit();
         
-        // Fetch the updated item data for socket emission
+        // Fetch the updated item data for socket emission (same structure as getInventoryItems)
         const [updatedItemResult] = await conn.query(`
-            SELECT p.*, s.name as supplier_name, 
-                   JSON_UNQUOTE(p.attributes) as attributes_json
-            FROM products p
-            LEFT JOIN suppliers s ON p.supplier_id = s.id
-            WHERE p.id = ? AND p.is_deleted = 0
+            SELECT pl.*, s.name as supplier_name, pc.name as category_name, ps.name as subcategory_name,
+                   p.stock, p.low_stock_threshold, p.attributes as product_attributes,
+                   JSON_UNQUOTE(pl.attributes) as attributes_json
+            FROM price_list pl
+            LEFT JOIN suppliers s ON pl.supplier_id = s.id
+            LEFT JOIN price_subcategories ps ON pl.subcategory_id = ps.id
+            LEFT JOIN price_categories pc ON ps.category_id = pc.id
+            LEFT JOIN products p ON pl.id = p.price_list_id AND p.is_deleted = 0
+            WHERE pl.id = ? AND pl.is_deleted = 0
         `, [id]);
         
         if (updatedItemResult.length > 0) {
-            const updatedItem = updatedItemResult[0];
-            // Parse attributes JSON
-            if (updatedItem.attributes_json) {
-                updatedItem.attributes = JSON.parse(updatedItem.attributes_json);
-            }
-            // Add stock and low_stock_threshold to attributes for frontend compatibility
-            updatedItem.attributes = {
-                ...updatedItem.attributes,
-                stock: updatedItem.stock,
-                low_stock_threshold: updatedItem.low_stock_threshold
+            const item = updatedItemResult[0];
+            // Parse attributes JSON (same logic as getInventoryItems)
+            const attributes = item.attributes_json ? JSON.parse(item.attributes_json) : {};
+            const productAttributes = item.product_attributes ? JSON.parse(item.product_attributes) : {};
+            
+            const updatedItem = {
+                ...item,
+                attributes: {
+                    ...attributes,
+                    // Include product attributes (sphere, cylinder, diameter) in the main attributes
+                    ...productAttributes,
+                    stock: item.stock || 0,
+                    low_stock_threshold: item.low_stock_threshold || 5
+                }
             };
+            
+            // Clean up the temporary fields
             delete updatedItem.attributes_json;
+            delete updatedItem.product_attributes;
             
             // Emit Socket.IO events with complete item data
             emitSocketEvent(req, 'item-updated', { type: 'updated', item: updatedItem });
             
-            // Always emit inventory event for updates, with appropriate type
-            if (supplier_id) {
-                // Item is being added/kept in inventory
-                console.log(`🔌 Emitting inventory-updated event: type=updated, item=${updatedItem.id}, supplier_id=${supplier_id}`);
+            // Also emit inventory update if this item is in inventory
+            if (addToInventory) {
                 emitSocketEvent(req, 'inventory-updated', { type: 'updated', item: updatedItem });
-            } else {
-                // Item is being removed from inventory (supplier_id set to null)
-                console.log(`🔌 Emitting inventory-updated event: type=deleted, item=${updatedItem.id}, supplier_id=${supplier_id}`);
-                emitSocketEvent(req, 'inventory-updated', { type: 'deleted', item: updatedItem });
             }
         }
         
-        res.status(200).json({message: "Item updated successfully", item: result});
+        res.status(200).json({message: "Item updated successfully"});
     } catch (error) {
         await conn.rollback();
         res.status(500).json({message: "Failed to update item", error: error.message});
@@ -395,14 +529,21 @@ exports.deleteItem = async (req, res) => {
         
         // Fetch the item data before deletion for socket emission
         const [itemToDelete] = await conn.query(`
-            SELECT p.*, s.name as supplier_name, 
-                   JSON_UNQUOTE(p.attributes) as attributes_json
-            FROM products p
-            LEFT JOIN suppliers s ON p.supplier_id = s.id
-            WHERE p.id = ? AND p.is_deleted = 0
+            SELECT pl.*, s.name as supplier_name,
+                   JSON_UNQUOTE(pl.attributes) as attributes_json,
+                   p.stock, p.low_stock_threshold, p.attributes as product_attributes
+            FROM price_list pl
+            LEFT JOIN suppliers s ON pl.supplier_id = s.id
+            LEFT JOIN products p ON pl.id = p.price_list_id AND p.is_deleted = 0
+            WHERE pl.id = ? AND pl.is_deleted = 0
         `, [id]);
         
-        const [result] = await conn.query("UPDATE products SET is_deleted = 1 WHERE id = ?", [id]);
+        // Soft delete from price_list table
+        const [result] = await conn.query("UPDATE price_list SET is_deleted = 1 WHERE id = ?", [id]);
+        
+        // Also soft delete from products table if it exists
+        await conn.query("UPDATE products SET is_deleted = 1 WHERE price_list_id = ?", [id]);
+        
         await conn.commit();
         
         if (itemToDelete.length > 0) {
@@ -411,21 +552,20 @@ exports.deleteItem = async (req, res) => {
             if (deletedItem.attributes_json) {
                 deletedItem.attributes = JSON.parse(deletedItem.attributes_json);
             }
+            const productAttributes = deletedItem.product_attributes ? JSON.parse(deletedItem.product_attributes) : {};
+            
             // Add stock and low_stock_threshold to attributes for frontend compatibility
             deletedItem.attributes = {
                 ...deletedItem.attributes,
-                stock: deletedItem.stock,
-                low_stock_threshold: deletedItem.low_stock_threshold
+                ...productAttributes,
+                stock: deletedItem.stock || 0,
+                low_stock_threshold: deletedItem.low_stock_threshold || 5
             };
             delete deletedItem.attributes_json;
+            delete deletedItem.product_attributes;
             
             // Emit Socket.IO events with complete item data
             emitSocketEvent(req, 'item-updated', { type: 'deleted', item: deletedItem });
-            
-            // If item had a supplier (meaning it was in inventory), emit inventory event
-            if (deletedItem.supplier_id) {
-                emitSocketEvent(req, 'inventory-updated', { type: 'deleted', item: deletedItem });
-            }
         }
         
         res.status(200).json({message: "Item deleted successfully", item: result});

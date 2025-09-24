@@ -94,8 +94,6 @@ function Transactions() {
         
         // Listen for transaction updates
         const handleTransactionUpdate = (data) => {
-          console.log('🔌 Real-time transaction update received in Daily Sales:', data);
-          console.log('🔌 Event type:', data.type);
           
           if (data.type === 'added') {
             // Add new transaction to the list
@@ -109,27 +107,22 @@ function Transactions() {
             );
           } else if (data.type === 'deleted') {
             // Remove deleted transaction from the list
-            console.log('🔌 Removing deleted transaction:', data.transaction_id);
             setTransactions(prevTransactions => {
               const filtered = prevTransactions.filter(transaction => {
                 // Convert both to numbers for comparison to handle string/number mismatch
                 const transactionId = Number(transaction.id);
                 const deletedId = Number(data.transaction_id);
                 const shouldKeep = transactionId !== deletedId;
-                console.log(`🔌 Transaction ${transactionId} vs deleted ${deletedId}: ${shouldKeep ? 'keep' : 'remove'}`);
                 return shouldKeep;
               });
-              console.log(`🔌 Transactions before: ${prevTransactions.length}, after: ${filtered.length}`);
               return filtered;
             });
           } else if (data.type === 'item_fulfilled' || data.type === 'item_refunded') {
             // Refresh transactions to show updated status when items are fulfilled or refunded
-            console.log('🔌 Item fulfillment/refund detected, refreshing transactions...');
             const refreshTransactions = async () => {
               try {
                 const data = await getTransactions();
                 setTransactions(data || []);
-                console.log('🔌 Transactions refreshed after item status change');
               } catch (err) {
                 console.error('Failed to refresh transactions:', err);
               }

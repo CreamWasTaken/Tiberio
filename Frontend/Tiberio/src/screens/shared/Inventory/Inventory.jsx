@@ -22,10 +22,10 @@ function Inventory() {
     supplier: '',
     index: '',
     diameter: '',
-    sphFR: '',
-    sphTo: '',
-    cylFr: '',
-    cylTo: '',
+    sphere: '',
+    cylinder: '',
+    add: '',
+    axis: '',
     steps: '',
     modality: '',
     set: '',
@@ -40,21 +40,25 @@ function Inventory() {
   const [itemsPerPage] = useState(20);
   
   const abortRef = useRef(null);
+  
+  const fetchInventory = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getInventoryItems(abortRef.current?.signal);
+
+      setItems(data);
+    } catch (err) {
+      if (err.message !== 'Request cancelled') {
+        console.error('Failed to load inventory items:', err.message);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     abortRef.current = new AbortController();
-    const fetchInventory = async () => {
-      try {
-        setIsLoading(true);
-        const data = await getInventoryItems(abortRef.current.signal);
-        setItems(data);
-      } catch (err) {
-        if (err.message !== 'Request cancelled') {
-          console.error('Failed to load inventory items:', err.message);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    fetchInventory();
     const fetchSuppliersList = async () => {
       try {
         const s = await getSuppliers(abortRef.current.signal);
@@ -74,66 +78,75 @@ function Inventory() {
   useEffect(() => {
     const setupSocketIO = async () => {
       try {
-        console.log('🔌 Setting up Socket.IO for Inventory...');
-        console.log('🔌 Connection status:', socketService.getConnectionStatus());
+     
         
         // Wait for Socket.IO connection to be established
         const socket = await socketService.waitForConnection();
-        console.log('🔌 Socket.IO connection established for Inventory');
+   
         
         // Join inventory room
-        console.log('🔌 Joining inventory-updated room...');
+  
         socketService.joinRoom('inventory-updated');
-        console.log('🔌 Room join request sent');
+     
         
         // Listen for inventory updates
         const handleInventoryUpdate = (data) => {
-          console.log('🔌 Real-time inventory update received:', data);
+        
           
           if (data.type === 'added' && data.item) {
-            console.log('🔌 Processing ADD event for item:', data.item.id);
             setItems(prevItems => {
               // Add new item if not already present
               const exists = prevItems.some(item => item.id === data.item.id);
               if (exists) {
-                console.log('🔌 Item already exists, skipping add');
                 return prevItems;
               }
-              console.log('🔌 Adding new item to inventory');
+          
               return [...prevItems, data.item];
             });
           } else if (data.type === 'updated' && data.item) {
-            console.log('🔌 Processing UPDATE event for item:', data.item.id);
+        
             setItems(prevItems => {
               const updated = prevItems.map(item => item.id === data.item.id ? data.item : item);
-              console.log('🔌 Updated items count:', updated.length);
+            
               return updated;
             });
           } else if (data.type === 'deleted' && data.item) {
-            console.log('🔌 Processing DELETE event for item:', data.item.id);
+         
             setItems(prevItems => {
               const filtered = prevItems.filter(item => item.id !== data.item.id);
-              console.log('🔌 Filtered items count:', filtered.length);
               return filtered;
             });
           } else if (data.type === 'stock_updated' && data.item) {
-            console.log('🔌 Processing STOCK UPDATE event for item:', data.item.id, 'Reason:', data.reason);
-            console.log('🔌 Complete item data received:', data.item);
             setItems(prevItems => {
               const updated = prevItems.map(item => item.id === data.item.id ? data.item : item);
-              console.log('🔌 Stock updated for item:', data.item.id, 'New stock:', data.item.stock);
-              console.log('🔌 Updated items array length:', updated.length);
               return updated;
             });
-          } else if (data.type === 'test') {
-            console.log('🔌 Test event received:', data.message);
-          } else {
-            console.log('🔌 Unknown event type:', data.type);
+          }
+        };
+
+        // Listen for item updates (from price list updates)
+        const handleItemUpdate = (data) => {
+          console.log('🔌 Real-time item update received:', data);
+          
+          if (data.type === 'updated' && data.item) {
+            console.log('🔌 Processing ITEM UPDATE event for item:', data.item.id);
+            setItems(prevItems => {
+              const updated = prevItems.map(item => {
+                if (item.id === data.item.id) {
+                  console.log('🔌 Updating item with new data:', data.item);
+                  return data.item;
+                }
+                return item;
+              });
+              console.log('🔌 Item updated in inventory, count:', updated.length);
+              return updated;
+            });
           }
         };
 
         socket.on('inventory-updated', handleInventoryUpdate);
-        console.log('🔌 Inventory update listener registered');
+        socket.on('item-updated', handleItemUpdate);
+        console.log('🔌 Inventory update listeners registered');
         
         // Add test event listener for debugging
         socket.on('test-connection', (data) => {
@@ -143,6 +156,7 @@ function Inventory() {
         return () => {
           console.log('🔌 Cleaning up Socket.IO for Inventory...');
           socket.off('inventory-updated', handleInventoryUpdate);
+          socket.off('item-updated', handleItemUpdate);
           socket.off('test-connection');
           socketService.leaveRoom('inventory-updated');
         };
@@ -176,10 +190,11 @@ function Inventory() {
   const confirmDelete = async () => {
     if (deleteItem) {
       try {
-        // Update the item to set supplier_id to null
+        // Update the item to set supplier_id to null (inventory-only update)
         await updateItem(deleteItem.id, {
-          ...deleteItem,
-          supplier_id: null
+          supplier_id: null,
+          addToInventory: false,
+          inventoryOnlyUpdate: true
         });
         
         // Socket.IO will automatically update the UI in real-time
@@ -200,10 +215,10 @@ function Inventory() {
         (item.supplier_name || '').toLowerCase().includes(filters.supplier.toLowerCase()) &&
         (item.attributes?.index || '').toString().toLowerCase().includes(filters.index.toLowerCase()) &&
         (item.attributes?.diameter || '').toString().toLowerCase().includes(filters.diameter.toLowerCase()) &&
-        (item.attributes?.sphFR || '').toString().toLowerCase().includes(filters.sphFR.toLowerCase()) &&
-        (item.attributes?.sphTo || '').toString().toLowerCase().includes(filters.sphTo.toLowerCase()) &&
-        (item.attributes?.cylFr || '').toString().toLowerCase().includes(filters.cylFr.toLowerCase()) &&
-        (item.attributes?.cylTo || '').toString().toLowerCase().includes(filters.cylTo.toLowerCase()) &&
+        (item.attributes?.sphere || '').toString().toLowerCase().includes(filters.sphere.toLowerCase()) &&
+        (item.attributes?.cylinder || '').toString().toLowerCase().includes(filters.cylinder.toLowerCase()) &&
+        (item.attributes?.add || '').toString().toLowerCase().includes(filters.add.toLowerCase()) &&
+        (item.attributes?.axis || '').toString().toLowerCase().includes(filters.axis.toLowerCase()) &&
         (item.attributes?.steps || '').toString().toLowerCase().includes(filters.steps.toLowerCase()) &&
         (item.attributes?.modality || '').toLowerCase().includes(filters.modality.toLowerCase()) &&
         (item.attributes?.set || '').toString().toLowerCase().includes(filters.set.toLowerCase()) &&
@@ -244,10 +259,10 @@ function Inventory() {
       supplier: '',
       index: '',
       diameter: '',
-      sphFR: '',
-      sphTo: '',
-      cylFr: '',
-      cylTo: '',
+      sphere: '',
+      cylinder: '',
+      add: '',
+      axis: '',
       steps: '',
       modality: '',
       set: '',
@@ -291,8 +306,19 @@ function Inventory() {
                 <div className="ml-3 flex items-center">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
                   <span className="text-xs text-green-400">Live Updates</span>
-               
                 </div>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={fetchInventory}
+                  className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex items-center space-x-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Refresh</span>
+                </button>
               </div>
 
         
@@ -377,30 +403,30 @@ function Inventory() {
                         />
                         <input
                           type="text"
-                          placeholder="sphFR..."
-                          value={filters.sphFR}
-                          onChange={(e) => handleFilterChange('sphFR', e.target.value)}
+                          placeholder="sphere..."
+                          value={filters.sphere}
+                          onChange={(e) => handleFilterChange('sphere', e.target.value)}
                           className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                         <input
                           type="text"
-                          placeholder="sphTo..."
-                          value={filters.sphTo}
-                          onChange={(e) => handleFilterChange('sphTo', e.target.value)}
+                          placeholder="cylinder..."
+                          value={filters.cylinder}
+                          onChange={(e) => handleFilterChange('cylinder', e.target.value)}
                           className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                         <input
                           type="text"
-                          placeholder="cylFr..."
-                          value={filters.cylFr}
-                          onChange={(e) => handleFilterChange('cylFr', e.target.value)}
+                          placeholder="add..."
+                          value={filters.add}
+                          onChange={(e) => handleFilterChange('add', e.target.value)}
                           className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                         <input
                           type="text"
-                          placeholder="cylTo..."
-                          value={filters.cylTo}
-                          onChange={(e) => handleFilterChange('cylTo', e.target.value)}
+                          placeholder="axis..."
+                          value={filters.axis}
+                          onChange={(e) => handleFilterChange('axis', e.target.value)}
                           className="px-2 py-1 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                         <input
@@ -482,10 +508,10 @@ function Inventory() {
                                 <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-24">Supplier</th>
                                 <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Index</th>
                                 <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Diameter</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">SphFR</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">SphTo</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">CylFr</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">CylTo</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Sphere</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Cylinder</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Add</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Axis</th>
                                 <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Steps</th>
                                 <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">Modality</th>
                                 <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Set</th>
@@ -506,10 +532,10 @@ function Inventory() {
                                   <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.supplier_name || '-'}</td>
                                   <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.index || '-'}</td>
                                   <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.diameter || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.sphFR || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.sphTo || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.cylFr || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.cylTo || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.sphere || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.cylinder || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.add || '-'}</td>
+                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.axis || '-'}</td>
                                   <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.steps || '-'}</td>
                                   <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.modality || '-'}</td>
                                   <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.set || '-'}</td>
@@ -675,23 +701,34 @@ function Inventory() {
                       console.log('🔌 Starting item update for ID:', editingItem.id);
                       console.log('🔌 Socket connection status:', socketService.getConnectionStatus());
                       
-                      // Save supplier_id directly; stock and threshold in attributes
+                      // Prepare the payload for the backend (inventory-only update)
+                      // NOTE: This payload ONLY contains inventory-specific fields
+                      // It does NOT include any price_list fields like description, attributes, etc.
                       const payload = {
-                        ...editingItem,
-                        supplier_id: editForm.supplier_id || null,
-                        ...editingItem.attributes,
-                        stock: editForm.stock,
-                        low_stock_threshold: editForm.low_stock_threshold
+                        supplier_id: editForm.supplier_id || null, // Updates price_list.supplier_id only
+                        stock: editForm.stock, // Updates products.stock
+                        low_stock_threshold: editForm.low_stock_threshold, // Updates products.low_stock_threshold
+                        addToInventory: true, // Ensure it stays in inventory
+                        inventoryOnlyUpdate: true, // Flag to indicate this is inventory-only
+                        // Include lens specifications from attributes (updates products.attributes)
+                        sphere: editingItem.attributes?.sphere || '',
+                        cylinder: editingItem.attributes?.cylinder || '',
+                        diameter: editingItem.attributes?.diameter || ''
                       };
                       
                       console.log('🔌 Sending update payload:', payload);
                       const result = await updateItem(editingItem.id, payload);
                       console.log('🔌 Update API response:', result);
                       
+                      // Always close the modal after update attempt
                       setEditingItem(null);
-                      console.log('🔌 Modal closed, socket should update automatically...');
+                      console.log('🔌 Modal closed, socket will handle real-time update');
+                      
                     } catch (e) {
                       console.error('Failed to update item', e);
+                      // Still close the modal even if there's an error
+                      setEditingItem(null);
+                      alert('Failed to update item. Please try again.');
                     }
                   }}
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200"
