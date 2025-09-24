@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../components/Sidebar';
 import { getCategories } from '../../../services/category';
 import { getSubcategories, addSubcategory, updateSubcategory, deleteSubcategory } from '../../../services/subcategory';
-import { getItems, addItem, updateItem, deleteItem } from '../../../services/item';
+import { getItems, addItem, updateItem, deleteItem, bulkAddProducts } from '../../../services/item';
 import { getSuppliers } from '../../../services/supplier';
 import socketService from '../../../services/socket';
+import { AddProductsModal } from './components';
 
 function Pricelist() {
   // Custom scrollbar styles
@@ -53,7 +54,8 @@ function Pricelist() {
   const [selectedSubcategory, setSelectedSubcategory] = useState(null);
   const [isSubcategoryModalOpen, setIsSubcategoryModalOpen] = useState(false);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
-  const [addToInventory, setAddToInventory] = useState(false);
+  const [isAddProductsModalOpen, setIsAddProductsModalOpen] = useState(false);
+  const [selectedPricelistItem, setSelectedPricelistItem] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
   const [suppliersLoading, setSuppliersLoading] = useState(false);
   const [subcategoryFormData, setSubcategoryFormData] = useState({
@@ -122,11 +124,6 @@ function Pricelist() {
       setCategories(categoriesCacheRef.current);
       setLoading(false);
       setError(null);
-      
-      // Set active tab if not already set
-      if (!activeTab && categoriesCacheRef.current.length > 0) {
-        setActiveTab(categoriesCacheRef.current[0].id.toString());
-      }
       return;
     }
 
@@ -140,13 +137,6 @@ function Pricelist() {
       categoriesFetchedRef.current = true;
       setCategories(fetchedCategories);
       setRetryCount(0);
-      
-      // Set active tab only if it's not already set or if the current active tab doesn't exist
-      if (fetchedCategories.length > 0) {
-        if (!activeTab || !fetchedCategories.find(cat => cat.id.toString() === activeTab)) {
-          setActiveTab(fetchedCategories[0].id.toString());
-        }
-      }
     } catch (err) {
       if (err.name !== 'AbortError' && err.message !== 'Request cancelled') {
         setError(err.message);
@@ -164,7 +154,7 @@ function Pricelist() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, retryCount]);
+  }, [retryCount]);
 
   // Fetch categories only once on component mount
   useEffect(() => {
@@ -177,11 +167,6 @@ function Pricelist() {
       // Use cached data
       setCategories(categoriesCacheRef.current);
       setLoading(false);
-      
-      // Set active tab if not already set
-      if (!activeTab && categoriesCacheRef.current.length > 0) {
-        setActiveTab(categoriesCacheRef.current[0].id.toString());
-      }
     }
 
     return () => {
@@ -192,7 +177,7 @@ function Pricelist() {
         clearTimeout(retryTimeoutRef.current);
       }
     };
-  }, []); // Empty dependency array - only run once on mount
+  }, [fetchCategories]); // Include fetchCategories in dependencies
 
   // Socket.IO real-time updates for items
   useEffect(() => {
@@ -287,7 +272,7 @@ function Pricelist() {
   // Memoized function to get current category name
   const getCurrentCategoryName = useMemo(() => {
     const category = categories.find(cat => cat.id.toString() === activeTab);
-    return category ? category.name : '';
+    return category ? category.name : 'Select a category';
   }, [categories, activeTab]);
 
 
@@ -449,16 +434,9 @@ function Pricelist() {
         return;
       }
       
-      // Require stock and threshold if adding to inventory
-      if (addToInventory && (itemFormData.stock === '' || itemFormData.low_stock_threshold === '')) {
-        alert('Please provide Stock and Low stock threshold to add this item to inventory.');
-        return;
-      }
-      
-      // Prepare form data with addToInventory flag
+      // Prepare form data
       const formData = {
-        ...itemFormData,
-        addToInventory: addToInventory
+        ...itemFormData
       };
       
       if (editingItem) {
@@ -468,7 +446,6 @@ function Pricelist() {
       }
       setIsItemModalOpen(false);
       setEditingItem(null);
-      setAddToInventory(false);
       setItemFormData({ 
         description: '', 
         code: '', 
@@ -494,6 +471,49 @@ function Pricelist() {
   const handleSubcategorySelect = (subcategory) => {
     setSelectedSubcategory(subcategory);
     fetchItems(subcategory.id);
+  };
+
+  // Add products handlers
+  const handleAddProducts = async (item) => {
+    setSelectedPricelistItem(item);
+    setIsAddProductsModalOpen(true);
+  };
+
+  const handleBulkAddSubmit = async (products, pricelistId) => {
+    try {
+      await bulkAddProducts(pricelistId, products);
+      setIsAddProductsModalOpen(false);
+      setSelectedPricelistItem(null);
+      // Refresh items to show the newly created products
+      if (selectedSubcategory) {
+        fetchItems(selectedSubcategory.id);
+      }
+      alert(`Successfully created ${products.length} products!`);
+    } catch (error) {
+      console.error('Error bulk adding products:', error);
+      alert(`Error creating products: ${error.message}`);
+    }
+  };
+
+  const handleAddProductsClose = () => {
+    setIsAddProductsModalOpen(false);
+    setSelectedPricelistItem(null);
+  };
+
+  // Add single product handler
+  const handleAddSingleProduct = async (productData) => {
+    try {
+      await bulkAddProducts(selectedPricelistItem.id, [productData]);
+      
+      // Refresh items to show the newly created product
+      if (selectedSubcategory) {
+        fetchItems(selectedSubcategory.id);
+      }
+      alert('Product added successfully!');
+    } catch (error) {
+      console.error('Error adding single product:', error);
+      alert(`Error adding product: ${error.message}`);
+    }
   };
 
   // Function to determine form type based on category
@@ -522,15 +542,6 @@ function Pricelist() {
     return 'default';
   };
 
-  // Function to check if current category is Single Vision
-  const isSingleVision = () => {
-    if (!activeTab) return false;
-    
-    const category = categories.find(cat => cat.id.toString() === activeTab);
-    if (!category) return false;
-    
-    return category.name.toLowerCase().includes('single vision');
-  };
 
   // Handle tab change with proper event handling
   const handleTabChange = (tabId) => {
@@ -703,10 +714,11 @@ function Pricelist() {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder={`Search ${getCurrentCategoryName}...`}
+                    placeholder={activeTab ? `Search ${getCurrentCategoryName}...` : 'Select a category to search...'}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-900/60 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={!activeTab}
+                    className="w-full px-4 py-3 bg-gray-900/60 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                     <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -716,7 +728,19 @@ function Pricelist() {
                 </div>
               </div>
 
+              {/* No category selected message */}
+              {!activeTab && (
+                <div className="mb-6 text-center py-12">
+                  <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  <h3 className="text-lg font-medium text-gray-300 mb-2">Select a Category</h3>
+                  <p className="text-gray-400">Choose a category from the tabs above to view its subcategories and items.</p>
+                </div>
+              )}
+
               {/* Subcategories Section */}
+              {activeTab && (
               <div className="mb-6">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold text-white">Subcategories</h3>
@@ -792,6 +816,7 @@ function Pricelist() {
                   </div>
                 )}
               </div>
+              )}
 
               {/* Items Section - Only show if a subcategory is selected */}
               {selectedSubcategory && (
@@ -822,6 +847,7 @@ function Pricelist() {
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Code</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">PC Price</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">PC Cost</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Products</th>
                                                      {getFormType() === 'lens' && (
                              <>
                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Index</th>
@@ -860,6 +886,12 @@ function Pricelist() {
                             <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.code || '-'}</td>
                             <td className="px-4 py-3 text-sm text-green-400 font-semibold whitespace-nowrap">₱{parseFloat(item.pc_price || 0).toLocaleString()}</td>
                             <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">₱{parseFloat(item.pc_cost || 0).toLocaleString()}</td>
+                            <td className="px-4 py-3 text-sm text-blue-400 whitespace-nowrap">
+                              <div className="flex flex-col">
+                                <span className="font-medium">{item.attributes?.product_count || 0} variants</span>
+                                <span className="text-xs text-gray-400">Total stock: {item.attributes?.total_stock || 0}</span>
+                              </div>
+                            </td>
                             
                                                          {/* Lens specific columns */}
                              {getFormType() === 'lens' && (
@@ -896,24 +928,36 @@ function Pricelist() {
                             {userRole === 'admin' && (
                               <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">
                                 <div className="flex gap-2">
-                                                                      <button
-                                      onClick={() => handleEditPriceItem(item)}
-                                      className="text-gray-400 hover:text-blue-400 transition-colors duration-200 p-1"
-                                      title="Edit"
-                                    >
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                      </svg>
-                                    </button>
+                                  <button
+                                    onClick={() => handleEditPriceItem(item)}
+                                    className="text-gray-400 hover:text-blue-400 transition-colors duration-200 p-1"
+                                    title="Edit"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </button>
+                                  {/* Show add products button for lens categories */}
+                                  {getFormType() === 'lens' && (
                                     <button
-                                      onClick={() => handleDeletePriceItem(item.id)}
-                                      className="text-gray-400 hover:text-red-400 transition-colors duration-200 p-1"
-                                      title="Delete"
+                                      onClick={() => handleAddProducts(item)}
+                                      className="text-gray-400 hover:text-blue-400 transition-colors duration-200 p-1"
+                                      title="Add Products"
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                       </svg>
                                     </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleDeletePriceItem(item.id)}
+                                    className="text-gray-400 hover:text-red-400 transition-colors duration-200 p-1"
+                                    title="Delete"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
                                 </div>
                               </td>
                             )}
@@ -1286,90 +1330,6 @@ function Pricelist() {
                   )}
                 </div>
 
-                {/* Inventory toggle */}
-                <div className="flex items-center gap-3">
-                  <input
-                    id="addToInventory"
-                    type="checkbox"
-                    checked={addToInventory}
-                    onChange={(e) => {
-                      setAddToInventory(e.target.checked);
-                    }}
-                    className="h-4 w-4 text-blue-600 bg-gray-900 border-gray-700 rounded focus:ring-blue-500"
-                  />
-                  <label htmlFor="addToInventory" className="text-sm text-gray-300">
-                    Also add to inventory
-                  </label>
-                </div>
-
-                {/* Inventory fields */}
-                {addToInventory && (
-                  <>
-                    <hr className="my-4 border-gray-700" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Stock {addToInventory && <span className="text-red-400">*</span>}</label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={itemFormData.stock}
-                          onChange={(e) => setItemFormData({ ...itemFormData, stock: e.target.value })}
-                          required={addToInventory}
-                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Low stock threshold {addToInventory && <span className="text-red-400">*</span>}</label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={itemFormData.low_stock_threshold}
-                          onChange={(e) => setItemFormData({ ...itemFormData, low_stock_threshold: e.target.value })}
-                          required={addToInventory}
-                          className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Single Vision Specific Fields for Inventory */}
-                    {isSingleVision() && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">Sphere</label>
-                          <input
-                            type="text"
-                            placeholder="e.g., +2.50, -1.75"
-                            value={itemFormData.sphere}
-                            onChange={(e) => setItemFormData({...itemFormData, sphere: e.target.value})}
-                            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">Cylinder</label>
-                          <input
-                            type="text"
-                            placeholder="e.g., +0.50, -1.25"
-                            value={itemFormData.cylinder}
-                            onChange={(e) => setItemFormData({...itemFormData, cylinder: e.target.value})}
-                            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">Diameter</label>
-                          <input
-                            type="text"
-                            placeholder="e.g., 65, 70"
-                            value={itemFormData.diameter}
-                            onChange={(e) => setItemFormData({...itemFormData, diameter: e.target.value})}
-                            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
 
                 {/* Set Cost for Contact Lens */}
                 {getFormType() === 'contact' && (
@@ -1393,7 +1353,6 @@ function Pricelist() {
                   onClick={() => {
                     setIsItemModalOpen(false);
                     setEditingItem(null);
-                    setAddToInventory(false);
                     setItemFormData({ 
                       description: '', 
                       code: '', 
@@ -1439,6 +1398,15 @@ function Pricelist() {
           </div>
         </div>
       )}
+
+      {/* Add Products Modal */}
+      <AddProductsModal
+        isOpen={isAddProductsModalOpen}
+        onClose={handleAddProductsClose}
+        pricelistItem={selectedPricelistItem}
+        onBulkAdd={handleBulkAddSubmit}
+        onSingleAdd={handleAddSingleProduct}
+      />
     </div>
   );
 }

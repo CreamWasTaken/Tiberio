@@ -101,17 +101,17 @@ const PORT = process.env.PORT;
 })();
 
 //to do
+//fix bulk add cant go back to single add and test product
 
-// fix fulfill socket
+//refactor inventory to have a dropdown for better clarity per product_list
 
-//change logic on adding on price list to price_list table
+//fix socket.io on pricelist
 
-//change UI on adding to inventory when adding to price list add to products table
+//add on edit inventory screen to edit attributes 
 
-//add on modal to add in inventory attributes of product see list to see attributes of product
+//fix transactions due to changes on price list and products table
 
-
-//fic transactions due to changes on price list and products table
+//fix doesnt hide cmd on tiberio
 
 
 

@@ -98,6 +98,30 @@ export const addItem = async (itemData) => {
   }
 };
 
+export const bulkAddProducts = async (pricelistId, products) => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.post(`${API_URL}/api/categories/bulk-add-products`, {
+      pricelistId,
+      products
+    }, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      const errorMessage = error.response.data.message || error.response.data.error || 'Server error';
+      throw new Error(errorMessage);
+    } else if (error.request) {
+      throw new Error("No response from server");
+    } else {
+      throw new Error(error.message);
+    }
+  }
+};
+
 export const updateItem = async (id, itemData) => {
   try {
     const token = localStorage.getItem('authToken');

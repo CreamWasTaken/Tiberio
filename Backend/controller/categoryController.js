@@ -272,32 +272,167 @@ exports.addItem = async (req, res) => {
     }
 }
 
+// Bulk add products from pricelist template
+exports.bulkAddProducts = async (req, res) => {
+    const { pricelistId, products } = req.body;
+    
+    if (!pricelistId || !products || !Array.isArray(products) || products.length === 0) {
+        return res.status(400).json({
+            message: "Pricelist ID and products array are required",
+            error: "MISSING_DATA"
+        });
+    }
+    
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        
+        // Get the original pricelist item to use as template
+        const [pricelistResult] = await conn.query(`
+            SELECT pl.*, s.name as supplier_name, pc.name as category_name, ps.name as subcategory_name,
+                   JSON_UNQUOTE(pl.attributes) as attributes_json
+            FROM price_list pl
+            LEFT JOIN suppliers s ON pl.supplier_id = s.id
+            LEFT JOIN price_subcategories ps ON pl.subcategory_id = ps.id
+            LEFT JOIN price_categories pc ON ps.category_id = pc.id
+            WHERE pl.id = ? AND pl.is_deleted = 0
+        `, [pricelistId]);
+        
+        if (pricelistResult.length === 0) {
+            await conn.rollback();
+            return res.status(404).json({
+                message: "Pricelist item not found",
+                error: "PRICELIST_NOT_FOUND"
+            });
+        }
+        
+        const pricelistTemplate = pricelistResult[0];
+        const createdProducts = [];
+        
+        // Process each product - only create products table entries
+        for (const productData of products) {
+            const {
+                stock, lowStockThreshold, sphere, cylinder, diameter, index, tp
+            } = productData;
+            
+            // Validate required fields
+            if (stock === '' || lowStockThreshold === '') {
+                await conn.rollback();
+                return res.status(400).json({
+                    message: `Missing required fields for product: stock and low stock threshold are required`,
+                    error: "MISSING_REQUIRED_FIELDS"
+                });
+            }
+            
+            // Create product attributes (specific to this product)
+            const productAttributes = {
+                sphere: sphere || '',
+                cylinder: cylinder || '',
+                diameter: diameter || '',
+                index: index || '',
+                tp: tp || ''
+            };
+            
+            // Insert into products table (inventory) - reference the existing price_list
+            const [productResult] = await conn.query(
+                "INSERT INTO products (price_list_id, stock, low_stock_threshold, attributes) VALUES (?, ?, ?, ?)",
+                [
+                    pricelistId, // Use the existing price_list ID
+                    parseInt(stock),
+                    parseInt(lowStockThreshold),
+                    JSON.stringify(productAttributes)
+                ]
+            );
+            
+            // Get the complete item data for response
+            const [newItemResult] = await conn.query(`
+                SELECT pl.*, s.name as supplier_name, pc.name as category_name, ps.name as subcategory_name,
+                       p.stock, p.low_stock_threshold, p.attributes as product_attributes,
+                       JSON_UNQUOTE(pl.attributes) as attributes_json
+                FROM price_list pl
+                LEFT JOIN suppliers s ON pl.supplier_id = s.id
+                LEFT JOIN price_subcategories ps ON pl.subcategory_id = ps.id
+                LEFT JOIN price_categories pc ON ps.category_id = pc.id
+                LEFT JOIN products p ON pl.id = p.price_list_id AND p.is_deleted = 0
+                WHERE pl.id = ? AND p.id = ? AND pl.is_deleted = 0
+            `, [pricelistId, productResult.insertId]);
+            
+            if (newItemResult.length > 0) {
+                const item = newItemResult[0];
+                const attributes = item.attributes_json ? JSON.parse(item.attributes_json) : {};
+                const productAttrs = item.product_attributes ? JSON.parse(item.product_attributes) : {};
+                
+                const newItem = {
+                    ...item,
+                    attributes: {
+                        ...attributes,
+                        ...productAttrs,
+                        stock: item.stock || 0,
+                        low_stock_threshold: item.low_stock_threshold || 5
+                    }
+                };
+                
+                delete newItem.attributes_json;
+                delete newItem.product_attributes;
+                
+                createdProducts.push(newItem);
+            }
+        }
+        
+        await conn.commit();
+        
+        // Emit Socket.IO events for each created product
+        for (const product of createdProducts) {
+            emitSocketEvent(req, 'item-updated', { type: 'added', item: product });
+            emitSocketEvent(req, 'inventory-updated', { type: 'added', item: product });
+        }
+        
+        res.status(201).json({
+            message: `Successfully created ${createdProducts.length} products`,
+            products: createdProducts,
+            count: createdProducts.length
+        });
+        
+    } catch (error) {
+        await conn.rollback();
+        console.error('Error bulk adding products:', error);
+        res.status(500).json({
+            message: "Failed to bulk add products",
+            error: error.message
+        });
+    } finally {
+        if (conn) {
+            conn.release();
+        }
+    }
+};
+
 exports.getItems = async (req, res) => {
     const {subcategoryId} = req.params;
     let conn;
     try {
         conn = await db.getConnection();
         const [result] = await conn.query(`
-            SELECT pl.*, s.name as supplier_name, p.stock, p.low_stock_threshold, p.attributes as product_attributes
+            SELECT pl.*, s.name as supplier_name,
+                   COUNT(p.id) as product_count,
+                   COALESCE(SUM(p.stock), 0) as total_stock
             FROM price_list pl
             LEFT JOIN suppliers s ON pl.supplier_id = s.id
             LEFT JOIN products p ON pl.id = p.price_list_id AND p.is_deleted = 0
             WHERE pl.subcategory_id = ? AND pl.is_deleted = 0
+            GROUP BY pl.id
         `, [subcategoryId]);
         
         // Parse attributes JSON for each item
         const items = result.map(item => {
             const attributes = item.attributes ? JSON.parse(item.attributes) : {};
-            const productAttributes = item.product_attributes ? JSON.parse(item.product_attributes) : {};
             
             return {
                 ...item,
                 attributes: {
                     ...attributes,
-                    // Include product attributes (sphere, cylinder, diameter) in the main attributes
-                    ...productAttributes,
-                    stock: item.stock || 0,
-                    low_stock_threshold: item.low_stock_threshold || 5
+                    product_count: item.product_count || 0,
+                    total_stock: item.total_stock || 0
                 }
             };
         });
@@ -335,9 +470,13 @@ exports.getInventoryItems = async (req, res) => {
             return {
                 ...item,
                 attributes: {
-                    ...attributes,
-                    // Include product attributes (sphere, cylinder, diameter) in the main attributes
+                    // For inventory items, prioritize product attributes over price_list attributes
+                    // This ensures specific product values (sphere, cylinder) are shown instead of range values (sphFR, sphTo)
                     ...productAttributes,
+                    // Include non-conflicting price_list attributes (like index, diameter from price_list)
+                    ...Object.fromEntries(
+                        Object.entries(attributes).filter(([key]) => !productAttributes.hasOwnProperty(key))
+                    ),
                     stock: item.stock || 0,
                     low_stock_threshold: item.low_stock_threshold || 5
                 }

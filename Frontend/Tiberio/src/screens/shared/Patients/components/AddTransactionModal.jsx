@@ -18,12 +18,12 @@ function AddTransactionModal({
   const [customerName, setCustomerName] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('');
   const [specFilters, setSpecFilters] = useState({
-    index: '',
-    diameter: '',
-    sphFR: '',
-    sphTo: '',
-    cylFr: '',
-    cylTo: ''
+    sphere: '',
+    cylinder: '',
+    add: '',
+    axis: '',
+    steps: '',
+    modality: ''
   });
   
   // Dynamic data states
@@ -65,7 +65,7 @@ function AddTransactionModal({
       
       // Transform inventory data to match the expected format
       const transformedInventory = inventoryData.map(item => ({
-        id: item.id,
+        id: item.id, // This is the price_list.id
         name: item.description || 'Unnamed Product',
         category: item.category_name || 'uncategorized',
         subcategory: item.subcategory_name || 'No Subcategory',
@@ -74,7 +74,7 @@ function AddTransactionModal({
         code: item.code,
         supplier: item.supplier_name,
         subcategory_id: item.subcategory_id,
-        attributes: item.attributes
+        attributes: item.attributes // This now contains both price_list attributes and product attributes merged
       }));
       
       setInventory(transformedInventory);
@@ -101,6 +101,13 @@ function AddTransactionModal({
       const lensSpecs = [
         item.attributes.index,
         item.attributes.diameter,
+        item.attributes.sphere,
+        item.attributes.cylinder,
+        item.attributes.add,
+        item.attributes.axis,
+        item.attributes.steps,
+        item.attributes.modality,
+        // Fallback to range attributes if specific ones not available
         item.attributes.sphFR,
         item.attributes.sphTo,
         item.attributes.cylFr,
@@ -196,19 +203,31 @@ function AddTransactionModal({
     
     const specs = [];
     
-    // Only lens specifications
+    // Prioritize specific product attributes over range attributes
     const lensSpecFields = [
       { key: 'index', label: 'Index' },
       { key: 'diameter', label: 'Diameter' },
+      // Specific product attributes (preferred for inventory items)
+      { key: 'sphere', label: 'Sphere' },
+      { key: 'cylinder', label: 'Cylinder' },
+      // Range attributes (fallback if specific attributes not available)
       { key: 'sphFR', label: 'Sph FR' },
       { key: 'sphTo', label: 'Sph To' },
       { key: 'cylFr', label: 'Cyl Fr' },
       { key: 'cylTo', label: 'Cyl To' }
     ];
     
-    // Add lens specs only
+    // Add lens specs, prioritizing specific values over ranges
     lensSpecFields.forEach(field => {
       if (attributes[field.key] && attributes[field.key] !== '' && attributes[field.key] !== '0') {
+        // Don't show range fields if we already have specific values
+        if ((field.key === 'sphFR' || field.key === 'sphTo') && attributes.sphere) {
+          return; // Skip range fields if specific sphere value exists
+        }
+        if ((field.key === 'cylFr' || field.key === 'cylTo') && attributes.cylinder) {
+          return; // Skip range fields if specific cylinder value exists
+        }
+        
         specs.push(`${field.label}: ${attributes[field.key]}`);
       }
     });
@@ -317,62 +336,62 @@ function AddTransactionModal({
                 <h4 className="text-white text-xs sm:text-sm font-medium mb-1">Filter by Lens Specifications:</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1">
                   <div>
-                    <label className="block text-gray-300 text-xs mb-0.5">Index</label>
+                    <label className="block text-gray-300 text-xs mb-0.5">Sphere</label>
                     <input
                       type="text"
-                      placeholder="1.50"
-                      value={specFilters.index}
-                      onChange={(e) => setSpecFilters(prev => ({ ...prev, index: e.target.value }))}
+                      placeholder="+2.50"
+                      value={specFilters.sphere}
+                      onChange={(e) => setSpecFilters(prev => ({ ...prev, sphere: e.target.value }))}
                       className="w-full px-1 py-1 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-300 text-xs mb-0.5">Diameter</label>
+                    <label className="block text-gray-300 text-xs mb-0.5">Cylinder</label>
                     <input
                       type="text"
-                      placeholder="70"
-                      value={specFilters.diameter}
-                      onChange={(e) => setSpecFilters(prev => ({ ...prev, diameter: e.target.value }))}
+                      placeholder="-1.25"
+                      value={specFilters.cylinder}
+                      onChange={(e) => setSpecFilters(prev => ({ ...prev, cylinder: e.target.value }))}
                       className="w-full px-1 py-1 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-300 text-xs mb-0.5">Sph FR</label>
+                    <label className="block text-gray-300 text-xs mb-0.5">Add</label>
                     <input
                       type="text"
                       placeholder="+2.00"
-                      value={specFilters.sphFR}
-                      onChange={(e) => setSpecFilters(prev => ({ ...prev, sphFR: e.target.value }))}
+                      value={specFilters.add}
+                      onChange={(e) => setSpecFilters(prev => ({ ...prev, add: e.target.value }))}
                       className="w-full px-1 py-1 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-300 text-xs mb-0.5">Sph To</label>
+                    <label className="block text-gray-300 text-xs mb-0.5">Axis</label>
                     <input
                       type="text"
-                      placeholder="+4.00"
-                      value={specFilters.sphTo}
-                      onChange={(e) => setSpecFilters(prev => ({ ...prev, sphTo: e.target.value }))}
+                      placeholder="90"
+                      value={specFilters.axis}
+                      onChange={(e) => setSpecFilters(prev => ({ ...prev, axis: e.target.value }))}
                       className="w-full px-1 py-1 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-300 text-xs mb-0.5">Cyl Fr</label>
+                    <label className="block text-gray-300 text-xs mb-0.5">Steps</label>
                     <input
                       type="text"
-                      placeholder="-1.00"
-                      value={specFilters.cylFr}
-                      onChange={(e) => setSpecFilters(prev => ({ ...prev, cylFr: e.target.value }))}
+                      placeholder="0.25"
+                      value={specFilters.steps}
+                      onChange={(e) => setSpecFilters(prev => ({ ...prev, steps: e.target.value }))}
                       className="w-full px-1 py-1 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-300 text-xs mb-0.5">Cyl To</label>
+                    <label className="block text-gray-300 text-xs mb-0.5">Modality</label>
                     <input
                       type="text"
-                      placeholder="-3.00"
-                      value={specFilters.cylTo}
-                      onChange={(e) => setSpecFilters(prev => ({ ...prev, cylTo: e.target.value }))}
+                      placeholder="Monthly"
+                      value={specFilters.modality}
+                      onChange={(e) => setSpecFilters(prev => ({ ...prev, modality: e.target.value }))}
                       className="w-full px-1 py-1 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
                     />
                   </div>
@@ -380,7 +399,7 @@ function AddTransactionModal({
                 <div className="mt-1 flex justify-end">
                   <button
                     type="button"
-                    onClick={() => setSpecFilters({ index: '', diameter: '', sphFR: '', sphTo: '', cylFr: '', cylTo: '' })}
+                    onClick={() => setSpecFilters({ sphere: '', cylinder: '', add: '', axis: '', steps: '', modality: '' })}
                     className="text-gray-400 hover:text-white text-xs underline"
                   >
                     Clear Filters
