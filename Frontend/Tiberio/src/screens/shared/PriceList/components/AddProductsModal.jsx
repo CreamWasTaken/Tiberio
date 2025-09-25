@@ -209,12 +209,13 @@ const AddProductsModal = ({
               </div>
             </form>
           ) : (
-            // Bulk Add Products
+            // Bulk Add Products - Inline content instead of separate modal
             <BulkAddProductsModal
-              isOpen={true}
-              onClose={onClose} // Close the parent modal when bulk modal closes
+              isOpen={false} // Don't render as separate modal
+              onClose={() => setActiveTab('single')} // Go back to single tab instead of closing
               pricelistItem={pricelistItem}
               onBulkAdd={onBulkAdd}
+              isInline={true} // New prop to indicate inline rendering
             />
           )}
         </div>
