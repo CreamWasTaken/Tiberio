@@ -131,9 +131,10 @@ const AddProductsModal = ({
                       required
                       value={singleProductData.sphere}
                       onChange={(e) => setSingleProductData({...singleProductData, sphere: e.target.value})}
-                      placeholder="e.g., -1.50, +2.25"
+                      placeholder="e.g., -1.50, +2.25, -3.75"
                       className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                    <p className="text-xs text-gray-400 mt-1">Enter positive (+) or negative (-) values</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Cylinder *</label>
@@ -143,9 +144,10 @@ const AddProductsModal = ({
                       required
                       value={singleProductData.cylinder}
                       onChange={(e) => setSingleProductData({...singleProductData, cylinder: e.target.value})}
-                      placeholder="e.g., -0.75, +1.25"
+                      placeholder="e.g., -0.75, +1.25, -2.50"
                       className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                    <p className="text-xs text-gray-400 mt-1">Enter positive (+) or negative (-) values</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Stock *</label>

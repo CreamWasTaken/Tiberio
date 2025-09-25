@@ -1116,41 +1116,45 @@ function Pricelist() {
                       <label className="block text-sm font-medium text-gray-300 mb-2">SphFR</label>
                       <input
                         type="text"
-                        placeholder="e.g., +2.50, -1.75"
+                        placeholder="e.g., +2.50, -1.75, -3.25"
                         value={itemFormData.sphFR}
                         onChange={(e) => setItemFormData({...itemFormData, sphFR: e.target.value})}
                         className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-xs text-gray-400 mt-1">Sphere range start (can be + or -)</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">SphTo</label>
                       <input
                         type="text"
-                        placeholder="e.g., +4.00, -3.25"
+                        placeholder="e.g., +4.00, -3.25, +1.50"
                         value={itemFormData.sphTo}
                         onChange={(e) => setItemFormData({...itemFormData, sphTo: e.target.value})}
                         className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-xs text-gray-400 mt-1">Sphere range end (can be + or -)</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">CylFr</label>
                       <input
                         type="text"
-                        placeholder="e.g., +0.50, -1.25"
+                        placeholder="e.g., +0.50, -1.25, -2.75"
                         value={itemFormData.cylFr}
                         onChange={(e) => setItemFormData({...itemFormData, cylFr: e.target.value})}
                         className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-xs text-gray-400 mt-1">Cylinder range start (can be + or -)</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">CylTo</label>
                       <input
                         type="text"
-                        placeholder="e.g., +2.00, -3.50"
+                        placeholder="e.g., +2.00, -3.50, +1.25"
                         value={itemFormData.cylTo}
                         onChange={(e) => setItemFormData({...itemFormData, cylTo: e.target.value})}
                         className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-xs text-gray-400 mt-1">Cylinder range end (can be + or -)</p>
                     </div>
                   </div>
                 )}
@@ -1207,61 +1211,67 @@ function Pricelist() {
                       <label className="block text-sm font-medium text-gray-300 mb-2">SphFR</label>
                       <input
                         type="text"
-                        placeholder="e.g., +2.50, -1.75"
+                        placeholder="e.g., +2.50, -1.75, -3.25"
                         value={itemFormData.sphFR}
                         onChange={(e) => setItemFormData({...itemFormData, sphFR: e.target.value})}
                         className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-xs text-gray-400 mt-1">Sphere range start (can be + or -)</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">SphTo</label>
                       <input
                         type="text"
-                        placeholder="e.g., +4.00, -3.25"
+                        placeholder="e.g., +4.00, -3.25, +1.50"
                         value={itemFormData.sphTo}
                         onChange={(e) => setItemFormData({...itemFormData, sphTo: e.target.value})}
                         className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-xs text-gray-400 mt-1">Sphere range end (can be + or -)</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">CylFr</label>
                       <input
                         type="text"
-                        placeholder="e.g., +0.50, -1.25"
+                        placeholder="e.g., +0.50, -1.25, -2.75"
                         value={itemFormData.cylFr}
                         onChange={(e) => setItemFormData({...itemFormData, cylFr: e.target.value})}
                         className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-xs text-gray-400 mt-1">Cylinder range start (can be + or -)</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">CylTo</label>
                       <input
                         type="text"
-                        placeholder="e.g., +2.00, -3.50"
+                        placeholder="e.g., +2.00, -3.50, +1.25"
                         value={itemFormData.cylTo}
                         onChange={(e) => setItemFormData({...itemFormData, cylTo: e.target.value})}
                         className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-xs text-gray-400 mt-1">Cylinder range end (can be + or -)</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">AddFr</label>
                       <input
                         type="text"
-                        placeholder="e.g., +1.00, +2.50"
+                        placeholder="e.g., +1.00, +2.50, +3.25"
                         value={itemFormData.addFr}
                         onChange={(e) => setItemFormData({...itemFormData, addFr: e.target.value})}
                         className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-xs text-gray-400 mt-1">Add range start (usually +)</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">AddTo</label>
                       <input
                         type="text"
-                        placeholder="e.g., +3.00, +3.50"
+                        placeholder="e.g., +3.00, +3.50, +4.00"
                         value={itemFormData.addTo}
                         onChange={(e) => setItemFormData({...itemFormData, addTo: e.target.value})}
                         className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-xs text-gray-400 mt-1">Add range end (usually +)</p>
                     </div>
                   </div>
                 )}

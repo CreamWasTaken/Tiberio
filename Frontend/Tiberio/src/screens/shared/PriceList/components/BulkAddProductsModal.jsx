@@ -300,8 +300,10 @@ const BulkAddProductsModal = ({
                   step="0.25"
                   value={formData.sphereStart}
                   onChange={(e) => setFormData({...formData, sphereStart: e.target.value})}
+                  placeholder="e.g., -3.00, +1.50"
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="text-xs text-gray-400 mt-1">Starting value (can be + or -)</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Sphere End</label>
@@ -310,8 +312,10 @@ const BulkAddProductsModal = ({
                   step="0.25"
                   value={formData.sphereEnd}
                   onChange={(e) => setFormData({...formData, sphereEnd: e.target.value})}
+                  placeholder="e.g., +2.00, -1.25"
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="text-xs text-gray-400 mt-1">Ending value (can be + or -)</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Sphere Step</label>
@@ -331,8 +335,10 @@ const BulkAddProductsModal = ({
                   step="0.25"
                   value={formData.cylinderStart}
                   onChange={(e) => setFormData({...formData, cylinderStart: e.target.value})}
+                  placeholder="e.g., -2.00, +0.50"
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="text-xs text-gray-400 mt-1">Starting value (can be + or -)</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Cylinder End</label>
@@ -341,8 +347,10 @@ const BulkAddProductsModal = ({
                   step="0.25"
                   value={formData.cylinderEnd}
                   onChange={(e) => setFormData({...formData, cylinderEnd: e.target.value})}
+                  placeholder="e.g., +1.50, -0.75"
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="text-xs text-gray-400 mt-1">Ending value (can be + or -)</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Cylinder Step</label>
@@ -434,6 +442,7 @@ const BulkAddProductsModal = ({
                     step="0.25"
                     value={combo.sphere}
                     onChange={(e) => updateCustomCombination(index, 'sphere', e.target.value)}
+                    placeholder="e.g., -1.50, +2.25"
                     className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
@@ -444,6 +453,7 @@ const BulkAddProductsModal = ({
                     step="0.25"
                     value={combo.cylinder}
                     onChange={(e) => updateCustomCombination(index, 'cylinder', e.target.value)}
+                    placeholder="e.g., -0.75, +1.25"
                     className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
@@ -521,6 +531,7 @@ const BulkAddProductsModal = ({
                               step="0.25"
                               value={product.sphere}
                               onChange={(e) => updateGeneratedProduct(actualIndex, 'sphere', e.target.value)}
+                              placeholder="e.g., -1.50, +2.25"
                               className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                           </div>
@@ -531,6 +542,7 @@ const BulkAddProductsModal = ({
                               step="0.25"
                               value={product.cylinder}
                               onChange={(e) => updateGeneratedProduct(actualIndex, 'cylinder', e.target.value)}
+                              placeholder="e.g., -0.75, +1.25"
                               className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                           </div>
@@ -719,8 +731,10 @@ const BulkAddProductsModal = ({
                   step="0.25"
                   value={formData.sphereStart}
                   onChange={(e) => setFormData({...formData, sphereStart: e.target.value})}
+                  placeholder="e.g., -3.00, +1.50"
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="text-xs text-gray-400 mt-1">Starting value (can be + or -)</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Sphere End</label>
@@ -729,8 +743,10 @@ const BulkAddProductsModal = ({
                   step="0.25"
                   value={formData.sphereEnd}
                   onChange={(e) => setFormData({...formData, sphereEnd: e.target.value})}
+                  placeholder="e.g., +2.00, -1.25"
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="text-xs text-gray-400 mt-1">Ending value (can be + or -)</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Sphere Step</label>
@@ -750,8 +766,10 @@ const BulkAddProductsModal = ({
                   step="0.25"
                   value={formData.cylinderStart}
                   onChange={(e) => setFormData({...formData, cylinderStart: e.target.value})}
+                  placeholder="e.g., -2.00, +0.50"
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="text-xs text-gray-400 mt-1">Starting value (can be + or -)</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Cylinder End</label>
@@ -760,8 +778,10 @@ const BulkAddProductsModal = ({
                   step="0.25"
                   value={formData.cylinderEnd}
                   onChange={(e) => setFormData({...formData, cylinderEnd: e.target.value})}
+                  placeholder="e.g., +1.50, -0.75"
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="text-xs text-gray-400 mt-1">Ending value (can be + or -)</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Cylinder Step</label>
@@ -853,6 +873,7 @@ const BulkAddProductsModal = ({
                     step="0.25"
                     value={combo.sphere}
                     onChange={(e) => updateCustomCombination(index, 'sphere', e.target.value)}
+                    placeholder="e.g., -1.50, +2.25"
                     className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
@@ -863,6 +884,7 @@ const BulkAddProductsModal = ({
                     step="0.25"
                     value={combo.cylinder}
                     onChange={(e) => updateCustomCombination(index, 'cylinder', e.target.value)}
+                    placeholder="e.g., -0.75, +1.25"
                     className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
@@ -940,6 +962,7 @@ const BulkAddProductsModal = ({
                               step="0.25"
                               value={product.sphere}
                               onChange={(e) => updateGeneratedProduct(actualIndex, 'sphere', e.target.value)}
+                              placeholder="e.g., -1.50, +2.25"
                               className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                           </div>
@@ -950,6 +973,7 @@ const BulkAddProductsModal = ({
                               step="0.25"
                               value={product.cylinder}
                               onChange={(e) => updateGeneratedProduct(actualIndex, 'cylinder', e.target.value)}
+                              placeholder="e.g., -0.75, +1.25"
                               className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                           </div>

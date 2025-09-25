@@ -208,33 +208,94 @@ function Inventory() {
 
   // Filtered and paginated items
   const filteredItems = useMemo(() => {
-    return items.filter(item => {
+    console.log('Current filters:', filters);
+    console.log('Total items to filter:', items.length);
+    
+    const filtered = items.filter(item => {
+      // Helper function for exact matching of numerical values
+      const exactMatch = (value, filter) => {
+        if (!filter) return true;
+        const itemValue = (value || '').toString().trim();
+        const filterValue = filter.toString().trim();
+        const matches = itemValue === filterValue;
+        // Debug logging for sphere, cylinder, and description
+        if (filter && (filter === filters.sphere || filter === filters.cylinder || filter === filters.description)) {
+          const fieldName = filter === filters.sphere ? 'sphere' : 
+                           filter === filters.cylinder ? 'cylinder' : 'description';
+          console.log(`Filtering ${fieldName}: "${itemValue}" === "${filterValue}" = ${matches}`);
+        }
+        return matches;
+      };
+
+      // Helper function for case-insensitive exact matching (for description)
+      const exactMatchCaseInsensitive = (value, filter) => {
+        if (!filter) return true;
+        const itemValue = (value || '').toString().trim().toLowerCase();
+        const filterValue = filter.toString().trim().toLowerCase();
+        const matches = itemValue === filterValue;
+        // Debug logging for description
+        if (filter && filter === filters.description) {
+          console.log(`Filtering description (case-insensitive): "${itemValue}" === "${filterValue}" = ${matches}`);
+        }
+        return matches;
+      };
+
+      // Helper function for partial matching (for text fields)
+      const partialMatch = (value, filter) => {
+        if (!filter) return true;
+        return (value || '').toLowerCase().includes(filter.toLowerCase());
+      };
+
+      // Check if item matches all non-empty filters
+      const matchesDescription = exactMatchCaseInsensitive(item.description, filters.description);
+      const matchesCode = partialMatch(item.code, filters.code);
+      const matchesSupplier = partialMatch(item.supplier_name, filters.supplier);
+      const matchesIndex = partialMatch(item.attributes?.index, filters.index);
+      const matchesDiameter = partialMatch(item.attributes?.diameter, filters.diameter);
+      const matchesSphere = exactMatch(item.attributes?.sphere, filters.sphere);
+      const matchesCylinder = exactMatch(item.attributes?.cylinder, filters.cylinder);
+      const matchesAdd = partialMatch(item.attributes?.add, filters.add);
+      const matchesAxis = partialMatch(item.attributes?.axis, filters.axis);
+      const matchesSteps = partialMatch(item.attributes?.steps, filters.steps);
+      const matchesModality = partialMatch(item.attributes?.modality, filters.modality);
+      const matchesSet = partialMatch(item.attributes?.set, filters.set);
+      const matchesBc = partialMatch(item.attributes?.bc, filters.bc);
+      const matchesPcPrice = partialMatch(item.pc_price, filters.pcPrice);
+      const matchesPcCost = partialMatch(item.pc_cost, filters.pcCost);
+      const matchesStock = partialMatch(item.attributes?.stock, filters.stock);
+      const matchesLowStockThreshold = partialMatch(item.attributes?.low_stock_threshold, filters.lowStockThreshold);
+      
+      const matchesStatus = (() => {
+        const stock = Number(item.attributes?.stock ?? 0);
+        const low = Number(item.attributes?.low_stock_threshold ?? 0);
+        const status = stock <= 0 ? 'Out of stock' : stock <= low ? 'Low' : 'Normal';
+        return status.toLowerCase().includes(filters.status.toLowerCase());
+      })();
+
       return (
-        item.description?.toLowerCase().includes(filters.description.toLowerCase()) &&
-        (item.code || '').toLowerCase().includes(filters.code.toLowerCase()) &&
-        (item.supplier_name || '').toLowerCase().includes(filters.supplier.toLowerCase()) &&
-        (item.attributes?.index || '').toString().toLowerCase().includes(filters.index.toLowerCase()) &&
-        (item.attributes?.diameter || '').toString().toLowerCase().includes(filters.diameter.toLowerCase()) &&
-        (item.attributes?.sphere || '').toString().toLowerCase().includes(filters.sphere.toLowerCase()) &&
-        (item.attributes?.cylinder || '').toString().toLowerCase().includes(filters.cylinder.toLowerCase()) &&
-        (item.attributes?.add || '').toString().toLowerCase().includes(filters.add.toLowerCase()) &&
-        (item.attributes?.axis || '').toString().toLowerCase().includes(filters.axis.toLowerCase()) &&
-        (item.attributes?.steps || '').toString().toLowerCase().includes(filters.steps.toLowerCase()) &&
-        (item.attributes?.modality || '').toLowerCase().includes(filters.modality.toLowerCase()) &&
-        (item.attributes?.set || '').toString().toLowerCase().includes(filters.set.toLowerCase()) &&
-        (item.attributes?.bc || '').toString().toLowerCase().includes(filters.bc.toLowerCase()) &&
-        (item.pc_price || '').toString().includes(filters.pcPrice) &&
-        (item.pc_cost || '').toString().includes(filters.pcCost) &&
-        (item.attributes?.stock || '').toString().includes(filters.stock) &&
-        (item.attributes?.low_stock_threshold || '').toString().includes(filters.lowStockThreshold) &&
-        (() => {
-          const stock = Number(item.attributes?.stock ?? 0);
-          const low = Number(item.attributes?.low_stock_threshold ?? 0);
-          const status = stock <= 0 ? 'Out of stock' : stock <= low ? 'Low' : 'Normal';
-          return status.toLowerCase().includes(filters.status.toLowerCase());
-        })()
+        matchesDescription &&
+        matchesCode &&
+        matchesSupplier &&
+        matchesIndex &&
+        matchesDiameter &&
+        matchesSphere &&
+        matchesCylinder &&
+        matchesAdd &&
+        matchesAxis &&
+        matchesSteps &&
+        matchesModality &&
+        matchesSet &&
+        matchesBc &&
+        matchesPcPrice &&
+        matchesPcCost &&
+        matchesStock &&
+        matchesLowStockThreshold &&
+        matchesStatus
       );
     });
+    
+    console.log('Filtered items count:', filtered.length);
+    return filtered;
   }, [items, filters]);
 
   // Paginated items

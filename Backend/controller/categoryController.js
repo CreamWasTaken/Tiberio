@@ -596,13 +596,9 @@ exports.updateItem = async (req, res) => {
             }
             
             // Inventory update will be emitted after we fetch the complete item data
-        } else {
-            // If not adding to inventory, soft delete any existing product entry
-            await conn.query(
-                "UPDATE products SET is_deleted = 1 WHERE price_list_id = ?",
-                [id]
-            );
         }
+        // Note: We no longer automatically delete products when addToInventory is false
+        // This prevents accidental deletion of products when editing pricelist items
         
         await conn.commit();
         
