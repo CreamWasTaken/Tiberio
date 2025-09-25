@@ -12,7 +12,26 @@ function Inventory() {
   const [items, setItems] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
-  const [editForm, setEditForm] = useState({ supplier_id: '', stock: '', low_stock_threshold: '' });
+  const [editForm, setEditForm] = useState({ 
+    supplier_id: '', 
+    stock: '', 
+    low_stock_threshold: '',
+    description: '',
+    code: '',
+    pc_price: '',
+    pc_cost: '',
+    // Lens attributes
+    index: '',
+    diameter: '',
+    sphere: '',
+    cylinder: '',
+    add: '',
+    axis: '',
+    steps: '',
+    modality: '',
+    set: '',
+    bc: ''
+  });
   const [deleteItem, setDeleteItem] = useState(null);
   
   // Filtering and pagination state
@@ -82,45 +101,65 @@ function Inventory() {
         
         // Wait for Socket.IO connection to be established
         const socket = await socketService.waitForConnection();
+        console.log('🔌 Socket connection established:', socket.connected);
    
         
         // Join inventory room
-  
+        console.log('🔌 Joining inventory-updated room');
         socketService.joinRoom('inventory-updated');
      
         
         // Listen for inventory updates
         const handleInventoryUpdate = (data) => {
-        
+          console.log('🔌 Inventory update received:', data);
+          console.log('🔌 Data type:', data.type);
+          console.log('🔌 Item data:', data.item);
           
           if (data.type === 'added' && data.item) {
+            console.log('🔌 Adding new item to inventory:', data.item.id);
             setItems(prevItems => {
               // Add new item if not already present
               const exists = prevItems.some(item => item.id === data.item.id);
               if (exists) {
+                console.log('🔌 Item already exists, skipping add');
                 return prevItems;
               }
           
+              console.log('🔌 Item added to inventory list');
               return [...prevItems, data.item];
             });
           } else if (data.type === 'updated' && data.item) {
-        
+            console.log('🔌 Updating item in inventory:', data.item.id);
+            console.log('🔌 Updated item data:', data.item);
             setItems(prevItems => {
-              const updated = prevItems.map(item => item.id === data.item.id ? data.item : item);
-            
+              console.log('🔌 Current items before update:', prevItems.length);
+              const updated = prevItems.map(item => {
+                if (item.id === data.item.id) {
+                  console.log('🔌 Found item to update:', item.id);
+                  return data.item;
+                }
+                return item;
+              });
+              console.log('🔌 Items after update:', updated.length);
+              console.log('🔌 Item updated in inventory list');
               return updated;
             });
           } else if (data.type === 'deleted' && data.item) {
-         
+            console.log('🔌 Removing item from inventory:', data.item.id);
             setItems(prevItems => {
               const filtered = prevItems.filter(item => item.id !== data.item.id);
+              console.log('🔌 Item removed from inventory list');
               return filtered;
             });
           } else if (data.type === 'stock_updated' && data.item) {
+            console.log('🔌 Stock updated for item:', data.item.id);
             setItems(prevItems => {
               const updated = prevItems.map(item => item.id === data.item.id ? data.item : item);
+              console.log('🔌 Stock updated in inventory list');
               return updated;
             });
+          } else {
+            console.log('🔌 Unknown inventory update type:', data.type);
           }
         };
 
@@ -147,6 +186,7 @@ function Inventory() {
         socket.on('inventory-updated', handleInventoryUpdate);
         socket.on('item-updated', handleItemUpdate);
         console.log('🔌 Inventory update listeners registered');
+        console.log('🔌 Socket event listeners:', socket.eventNames());
         
         // Add test event listener for debugging
         socket.on('test-connection', (data) => {
@@ -622,7 +662,22 @@ function Inventory() {
                                           setEditForm({
                                             supplier_id: item.supplier_id || '',
                                             stock: item.attributes?.stock ?? '',
-                                            low_stock_threshold: item.attributes?.low_stock_threshold ?? ''
+                                            low_stock_threshold: item.attributes?.low_stock_threshold ?? '',
+                                            description: item.description || '',
+                                            code: item.code || '',
+                                            pc_price: item.pc_price || '',
+                                            pc_cost: item.pc_cost || '',
+                                            // Lens attributes
+                                            index: item.attributes?.index || '',
+                                            diameter: item.attributes?.diameter || '',
+                                            sphere: item.attributes?.sphere || '',
+                                            cylinder: item.attributes?.cylinder || '',
+                                            add: item.attributes?.add || '',
+                                            axis: item.attributes?.axis || '',
+                                            steps: item.attributes?.steps || '',
+                                            modality: item.attributes?.modality || '',
+                                            set: item.attributes?.set || '',
+                                            bc: item.attributes?.bc || ''
                                           });
                                         }}
                                         className="text-blue-400 hover:text-blue-300"
@@ -710,9 +765,60 @@ function Inventory() {
         </main>
         {editingItem && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-white mb-4">Edit Inventory</h3>
-              <div className="space-y-4">
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <h3 className="text-lg font-semibold text-white mb-6">Edit Item Details</h3>
+              
+              {/* Basic Information Section */}
+              <div className="mb-6">
+                <h4 className="text-md font-medium text-blue-400 mb-3 border-b border-gray-700 pb-2">Basic Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
+                    <input
+                      type="text"
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Code</label>
+                    <input
+                      type="text"
+                      value={editForm.code}
+                      onChange={(e) => setEditForm({ ...editForm, code: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">PC Price (₱)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editForm.pc_price}
+                      onChange={(e) => setEditForm({ ...editForm, pc_price: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">PC Cost (₱)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editForm.pc_cost}
+                      onChange={(e) => setEditForm({ ...editForm, pc_cost: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Inventory Management Section */}
+              <div className="mb-6">
+                <h4 className="text-md font-medium text-green-400 mb-3 border-b border-gray-700 pb-2">Inventory Management</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Supplier</label>
                   <select
@@ -738,7 +844,7 @@ function Inventory() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Low stock threshold</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Low Stock Threshold</label>
                   <input
                     type="number"
                     min="0"
@@ -747,6 +853,104 @@ function Inventory() {
                     onChange={(e) => setEditForm({ ...editForm, low_stock_threshold: e.target.value })}
                     className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                  </div>
+                </div>
+              </div>
+
+              {/* Lens Specifications Section */}
+              <div className="mb-6">
+                <h4 className="text-md font-medium text-yellow-400 mb-3 border-b border-gray-700 pb-2">Lens Specifications</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Index</label>
+                    <input
+                      type="text"
+                      value={editForm.index}
+                      onChange={(e) => setEditForm({ ...editForm, index: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Diameter</label>
+                    <input
+                      type="text"
+                      value={editForm.diameter}
+                      onChange={(e) => setEditForm({ ...editForm, diameter: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Sphere</label>
+                    <input
+                      type="text"
+                      value={editForm.sphere}
+                      onChange={(e) => setEditForm({ ...editForm, sphere: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Cylinder</label>
+                    <input
+                      type="text"
+                      value={editForm.cylinder}
+                      onChange={(e) => setEditForm({ ...editForm, cylinder: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Add</label>
+                    <input
+                      type="text"
+                      value={editForm.add}
+                      onChange={(e) => setEditForm({ ...editForm, add: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Axis</label>
+                    <input
+                      type="text"
+                      value={editForm.axis}
+                      onChange={(e) => setEditForm({ ...editForm, axis: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Steps</label>
+                    <input
+                      type="text"
+                      value={editForm.steps}
+                      onChange={(e) => setEditForm({ ...editForm, steps: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Modality</label>
+                    <input
+                      type="text"
+                      value={editForm.modality}
+                      onChange={(e) => setEditForm({ ...editForm, modality: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Set</label>
+                    <input
+                      type="text"
+                      value={editForm.set}
+                      onChange={(e) => setEditForm({ ...editForm, set: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">BC</label>
+                    <input
+                      type="text"
+                      value={editForm.bc}
+                      onChange={(e) => setEditForm({ ...editForm, bc: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
               </div>
               <div className="flex gap-3 mt-6">
@@ -762,23 +966,63 @@ function Inventory() {
                       console.log('🔌 Starting item update for ID:', editingItem.id);
                       console.log('🔌 Socket connection status:', socketService.getConnectionStatus());
                       
-                      // Prepare the payload for the backend (inventory-only update)
-                      // NOTE: This payload ONLY contains inventory-specific fields
-                      // It does NOT include any price_list fields like description, attributes, etc.
+                      // Determine if this is an inventory-only update or full update
+                      // Check if only inventory fields were changed
+                      const originalItem = editingItem;
+                      const priceListFields = ['description', 'code', 'pc_price', 'pc_cost'];
+                      const attributeFields = ['index', 'diameter', 'sphere', 'cylinder', 'add', 'axis', 'steps', 'modality', 'set', 'bc'];
+                      
+                      // Check if any price list or attribute fields were changed
+                      const priceListChanged = priceListFields.some(field => 
+                        editForm[field] !== (originalItem[field] || '')
+                      );
+                      const attributesChanged = attributeFields.some(field => 
+                        editForm[field] !== (originalItem.attributes?.[field] || '')
+                      );
+                      
+                      const isInventoryOnlyUpdate = !priceListChanged && !attributesChanged;
+                      
+                      // Prepare the payload for the backend
                       const payload = {
-                        supplier_id: editForm.supplier_id || null, // Updates price_list.supplier_id only
-                        stock: editForm.stock, // Updates products.stock
-                        low_stock_threshold: editForm.low_stock_threshold, // Updates products.low_stock_threshold
+                        // Always include inventory fields
+                        supplier_id: editForm.supplier_id || null,
+                        stock: editForm.stock,
+                        low_stock_threshold: editForm.low_stock_threshold,
                         addToInventory: true, // Ensure it stays in inventory
-                        inventoryOnlyUpdate: true, // Flag to indicate this is inventory-only
-                        // Include lens specifications from attributes (updates products.attributes)
-                        sphere: editingItem.attributes?.sphere || '',
-                        cylinder: editingItem.attributes?.cylinder || '',
-                        diameter: editingItem.attributes?.diameter || ''
+                        inventoryOnlyUpdate: isInventoryOnlyUpdate,
+                        
+                        // Include lens specifications (for products.attributes)
+                        sphere: editForm.sphere,
+                        cylinder: editForm.cylinder,
+                        diameter: editForm.diameter,
+                        
+                        // If not inventory-only, include all other fields
+                        ...(isInventoryOnlyUpdate ? {} : {
+                          description: editForm.description,
+                          code: editForm.code,
+                          pc_price: editForm.pc_price,
+                          pc_cost: editForm.pc_cost,
+                          subcategory_id: originalItem.subcategory_id, // Preserve original subcategory
+                          
+                          // Lens attributes for price_list.attributes (using backend field names)
+                          index: editForm.index,
+                          addFr: editForm.add, // Backend expects addFr/addTo instead of add
+                          addTo: editForm.add, // For single value, use same for both
+                          axis: editForm.axis,
+                          steps: editForm.steps,
+                          modality: editForm.modality,
+                          set: editForm.set,
+                          bc: editForm.bc
+                        })
                       };
                       
+                      console.log('🔌 Update type:', isInventoryOnlyUpdate ? 'Inventory Only' : 'Full Update');
+                      console.log('🔌 Original item data:', editingItem);
                       console.log('🔌 Sending update payload:', payload);
-                      const result = await updateItem(editingItem.id, payload);
+                      // Use price_list_id for updates, not product_id
+                      const priceListId = editingItem.price_list_id || editingItem.id;
+                      console.log('🔌 Using price_list_id for update:', priceListId);
+                      const result = await updateItem(priceListId, payload);
                       console.log('🔌 Update API response:', result);
                       
                       // Always close the modal after update attempt
@@ -787,9 +1031,18 @@ function Inventory() {
                       
                     } catch (e) {
                       console.error('Failed to update item', e);
+                      
+                      // Get more specific error message
+                      let errorMessage = 'Failed to update item. Please try again.';
+                      if (e.message && e.message.includes('DUPLICATE_DESCRIPTION')) {
+                        errorMessage = 'An item with this description already exists. Please use a different description.';
+                      } else if (e.message) {
+                        errorMessage = `Failed to update item: ${e.message}`;
+                      }
+                      
                       // Still close the modal even if there's an error
                       setEditingItem(null);
-                      alert('Failed to update item. Please try again.');
+                      alert(errorMessage);
                     }
                   }}
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200"

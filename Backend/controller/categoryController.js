@@ -4,10 +4,11 @@ const db = require("../config/db");
 // Helper function to emit Socket.IO events
 const emitSocketEvent = (req, event, data) => {
   const io = req.app.get('io');
+  console.log(`🔌 emitSocketEvent called: event=${event}, data=`, data);
   if (io) {
-  
+    console.log(`🔌 Emitting socket event: ${event} to room: ${event}`);
     io.to(event).emit(event, data);
-   
+    console.log(`🔌 Socket event emitted successfully`);
   } else {
     console.log(`❌ Socket.IO not available for event: ${event}`);
   }
@@ -236,19 +237,31 @@ exports.addItem = async (req, res) => {
             const productAttributes = item.product_attributes ? JSON.parse(item.product_attributes) : {};
             
             const newItem = {
-                ...item,
+                id: item.product_id, // This is the product ID that should be used in transactions
+                price_list_id: item.price_list_id, // This is the price_list ID that should be used for updates
+                stock: item.stock,
+                low_stock_threshold: item.low_stock_threshold,
+                supplier_id: item.supplier_id,
+                subcategory_id: item.subcategory_id,
+                description: item.description,
+                pc_price: item.pc_price,
+                pc_cost: item.pc_cost,
+                code: item.code,
+                supplier_name: item.supplier_name,
+                category_name: item.category_name,
+                subcategory_name: item.subcategory_name,
                 attributes: {
-                    ...attributes,
-                    // Include product attributes (sphere, cylinder, diameter) in the main attributes
+                    // For inventory items, prioritize product attributes over price_list attributes
+                    // This ensures specific product values (sphere, cylinder) are shown instead of range values (sphFR, sphTo)
                     ...productAttributes,
+                    // Include non-conflicting price_list attributes (like index, diameter from price_list)
+                    ...Object.fromEntries(
+                        Object.entries(attributes).filter(([key]) => !productAttributes.hasOwnProperty(key))
+                    ),
                     stock: item.stock || 0,
                     low_stock_threshold: item.low_stock_threshold || 5
                 }
             };
-            
-            // Clean up the temporary fields
-            delete newItem.attributes_json;
-            delete newItem.product_attributes;
             
             // Emit Socket.IO events with complete item data
             emitSocketEvent(req, 'item-updated', { type: 'added', item: newItem });
@@ -363,17 +376,30 @@ exports.bulkAddProducts = async (req, res) => {
                 const productAttrs = item.product_attributes ? JSON.parse(item.product_attributes) : {};
                 
                 const newItem = {
-                    ...item,
+                    id: item.id, // This is the product ID from the INSERT result
+                    price_list_id: pricelistId, // This is the price_list ID that should be used for updates
+                    stock: item.stock,
+                    low_stock_threshold: item.low_stock_threshold,
+                    supplier_id: item.supplier_id,
+                    subcategory_id: item.subcategory_id,
+                    description: item.description,
+                    pc_price: item.pc_price,
+                    pc_cost: item.pc_cost,
+                    code: item.code,
+                    supplier_name: item.supplier_name,
+                    category_name: item.category_name,
+                    subcategory_name: item.subcategory_name,
                     attributes: {
-                        ...attributes,
+                        // For inventory items, prioritize product attributes over price_list attributes
                         ...productAttrs,
+                        // Include non-conflicting price_list attributes
+                        ...Object.fromEntries(
+                            Object.entries(attributes).filter(([key]) => !productAttrs.hasOwnProperty(key))
+                        ),
                         stock: item.stock || 0,
                         low_stock_threshold: item.low_stock_threshold || 5
                     }
                 };
-                
-                delete newItem.attributes_json;
-                delete newItem.product_attributes;
                 
                 createdProducts.push(newItem);
             }
@@ -472,6 +498,7 @@ exports.getInventoryItems = async (req, res) => {
             
             return {
                 id: item.product_id, // This is the product ID that should be used in transactions
+                price_list_id: item.price_list_id, // This is the price_list ID that should be used for updates
                 stock: item.stock,
                 low_stock_threshold: item.low_stock_threshold,
                 supplier_id: item.supplier_id,
@@ -666,15 +693,17 @@ exports.updateItem = async (req, res) => {
         
         // Fetch the updated item data for socket emission (same structure as getInventoryItems)
         const [updatedItemResult] = await conn.query(`
-            SELECT pl.*, s.name as supplier_name, pc.name as category_name, ps.name as subcategory_name,
-                   p.stock, p.low_stock_threshold, p.attributes as product_attributes,
-                   JSON_UNQUOTE(pl.attributes) as attributes_json
-            FROM price_list pl
+            SELECT p.id as product_id, p.stock, p.low_stock_threshold, p.attributes as product_attributes,
+                   pl.id as price_list_id, pl.supplier_id, pl.subcategory_id, pl.attributes, 
+                   pl.description, pl.pc_price, pl.pc_cost, pl.is_deleted as price_list_deleted, 
+                   pl.created_at as price_list_created_at, pl.updated_at as price_list_updated_at, pl.code,
+                   s.name AS supplier_name, pc.name AS category_name, ps.name AS subcategory_name
+            FROM products p
+            INNER JOIN price_list pl ON p.price_list_id = pl.id AND pl.is_deleted = 0
             LEFT JOIN suppliers s ON pl.supplier_id = s.id
             LEFT JOIN price_subcategories ps ON pl.subcategory_id = ps.id
             LEFT JOIN price_categories pc ON ps.category_id = pc.id
-            LEFT JOIN products p ON pl.id = p.price_list_id AND p.is_deleted = 0
-            WHERE pl.id = ? AND pl.is_deleted = 0
+            WHERE pl.id = ? AND p.is_deleted = 0
         `, [id]);
         
         if (updatedItemResult.length > 0) {
@@ -684,25 +713,39 @@ exports.updateItem = async (req, res) => {
             const productAttributes = item.product_attributes ? JSON.parse(item.product_attributes) : {};
             
             const updatedItem = {
-                ...item,
+                id: item.product_id, // This is the product ID that should be used in transactions
+                price_list_id: item.price_list_id, // This is the price_list ID that should be used for updates
+                stock: item.stock,
+                low_stock_threshold: item.low_stock_threshold,
+                supplier_id: item.supplier_id,
+                subcategory_id: item.subcategory_id,
+                description: item.description,
+                pc_price: item.pc_price,
+                pc_cost: item.pc_cost,
+                code: item.code,
+                supplier_name: item.supplier_name,
+                category_name: item.category_name,
+                subcategory_name: item.subcategory_name,
                 attributes: {
-                    ...attributes,
-                    // Include product attributes (sphere, cylinder, diameter) in the main attributes
+                    // For inventory items, prioritize product attributes over price_list attributes
+                    // This ensures specific product values (sphere, cylinder) are shown instead of range values (sphFR, sphTo)
                     ...productAttributes,
+                    // Include non-conflicting price_list attributes (like index, diameter from price_list)
+                    ...Object.fromEntries(
+                        Object.entries(attributes).filter(([key]) => !productAttributes.hasOwnProperty(key))
+                    ),
                     stock: item.stock || 0,
                     low_stock_threshold: item.low_stock_threshold || 5
                 }
             };
             
-            // Clean up the temporary fields
-            delete updatedItem.attributes_json;
-            delete updatedItem.product_attributes;
-            
             // Emit Socket.IO events with complete item data
+            console.log('🔌 Emitting item-updated event for item:', updatedItem.id);
             emitSocketEvent(req, 'item-updated', { type: 'updated', item: updatedItem });
             
             // Also emit inventory update if this item is in inventory
             if (addToInventory) {
+                console.log('🔌 Emitting inventory-updated event for item:', updatedItem.id);
                 emitSocketEvent(req, 'inventory-updated', { type: 'updated', item: updatedItem });
             }
         }

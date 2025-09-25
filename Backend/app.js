@@ -109,7 +109,7 @@ const PORT = process.env.PORT;
 
 //add on edit inventory screen to edit attributes 
 
-//fix transactions due to changes on price list and products table
+//fix daily sales due to new database design
 
 //fix doesnt hide cmd on tiberio
 
