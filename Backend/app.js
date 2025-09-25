@@ -101,7 +101,7 @@ const PORT = process.env.PORT;
 })();
 
 //to do
-//fix bulk add cant go back to single add and test product
+
 
 //refactor inventory to have a dropdown for better clarity per product_list
 

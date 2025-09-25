@@ -453,14 +453,17 @@ exports.getInventoryItems = async (req, res) => {
     try {
         conn = await db.getConnection();
         const [result] = await conn.query(
-            `SELECT pl.*, s.name AS supplier_name, pc.name AS category_name, ps.name AS subcategory_name,
-                    p.stock, p.low_stock_threshold, p.attributes as product_attributes
-             FROM price_list pl
+            `SELECT p.id as product_id, p.stock, p.low_stock_threshold, p.attributes as product_attributes,
+                    pl.id as price_list_id, pl.supplier_id, pl.subcategory_id, pl.attributes, 
+                    pl.description, pl.pc_price, pl.pc_cost, pl.is_deleted as price_list_deleted, 
+                    pl.created_at as price_list_created_at, pl.updated_at as price_list_updated_at, pl.code,
+                    s.name AS supplier_name, pc.name AS category_name, ps.name AS subcategory_name
+             FROM products p
+             INNER JOIN price_list pl ON p.price_list_id = pl.id AND pl.is_deleted = 0
              LEFT JOIN suppliers s ON pl.supplier_id = s.id
              LEFT JOIN price_subcategories ps ON pl.subcategory_id = ps.id
              LEFT JOIN price_categories pc ON ps.category_id = pc.id
-             INNER JOIN products p ON pl.id = p.price_list_id AND p.is_deleted = 0
-             WHERE pl.is_deleted = 0 AND pl.supplier_id IS NOT NULL`
+             WHERE p.is_deleted = 0 AND pl.supplier_id IS NOT NULL`
         );
 
         const items = result.map(item => {
@@ -468,7 +471,18 @@ exports.getInventoryItems = async (req, res) => {
             const productAttributes = item.product_attributes ? JSON.parse(item.product_attributes) : {};
             
             return {
-                ...item,
+                id: item.product_id, // This is the product ID that should be used in transactions
+                stock: item.stock,
+                low_stock_threshold: item.low_stock_threshold,
+                supplier_id: item.supplier_id,
+                subcategory_id: item.subcategory_id,
+                description: item.description,
+                pc_price: item.pc_price,
+                pc_cost: item.pc_cost,
+                code: item.code,
+                supplier_name: item.supplier_name,
+                category_name: item.category_name,
+                subcategory_name: item.subcategory_name,
                 attributes: {
                     // For inventory items, prioritize product attributes over price_list attributes
                     // This ensures specific product values (sphere, cylinder) are shown instead of range values (sphFR, sphTo)
@@ -483,9 +497,57 @@ exports.getInventoryItems = async (req, res) => {
             };
         });
 
+        // Debug: Log the first few items to verify IDs
+        if (items.length > 0) {
+            console.log('🔍 getInventoryItems - First 3 items with IDs:', 
+                items.slice(0, 3).map(item => ({ 
+                    product_id: item.id, 
+                    description: item.description, 
+                    code: item.code
+                }))
+            );
+        }
+        
         res.status(200).json({ items });
     } catch (error) {
         res.status(500).json({ message: "Failed to get inventory items", error: error.message });
+    } finally {
+        if (conn) {
+            conn.release();
+        }
+    }
+}
+
+// Debug endpoint to check database structure
+exports.debugDatabase = async (req, res) => {
+    let conn;
+    try {
+        conn = await db.getConnection();
+        
+        // Get all products
+        const [products] = await conn.query('SELECT id, stock, price_list_id FROM products WHERE is_deleted = 0 LIMIT 10');
+        
+        // Get all price_list items
+        const [priceList] = await conn.query('SELECT id, description, code, pc_price FROM price_list WHERE is_deleted = 0 LIMIT 10');
+        
+        // Get joined data
+        const [joined] = await conn.query(`
+            SELECT p.id as product_id, p.stock, pl.id as price_list_id, pl.description, pl.code, pl.pc_price
+            FROM products p
+            LEFT JOIN price_list pl ON p.price_list_id = pl.id
+            WHERE p.is_deleted = 0
+            LIMIT 10
+        `);
+        
+        res.json({
+            products: products,
+            priceList: priceList,
+            joined: joined,
+            message: 'Database structure debug info'
+        });
+        
+    } catch (error) {
+        res.status(500).json({ message: "Debug failed", error: error.message });
     } finally {
         if (conn) {
             conn.release();

@@ -18,7 +18,7 @@ exports.createTransaction = async (req, res) => {
       user_id,
       patient_id,
       receipt_number,
-      items, // Array of items with product_id, quantity, discount (unit_price will be fetched from products table)
+      items, // Array of items with product_id, quantity, discount (unit_price will be fetched from price_list table)
       discount_percent = 0.00
     } = req.body;
 
@@ -47,9 +47,15 @@ exports.createTransaction = async (req, res) => {
         return res.status(400).json({ error: "Each item must have product_id and quantity" });
       }
       
-      // Check if product exists and get PC price
+      // Debug: Log the product ID being checked
+      console.log('🔍 createTransaction - Checking product_id:', item.product_id);
+      
+      // Check if product exists and get PC price from price_list
       const [existingProduct] = await db.execute(
-        "SELECT id, stock, pc_price FROM products WHERE id = ? AND is_deleted = 0",
+        `SELECT p.id, p.stock, pl.pc_price 
+         FROM products p 
+         LEFT JOIN price_list pl ON p.price_list_id = pl.id 
+         WHERE p.id = ? AND p.is_deleted = 0`,
         [item.product_id]
       );
 
@@ -61,7 +67,7 @@ exports.createTransaction = async (req, res) => {
         return res.status(400).json({ error: `Insufficient stock for product ID ${item.product_id}` });
       }
 
-      // Use PC price from products table
+      // Use PC price from price_list table
       const unit_price = existingProduct[0].pc_price;
       const itemTotal = item.quantity * unit_price;
       const itemDiscount = item.discount || 0;
@@ -89,9 +95,12 @@ exports.createTransaction = async (req, res) => {
 
       // Insert transaction items
       for (const item of items) {
-        // Get PC price for this specific item
+        // Get PC price for this specific item from price_list
         const [productData] = await connection.execute(
-          "SELECT pc_price FROM products WHERE id = ?",
+          `SELECT pl.pc_price 
+           FROM products p 
+           LEFT JOIN price_list pl ON p.price_list_id = pl.id 
+           WHERE p.id = ?`,
           [item.product_id]
         );
         
@@ -126,9 +135,10 @@ exports.createTransaction = async (req, res) => {
 
       // Get transaction items for Socket.IO emission
       const [transactionItems] = await db.execute(
-        `SELECT ti.*, p.description as product_description, p.code as product_code
+        `SELECT ti.*, pl.description as product_description, pl.code as product_code
          FROM transaction_items ti
          LEFT JOIN products p ON ti.product_id = p.id
+         LEFT JOIN price_list pl ON p.price_list_id = pl.id
          WHERE ti.transaction_id = ?`,
         [transaction_id]
       );
@@ -190,9 +200,10 @@ exports.getAllTransactions = async (req, res) => {
     // Get items for each transaction
     for (let transaction of transactions) {
       const [items] = await db.execute(
-        `SELECT ti.*, p.description as product_description, p.code as product_code
+        `SELECT ti.*, pl.description as product_description, pl.code as product_code
          FROM transaction_items ti
          LEFT JOIN products p ON ti.product_id = p.id
+         LEFT JOIN price_list pl ON p.price_list_id = pl.id
          WHERE ti.transaction_id = ?`,
         [transaction.id]
       );
@@ -476,7 +487,8 @@ exports.fulfillTransactionItem = async (req, res) => {
         `SELECT p.*, s.name as supplier_name, 
                 JSON_UNQUOTE(p.attributes) as attributes_json
          FROM products p
-         LEFT JOIN suppliers s ON p.supplier_id = s.id
+         LEFT JOIN price_list pl ON p.price_list_id = pl.id
+         LEFT JOIN suppliers s ON pl.supplier_id = s.id
          WHERE p.id = ? AND p.is_deleted = 0`,
         [item.product_id]
       );
@@ -614,7 +626,8 @@ exports.refundTransactionItem = async (req, res) => {
         `SELECT p.*, s.name as supplier_name, 
                 JSON_UNQUOTE(p.attributes) as attributes_json
          FROM products p
-         LEFT JOIN suppliers s ON p.supplier_id = s.id
+         LEFT JOIN price_list pl ON p.price_list_id = pl.id
+         LEFT JOIN suppliers s ON pl.supplier_id = s.id
          WHERE p.id = ? AND p.is_deleted = 0`,
         [item.product_id]
       );
@@ -699,9 +712,10 @@ exports.getTransactionItems = async (req, res) => {
     const { transactionId } = req.params;
 
     const [items] = await db.execute(
-      `SELECT ti.*, p.description as product_description, p.code as product_code
+      `SELECT ti.*, pl.description as product_description, pl.code as product_code
        FROM transaction_items ti
        LEFT JOIN products p ON ti.product_id = p.id
+       LEFT JOIN price_list pl ON p.price_list_id = pl.id
        WHERE ti.transaction_id = ?`,
       [transactionId]
     );
