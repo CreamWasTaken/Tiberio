@@ -105,10 +105,6 @@ const PORT = process.env.PORT;
 
 //refactor inventory to have a dropdown for better clarity per product_list
 
-//fix socket.io on pricelist
-
-//add on edit inventory screen to edit attributes 
-
 //fix daily sales due to new database design
 
 //fix doesnt hide cmd on tiberio

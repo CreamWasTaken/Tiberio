@@ -58,6 +58,10 @@ function Inventory() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
   
+  // Grouping state
+  const [groupBySubcategory, setGroupBySubcategory] = useState(true);
+  const [collapsedGroups, setCollapsedGroups] = useState(new Set());
+  
   const abortRef = useRef(null);
   
   const fetchInventory = async () => {
@@ -338,11 +342,38 @@ function Inventory() {
     return filtered;
   }, [items, filters]);
 
-  // Paginated items
+  // Group items by subcategory
+  const groupedItems = useMemo(() => {
+    if (!groupBySubcategory) {
+      return { 'All Items': filteredItems };
+    }
+    
+    const groups = {};
+    filteredItems.forEach(item => {
+      const subcategoryName = item.subcategory_name || 'Uncategorized';
+      if (!groups[subcategoryName]) {
+        groups[subcategoryName] = [];
+      }
+      groups[subcategoryName].push(item);
+    });
+    
+    // Sort groups alphabetically
+    const sortedGroups = {};
+    Object.keys(groups).sort().forEach(key => {
+      sortedGroups[key] = groups[key];
+    });
+    
+    return sortedGroups;
+  }, [filteredItems, groupBySubcategory]);
+
+  // Paginated items (when not grouping)
   const paginatedItems = useMemo(() => {
+    if (groupBySubcategory) {
+      return []; // Don't use pagination when grouping
+    }
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredItems.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredItems, currentPage, itemsPerPage]);
+  }, [filteredItems, currentPage, itemsPerPage, groupBySubcategory]);
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
@@ -375,6 +406,29 @@ function Inventory() {
       status: ''
     });
     setCurrentPage(1);
+  };
+
+  // Toggle group collapse
+  const toggleGroup = (groupName) => {
+    setCollapsedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupName)) {
+        newSet.delete(groupName);
+      } else {
+        newSet.add(groupName);
+      }
+      return newSet;
+    });
+  };
+
+  // Expand all groups
+  const expandAllGroups = () => {
+    setCollapsedGroups(new Set());
+  };
+
+  // Collapse all groups
+  const collapseAllGroups = () => {
+    setCollapsedGroups(new Set(Object.keys(groupedItems)));
   };
 
   return (
@@ -420,6 +474,36 @@ function Inventory() {
                   </svg>
                   <span>Refresh</span>
                 </button>
+                
+                {/* Grouping Controls */}
+                <div className="flex items-center space-x-2">
+                  <label className="flex items-center space-x-2 text-sm text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={groupBySubcategory}
+                      onChange={(e) => setGroupBySubcategory(e.target.checked)}
+                      className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>Group by Subcategory</span>
+                  </label>
+                  
+                  {groupBySubcategory && (
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={expandAllGroups}
+                        className="px-2 py-1 text-xs bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors duration-200"
+                      >
+                        Expand All
+                      </button>
+                      <button
+                        onClick={collapseAllGroups}
+                        className="px-2 py-1 text-xs bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors duration-200"
+                      >
+                        Collapse All
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
         
@@ -600,109 +684,246 @@ function Inventory() {
                       </div>
 
                       <div className="max-h-[65vh] overflow-y-auto custom-scrollbar">
-                        <div>
-                          <table className="w-full bg-gray-900/60 border border-gray-700 rounded-lg table-fixed">
-                            <thead className="bg-gray-800/80 sticky top-0 z-10">
-                              <tr>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-32">Description</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Code</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-24">Supplier</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Index</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Diameter</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Sphere</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Cylinder</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Add</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Axis</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Steps</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">Modality</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Set</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">BC</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">PC Price</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">PC Cost</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Stock</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Threshold</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Status</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-700">
-                              {paginatedItems.map((item) => (
-                                <tr key={item.id} className="hover:bg-gray-800/40 transition-colors duration-200">
-                                  <td className="px-2 py-2 text-[11px] text-white font-medium whitespace-nowrap">{item.description}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.code || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.supplier_name || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.index || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.diameter || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.sphere || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.cylinder || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.add || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.axis || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.steps || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.modality || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.set || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.bc || '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-green-400 font-semibold whitespace-nowrap">₱{parseFloat(item.pc_price || 0).toLocaleString()}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">₱{parseFloat(item.pc_cost || 0).toLocaleString()}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.stock ?? '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.low_stock_threshold ?? '-'}</td>
-                                  <td className="px-2 py-2 text-[11px] whitespace-nowrap">
-                                    {(() => {
-                                      const stock = Number(item.attributes?.stock ?? 0);
-                                      const low = Number(item.attributes?.low_stock_threshold ?? 0);
-                                      const status = stock <= 0 ? 'Out of stock' : stock <= low ? 'Low' : 'Normal';
-                                      const color = stock <= 0 ? 'text-red-400' : stock <= low ? 'text-yellow-400' : 'text-green-400';
-                                      return <span className={`${color} font-medium`}>{status}</span>;
-                                    })()}
-                                  </td>
-                                  <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">
-                                    <div className="flex space-x-2">
-                                      <button
-                                        onClick={() => {
-                                          setEditingItem(item);
-                                          setEditForm({
-                                            supplier_id: item.supplier_id || '',
-                                            stock: item.attributes?.stock ?? '',
-                                            low_stock_threshold: item.attributes?.low_stock_threshold ?? '',
-                                            description: item.description || '',
-                                            code: item.code || '',
-                                            pc_price: item.pc_price || '',
-                                            pc_cost: item.pc_cost || '',
-                                            // Lens attributes
-                                            index: item.attributes?.index || '',
-                                            diameter: item.attributes?.diameter || '',
-                                            sphere: item.attributes?.sphere || '',
-                                            cylinder: item.attributes?.cylinder || '',
-                                            add: item.attributes?.add || '',
-                                            axis: item.attributes?.axis || '',
-                                            steps: item.attributes?.steps || '',
-                                            modality: item.attributes?.modality || '',
-                                            set: item.attributes?.set || '',
-                                            bc: item.attributes?.bc || ''
-                                          });
-                                        }}
-                                        className="text-blue-400 hover:text-blue-300"
+                        {groupBySubcategory ? (
+                          // Grouped view
+                          <div>
+                            {Object.entries(groupedItems).map(([groupName, groupItems]) => (
+                              <div key={groupName} className="mb-6">
+                                {/* Group Header */}
+                                <div 
+                                  className="bg-gray-700/50 border border-gray-600 rounded-t-lg px-4 py-3 cursor-pointer hover:bg-gray-700/70 transition-colors duration-200"
+                                  onClick={() => toggleGroup(groupName)}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                      <svg 
+                                        className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${collapsedGroups.has(groupName) ? 'rotate-0' : 'rotate-90'}`}
+                                        fill="none" 
+                                        stroke="currentColor" 
+                                        viewBox="0 0 24 24"
                                       >
-                                        Edit
-                                      </button>
-                                      {item.supplier_id && item.supplier_name && (
-                                        <button
-                                          onClick={() => handleDeleteItem(item)}
-                                          className="text-red-400 hover:text-red-300"
-                                        >
-                                          Delete
-                                        </button>
-                                      )}
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                      </svg>
+                                      <h3 className="text-lg font-semibold text-white">{groupName}</h3>
+                                      <span className="text-sm text-gray-400">({groupItems.length} items)</span>
                                     </div>
-                                  </td>
+                                    <div className="text-sm text-gray-400">
+                                      {collapsedGroups.has(groupName) ? 'Click to expand' : 'Click to collapse'}
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {/* Group Items Table */}
+                                {!collapsedGroups.has(groupName) && (
+                                  <div className="border-l border-r border-b border-gray-700 rounded-b-lg">
+                                    <table className="w-full bg-gray-900/60 table-fixed">
+                                      <thead className="bg-gray-800/80">
+                                        <tr>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-32">Description</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Code</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-24">Supplier</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Index</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Diameter</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Sphere</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Cylinder</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Add</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Axis</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Steps</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">Modality</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Set</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">BC</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">PC Price</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">PC Cost</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Stock</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Threshold</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Status</th>
+                                          <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Actions</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-gray-700">
+                                        {groupItems.map((item) => (
+                                          <tr key={item.id} className="hover:bg-gray-800/40 transition-colors duration-200">
+                                            <td className="px-2 py-2 text-[11px] text-white font-medium whitespace-nowrap">{item.description}</td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.code || '-'}</td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.supplier_name || '-'}</td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.index || '-'}</td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.diameter || '-'}</td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.sphere || '-'}</td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.cylinder || '-'}</td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.add || '-'}</td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.axis || '-'}</td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.steps || '-'}</td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.modality || '-'}</td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.set || '-'}</td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.bc || '-'}</td>
+                                            <td className="px-2 py-2 text-[11px] text-green-400 font-semibold whitespace-nowrap">₱{parseFloat(item.pc_price || 0).toLocaleString()}</td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">₱{parseFloat(item.pc_cost || 0).toLocaleString()}</td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.stock ?? '-'}</td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.low_stock_threshold ?? '-'}</td>
+                                            <td className="px-2 py-2 text-[11px] whitespace-nowrap">
+                                              {(() => {
+                                                const stock = Number(item.attributes?.stock ?? 0);
+                                                const low = Number(item.attributes?.low_stock_threshold ?? 0);
+                                                const status = stock <= 0 ? 'Out of stock' : stock <= low ? 'Low' : 'Normal';
+                                                const color = stock <= 0 ? 'text-red-400' : stock <= low ? 'text-yellow-400' : 'text-green-400';
+                                                return <span className={`${color} font-medium`}>{status}</span>;
+                                              })()}
+                                            </td>
+                                            <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">
+                                              <div className="flex space-x-2">
+                                                <button
+                                                  onClick={() => {
+                                                    setEditingItem(item);
+                                                    setEditForm({
+                                                      supplier_id: item.supplier_id || '',
+                                                      stock: item.attributes?.stock ?? '',
+                                                      low_stock_threshold: item.attributes?.low_stock_threshold ?? '',
+                                                      description: item.description || '',
+                                                      code: item.code || '',
+                                                      pc_price: item.pc_price || '',
+                                                      pc_cost: item.pc_cost || '',
+                                                      // Lens attributes
+                                                      index: item.attributes?.index || '',
+                                                      diameter: item.attributes?.diameter || '',
+                                                      sphere: item.attributes?.sphere || '',
+                                                      cylinder: item.attributes?.cylinder || '',
+                                                      add: item.attributes?.add || '',
+                                                      axis: item.attributes?.axis || '',
+                                                      steps: item.attributes?.steps || '',
+                                                      modality: item.attributes?.modality || '',
+                                                      set: item.attributes?.set || '',
+                                                      bc: item.attributes?.bc || ''
+                                                    });
+                                                  }}
+                                                  className="text-blue-400 hover:text-blue-300"
+                                                >
+                                                  Edit
+                                                </button>
+                                                {item.supplier_id && item.supplier_name && (
+                                                  <button
+                                                    onClick={() => handleDeleteItem(item)}
+                                                    className="text-red-400 hover:text-red-300"
+                                                  >
+                                                    Delete
+                                                  </button>
+                                                )}
+                                              </div>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          // Ungrouped view (original table)
+                          <div>
+                            <table className="w-full bg-gray-900/60 border border-gray-700 rounded-lg table-fixed">
+                              <thead className="bg-gray-800/80 sticky top-0 z-10">
+                                <tr>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-32">Description</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Code</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-24">Supplier</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Index</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Diameter</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Sphere</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Cylinder</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Add</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Axis</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Steps</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">Modality</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Set</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">BC</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">PC Price</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-20">PC Cost</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-12">Stock</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Threshold</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Status</th>
+                                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-16">Actions</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                              </thead>
+                              <tbody className="divide-y divide-gray-700">
+                                {paginatedItems.map((item) => (
+                                  <tr key={item.id} className="hover:bg-gray-800/40 transition-colors duration-200">
+                                    <td className="px-2 py-2 text-[11px] text-white font-medium whitespace-nowrap">{item.description}</td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.code || '-'}</td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.supplier_name || '-'}</td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.index || '-'}</td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.diameter || '-'}</td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.sphere || '-'}</td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.cylinder || '-'}</td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.add || '-'}</td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.axis || '-'}</td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.steps || '-'}</td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.modality || '-'}</td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.set || '-'}</td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.bc || '-'}</td>
+                                    <td className="px-2 py-2 text-[11px] text-green-400 font-semibold whitespace-nowrap">₱{parseFloat(item.pc_price || 0).toLocaleString()}</td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">₱{parseFloat(item.pc_cost || 0).toLocaleString()}</td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.stock ?? '-'}</td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">{item.attributes?.low_stock_threshold ?? '-'}</td>
+                                    <td className="px-2 py-2 text-[11px] whitespace-nowrap">
+                                      {(() => {
+                                        const stock = Number(item.attributes?.stock ?? 0);
+                                        const low = Number(item.attributes?.low_stock_threshold ?? 0);
+                                        const status = stock <= 0 ? 'Out of stock' : stock <= low ? 'Low' : 'Normal';
+                                        const color = stock <= 0 ? 'text-red-400' : stock <= low ? 'text-yellow-400' : 'text-green-400';
+                                        return <span className={`${color} font-medium`}>{status}</span>;
+                                      })()}
+                                    </td>
+                                    <td className="px-2 py-2 text-[11px] text-gray-300 whitespace-nowrap">
+                                      <div className="flex space-x-2">
+                                        <button
+                                          onClick={() => {
+                                            setEditingItem(item);
+                                            setEditForm({
+                                              supplier_id: item.supplier_id || '',
+                                              stock: item.attributes?.stock ?? '',
+                                              low_stock_threshold: item.attributes?.low_stock_threshold ?? '',
+                                              description: item.description || '',
+                                              code: item.code || '',
+                                              pc_price: item.pc_price || '',
+                                              pc_cost: item.pc_cost || '',
+                                              // Lens attributes
+                                              index: item.attributes?.index || '',
+                                              diameter: item.attributes?.diameter || '',
+                                              sphere: item.attributes?.sphere || '',
+                                              cylinder: item.attributes?.cylinder || '',
+                                              add: item.attributes?.add || '',
+                                              axis: item.attributes?.axis || '',
+                                              steps: item.attributes?.steps || '',
+                                              modality: item.attributes?.modality || '',
+                                              set: item.attributes?.set || '',
+                                              bc: item.attributes?.bc || ''
+                                            });
+                                          }}
+                                          className="text-blue-400 hover:text-blue-300"
+                                        >
+                                          Edit
+                                        </button>
+                                        {item.supplier_id && item.supplier_name && (
+                                          <button
+                                            onClick={() => handleDeleteItem(item)}
+                                            className="text-red-400 hover:text-red-300"
+                                          >
+                                            Delete
+                                          </button>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Pagination Controls */}
-                      {totalPages > 1 && (
+                      {/* Pagination Controls - Only show when not grouping */}
+                      {!groupBySubcategory && totalPages > 1 && (
                         <div className="mt-4 flex items-center justify-between">
                           <div className="text-sm text-gray-400">
                             Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredItems.length)} of {filteredItems.length} results

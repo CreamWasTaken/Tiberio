@@ -5,7 +5,8 @@ const BulkAddProductsModal = ({
   onClose, 
   pricelistItem, 
   onBulkAdd,
-  isInline = false
+  isInline = false,
+  isLoading = false
 }) => {
   const [formData, setFormData] = useState({
     stock: '',
@@ -674,25 +675,33 @@ const BulkAddProductsModal = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200"
+              disabled={isLoading}
+              className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-lg transition-colors duration-200"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={generatedProducts.length === 0 && formData.customCombinations.length === 0}
-              className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors duration-200"
+              disabled={isLoading || (generatedProducts.length === 0 && formData.customCombinations.length === 0)}
+              className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
             >
-              {(() => {
-                let count = 0;
-                if (selectedProducts.size > 0) {
-                  count = selectedProducts.size;
-                } else {
-                  count = generatedProducts.length;
-                }
-                count += formData.customCombinations.filter(c => c.sphere && c.cylinder).length;
-                return `Add ${count} Products`;
-              })()}
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Adding Products...
+                </>
+              ) : (
+                (() => {
+                  let count = 0;
+                  if (selectedProducts.size > 0) {
+                    count = selectedProducts.size;
+                  } else {
+                    count = generatedProducts.length;
+                  }
+                  count += formData.customCombinations.filter(c => c.sphere && c.cylinder).length;
+                  return `Add ${count} Products`;
+                })()
+              )}
             </button>
           </div>
         </form>
@@ -1105,25 +1114,33 @@ const BulkAddProductsModal = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200"
+              disabled={isLoading}
+              className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-lg transition-colors duration-200"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={generatedProducts.length === 0 && formData.customCombinations.length === 0}
-              className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors duration-200"
+              disabled={isLoading || (generatedProducts.length === 0 && formData.customCombinations.length === 0)}
+              className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
             >
-              {(() => {
-                let count = 0;
-                if (selectedProducts.size > 0) {
-                  count = selectedProducts.size;
-                } else {
-                  count = generatedProducts.length;
-                }
-                count += formData.customCombinations.filter(c => c.sphere && c.cylinder).length;
-                return `Add ${count} Products`;
-              })()}
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Adding Products...
+                </>
+              ) : (
+                (() => {
+                  let count = 0;
+                  if (selectedProducts.size > 0) {
+                    count = selectedProducts.size;
+                  } else {
+                    count = generatedProducts.length;
+                  }
+                  count += formData.customCombinations.filter(c => c.sphere && c.cylinder).length;
+                  return `Add ${count} Products`;
+                })()
+              )}
             </button>
           </div>
         </form>

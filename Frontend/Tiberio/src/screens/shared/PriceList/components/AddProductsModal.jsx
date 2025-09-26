@@ -6,7 +6,8 @@ const AddProductsModal = ({
   onClose, 
   pricelistItem, 
   onBulkAdd,
-  onSingleAdd
+  onSingleAdd,
+  isBulkAdding = false
 }) => {
   const [activeTab, setActiveTab] = useState('single');
   const [singleProductData, setSingleProductData] = useState({
@@ -68,12 +69,19 @@ const AddProductsModal = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-gray-800 border border-gray-700 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
         <div className="flex justify-between items-center p-6 border-b border-gray-700">
-          <h3 className="text-xl font-semibold text-white">
+          <h3 className="text-xl font-semibold text-white flex items-center gap-2">
             Add Products - {pricelistItem?.description}
+            {isBulkAdding && (
+              <div className="flex items-center gap-2 text-sm text-blue-400">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+                Adding Products...
+              </div>
+            )}
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors duration-200"
+            disabled={isBulkAdding}
+            className="text-gray-400 hover:text-white disabled:text-gray-600 disabled:cursor-not-allowed transition-colors duration-200"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -85,11 +93,12 @@ const AddProductsModal = ({
         <div className="flex border-b border-gray-700">
           <button
             onClick={() => setActiveTab('single')}
+            disabled={isBulkAdding}
             className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
               activeTab === 'single'
                 ? 'text-blue-400 border-b-2 border-blue-500 bg-gray-900/50'
                 : 'text-gray-400 hover:text-gray-200'
-            }`}
+            } ${isBulkAdding ? 'disabled:opacity-50 disabled:cursor-not-allowed' : ''}`}
           >
             <div className="flex items-center justify-center gap-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -100,11 +109,12 @@ const AddProductsModal = ({
           </button>
           <button
             onClick={() => setActiveTab('bulk')}
+            disabled={isBulkAdding}
             className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
               activeTab === 'bulk'
                 ? 'text-blue-400 border-b-2 border-blue-500 bg-gray-900/50'
                 : 'text-gray-400 hover:text-gray-200'
-            }`}
+            } ${isBulkAdding ? 'disabled:opacity-50 disabled:cursor-not-allowed' : ''}`}
           >
             <div className="flex items-center justify-center gap-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,6 +228,7 @@ const AddProductsModal = ({
               pricelistItem={pricelistItem}
               onBulkAdd={onBulkAdd}
               isInline={true} // New prop to indicate inline rendering
+              isLoading={isBulkAdding}
             />
           )}
         </div>

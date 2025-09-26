@@ -56,6 +56,7 @@ function Pricelist() {
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [isAddProductsModalOpen, setIsAddProductsModalOpen] = useState(false);
   const [selectedPricelistItem, setSelectedPricelistItem] = useState(null);
+  const [isBulkAdding, setIsBulkAdding] = useState(false);
   const [suppliers, setSuppliers] = useState([]);
   const [suppliersLoading, setSuppliersLoading] = useState(false);
   const [subcategoryFormData, setSubcategoryFormData] = useState({
@@ -480,6 +481,7 @@ function Pricelist() {
   };
 
   const handleBulkAddSubmit = async (products, pricelistId) => {
+    setIsBulkAdding(true);
     try {
       await bulkAddProducts(pricelistId, products);
       setIsAddProductsModalOpen(false);
@@ -492,6 +494,8 @@ function Pricelist() {
     } catch (error) {
       console.error('Error bulk adding products:', error);
       alert(`Error creating products: ${error.message}`);
+    } finally {
+      setIsBulkAdding(false);
     }
   };
 
@@ -1416,6 +1420,7 @@ function Pricelist() {
         pricelistItem={selectedPricelistItem}
         onBulkAdd={handleBulkAddSubmit}
         onSingleAdd={handleAddSingleProduct}
+        isBulkAdding={isBulkAdding}
       />
     </div>
   );
