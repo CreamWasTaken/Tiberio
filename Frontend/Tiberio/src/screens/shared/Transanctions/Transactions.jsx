@@ -711,34 +711,68 @@ function Transactions() {
                     <h4 className="text-sm font-medium text-gray-300 mb-4">Items Purchased</h4>
                     {selectedTransaction.items && selectedTransaction.items.length > 0 ? (
                       <div className="space-y-3">
-                        {selectedTransaction.items.map((item, index) => (
-                          <div key={index} className="bg-gray-800 rounded-lg p-4 border border-gray-600">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                              <div>
-                                <span className="text-gray-400">Product:</span>
-                                <p className="text-white font-medium">{item.product_description || 'Unknown Product'}</p>
-                                <p className="text-gray-500 text-xs">Code: {item.product_code || 'N/A'}</p>
-                              </div>
-                              <div>
-                                <span className="text-gray-400">Quantity:</span>
-                                <p className="text-white">{item.quantity}</p>
-                              </div>
-                              <div>
-                                <span className="text-gray-400">Unit Price:</span>
-                                <p className="text-white">₱{parseFloat(item.unit_price || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                              </div>
-                              <div>
-                                <span className="text-gray-400">Total:</span>
-                                <p className="text-white font-medium">
-                                  ₱{parseFloat((item.quantity * item.unit_price) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </p>
-                                {item.discount > 0 && (
-                                  <p className="text-red-400 text-xs">Discount: ₱{parseFloat(item.discount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                )}
+                        {selectedTransaction.items.map((item, index) => {
+                          // Helper function to render lens specifications
+                          const renderLensSpecs = () => {
+                            const specs = [];
+                            const productAttrs = item.product_attributes || {};
+                            const priceListAttrs = item.price_list_attributes || {};
+                            
+                            // Priority: product attributes (specific values) over price_list attributes (ranges)
+                            const sphere = productAttrs.sphere || (priceListAttrs.sphFR && priceListAttrs.sphTo ? `${priceListAttrs.sphFR} to ${priceListAttrs.sphTo}` : '');
+                            const cylinder = productAttrs.cylinder || (priceListAttrs.cylFr && priceListAttrs.cylTo ? `${priceListAttrs.cylFr} to ${priceListAttrs.cylTo}` : '');
+                            const diameter = productAttrs.diameter || priceListAttrs.diameter || '';
+                            const index = productAttrs.index || priceListAttrs.index || '';
+                            const tp = productAttrs.tp || priceListAttrs.tp || '';
+                            const add = priceListAttrs.addFr && priceListAttrs.addTo ? `${priceListAttrs.addFr} to ${priceListAttrs.addTo}` : '';
+                            const bc = priceListAttrs.bc || '';
+                            const modality = priceListAttrs.modality || '';
+                            
+                            if (sphere) specs.push(`Sphere: ${sphere}`);
+                            if (cylinder) specs.push(`Cylinder: ${cylinder}`);
+                            if (diameter) specs.push(`Diameter: ${diameter}`);
+                            if (index) specs.push(`Index: ${index}`);
+                            if (tp) specs.push(`TP: ${tp}`);
+                            if (add) specs.push(`Add: ${add}`);
+                            if (bc) specs.push(`BC: ${bc}`);
+                            if (modality) specs.push(`Modality: ${modality}`);
+                            
+                            return specs.length > 0 ? specs.join(' • ') : 'No specifications available';
+                          };
+
+                          return (
+                            <div key={index} className="bg-gray-800 rounded-lg p-4 border border-gray-600">
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                  <span className="text-gray-400">Product:</span>
+                                  <p className="text-white font-medium">{item.product_description || 'Unknown Product'}</p>
+                                  <p className="text-gray-500 text-xs">Code: {item.product_code || 'N/A'}</p>
+                                  <div className="mt-2">
+                                    <span className="text-gray-400 text-xs">Specifications:</span>
+                                    <p className="text-gray-300 text-xs mt-1">{renderLensSpecs()}</p>
+                                  </div>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400">Quantity:</span>
+                                  <p className="text-white">{item.quantity}</p>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400">Unit Price:</span>
+                                  <p className="text-white">₱{parseFloat(item.unit_price || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400">Total:</span>
+                                  <p className="text-white font-medium">
+                                    ₱{parseFloat((item.quantity * item.unit_price) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </p>
+                                  {item.discount > 0 && (
+                                    <p className="text-red-400 text-xs">Discount: ₱{parseFloat(item.discount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-gray-400 text-center py-4">No items found for this transaction.</p>

@@ -103,8 +103,6 @@ const PORT = process.env.PORT;
 //to do
 
 
-//refactor inventory to have a dropdown for better clarity per product_list
-
 //fix daily sales due to new database design
 
 //fix doesnt hide cmd on tiberio

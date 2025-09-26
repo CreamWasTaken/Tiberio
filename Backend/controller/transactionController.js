@@ -200,13 +200,30 @@ exports.getAllTransactions = async (req, res) => {
     // Get items for each transaction
     for (let transaction of transactions) {
       const [items] = await db.execute(
-        `SELECT ti.*, pl.description as product_description, pl.code as product_code
+        `SELECT ti.*, 
+                pl.description as product_description, 
+                pl.code as product_code,
+                p.attributes as product_attributes,
+                pl.attributes as price_list_attributes
          FROM transaction_items ti
          LEFT JOIN products p ON ti.product_id = p.id
          LEFT JOIN price_list pl ON p.price_list_id = pl.id
          WHERE ti.transaction_id = ?`,
         [transaction.id]
       );
+      
+      // Parse JSON attributes for each item
+      items.forEach(item => {
+        try {
+          item.product_attributes = item.product_attributes ? JSON.parse(item.product_attributes) : {};
+          item.price_list_attributes = item.price_list_attributes ? JSON.parse(item.price_list_attributes) : {};
+        } catch (error) {
+          console.error('Error parsing attributes for item:', item.id, error);
+          item.product_attributes = {};
+          item.price_list_attributes = {};
+        }
+      });
+      
       transaction.items = items;
     }
 
@@ -242,12 +259,29 @@ exports.getTransactionById = async (req, res) => {
 
     // Get transaction items
     const [items] = await db.execute(
-      `SELECT ti.*, p.description as product_description, p.code as product_code
+      `SELECT ti.*, 
+              pl.description as product_description, 
+              pl.code as product_code,
+              p.attributes as product_attributes,
+              pl.attributes as price_list_attributes
        FROM transaction_items ti
        LEFT JOIN products p ON ti.product_id = p.id
+       LEFT JOIN price_list pl ON p.price_list_id = pl.id
        WHERE ti.transaction_id = ?`,
       [id]
     );
+
+    // Parse JSON attributes for each item
+    items.forEach(item => {
+      try {
+        item.product_attributes = item.product_attributes ? JSON.parse(item.product_attributes) : {};
+        item.price_list_attributes = item.price_list_attributes ? JSON.parse(item.price_list_attributes) : {};
+      } catch (error) {
+        console.error('Error parsing attributes for item:', item.id, error);
+        item.product_attributes = {};
+        item.price_list_attributes = {};
+      }
+    });
 
     const transaction = transactions[0];
     transaction.items = items;
