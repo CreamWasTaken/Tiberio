@@ -67,7 +67,7 @@ exports.login = async (req, res) => {
     );
 
     //query for login logs
-    // await db.query("INSERT INTO logs (user_id) VALUES (?)", [user.id]);
+    await db.query("INSERT INTO logs (user_id) VALUES (?)", [user.id]);
     
     res.status(200).json({
       message: "User Logged in successfully",
