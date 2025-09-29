@@ -89,7 +89,7 @@ function Transactions() {
         // Wait for Socket.IO connection to be established
         const socket = await socketService.waitForConnection();
         
-        // Join transaction update room
+        // Join general transaction update room
         socketService.joinRoom('transaction-updated');
         
         // Listen for transaction updates

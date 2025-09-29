@@ -146,16 +146,27 @@ exports.createTransaction = async (req, res) => {
       const completeTransaction = newTransaction[0];
       completeTransaction.items = transactionItems;
 
-      // Emit Socket.IO event for real-time updates to patient-specific room
+      // Emit Socket.IO event for real-time updates
       const io = req.app.get('io');
       if (io) {
-        const roomName = `patient-${patient_id}-transactions`;
-        io.to(roomName).emit('transaction-updated', {
+        // Emit to general transaction room for all users
+        io.to('transaction-updated').emit('transaction-updated', {
           type: 'added',
           transaction: completeTransaction,
           timestamp: new Date().toISOString(),
-          roomName: roomName
+          roomName: 'transaction-updated'
         });
+        
+        // Also emit to patient-specific room if patient_id exists
+        if (patient_id) {
+          const roomName = `patient-${patient_id}-transactions`;
+          io.to(roomName).emit('transaction-updated', {
+            type: 'added',
+            transaction: completeTransaction,
+            timestamp: new Date().toISOString(),
+            roomName: roomName
+          });
+        }
       } else {
         console.log(`❌ Socket.IO not available for transaction-updated event`);
       }
@@ -424,16 +435,35 @@ exports.deleteTransaction = async (req, res) => {
       [id]
     );
 
-    // Emit Socket.IO event for real-time updates to patient-specific room
+    // Emit Socket.IO event for real-time updates
     const io = req.app.get('io');
     if (io) {
-      const roomName = `patient-${patient_id}-transactions`;
-      io.to(roomName).emit('transaction-updated', {
+      const eventData = {
         type: 'deleted',
         transaction_id: id,
-        timestamp: new Date().toISOString(),
-        roomName: roomName
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log(`🔌 Emitting transaction deleted event:`, eventData);
+      
+      // Emit to general transaction room for all users
+      io.to('transaction-updated').emit('transaction-updated', {
+        ...eventData,
+        roomName: 'transaction-updated'
       });
+      
+      // Also emit to patient-specific room if patient_id exists
+      if (patient_id) {
+        const roomName = `patient-${patient_id}-transactions`;
+        console.log(`🔌 Also emitting to patient room: ${roomName}`);
+        
+        io.to(roomName).emit('transaction-updated', {
+          ...eventData,
+          roomName: roomName
+        });
+      } else {
+        console.log(`ℹ️ No patient_id found for transaction ${id} - only emitting to general room`);
+      }
     } else {
       console.log(`❌ Socket.IO not available for transaction-updated event`);
     }
@@ -552,7 +582,7 @@ exports.fulfillTransactionItem = async (req, res) => {
           item_id: itemId
         });
 
-        // Emit transaction update for the patients/transactions page to patient-specific room
+        // Emit transaction update for real-time updates
         const io = req.app.get('io');
         if (io) {
           // Get patient_id from the transaction
@@ -561,20 +591,39 @@ exports.fulfillTransactionItem = async (req, res) => {
             [item.transaction_id]
           );
           
-          if (transactionData.length > 0) {
+          const eventData = {
+            type: 'item_fulfilled',
+            transaction_id: item.transaction_id,
+            item_id: itemId,
+            product_id: item.product_id,
+            quantity: item.quantity,
+            all_items_fulfilled: remainingItems[0].pending_count === 0,
+            timestamp: new Date().toISOString()
+          };
+          
+          console.log(`🔌 Emitting item_fulfilled event:`, eventData);
+          
+          // Emit to general transaction room for all users
+          io.to('transaction-updated').emit('transaction-updated', {
+            ...eventData,
+            roomName: 'transaction-updated'
+          });
+          
+          // Also emit to patient-specific room if patient_id exists
+          if (transactionData.length > 0 && transactionData[0].patient_id) {
             const patient_id = transactionData[0].patient_id;
             const roomName = `patient-${patient_id}-transactions`;
+            console.log(`🔌 Also emitting to patient room: ${roomName}`);
+            
             io.to(roomName).emit('transaction-updated', {
-              type: 'item_fulfilled',
-              transaction_id: item.transaction_id,
-              item_id: itemId,
-              product_id: item.product_id,
-              quantity: item.quantity,
-              all_items_fulfilled: remainingItems[0].pending_count === 0,
-              timestamp: new Date().toISOString(),
+              ...eventData,
               roomName: roomName
             });
+          } else {
+            console.log(`ℹ️ No patient_id found for transaction ${item.transaction_id} - only emitting to general room`);
           }
+        } else {
+          console.log(`❌ Socket.IO not available for item_fulfilled event`);
         }
       }
 
@@ -692,7 +741,7 @@ exports.refundTransactionItem = async (req, res) => {
           refunded_quantity: refunded_quantity
         });
 
-        // Emit transaction update for the patients/transactions page to patient-specific room
+        // Emit transaction update for real-time updates
         const io = req.app.get('io');
         if (io) {
           // Get patient_id from the transaction
@@ -701,21 +750,38 @@ exports.refundTransactionItem = async (req, res) => {
             [item.transaction_id]
           );
           
-          if (transactionData.length > 0) {
+          const eventData = {
+            type: 'item_refunded',
+            transaction_id: item.transaction_id,
+            item_id: itemId,
+            product_id: item.product_id,
+            refunded_quantity: refunded_quantity,
+            total_refunded_quantity: newRefundedQuantity,
+            total_quantity: totalQuantity,
+            status: newStatus,
+            timestamp: new Date().toISOString()
+          };
+          
+          console.log(`🔌 Emitting item_refunded event:`, eventData);
+          
+          // Emit to general transaction room for all users
+          io.to('transaction-updated').emit('transaction-updated', {
+            ...eventData,
+            roomName: 'transaction-updated'
+          });
+          
+          // Also emit to patient-specific room if patient_id exists
+          if (transactionData.length > 0 && transactionData[0].patient_id) {
             const patient_id = transactionData[0].patient_id;
             const roomName = `patient-${patient_id}-transactions`;
+            console.log(`🔌 Also emitting to patient room: ${roomName}`);
+            
             io.to(roomName).emit('transaction-updated', {
-              type: 'item_refunded',
-              transaction_id: item.transaction_id,
-              item_id: itemId,
-              product_id: item.product_id,
-              refunded_quantity: refunded_quantity,
-              total_refunded_quantity: newRefundedQuantity,
-              total_quantity: totalQuantity,
-              status: newStatus,
-              timestamp: new Date().toISOString(),
+              ...eventData,
               roomName: roomName
             });
+          } else {
+            console.log(`ℹ️ No patient_id found for transaction ${item.transaction_id} - only emitting to general room`);
           }
         }
       }

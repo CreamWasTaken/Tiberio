@@ -237,6 +237,34 @@ const TransactionItemDetail = memo(({ item, userRole, onFulfill, onRefund }) => 
     return { basePrice, itemDiscount, itemTotal, isFulfilled };
   }, [item.quantity, item.unit_price, item.discount, item.status]);
   
+  // Helper function to render lens specifications
+  const renderLensSpecs = useMemo(() => {
+    const specs = [];
+    const productAttrs = item.product_attributes || {};
+    const priceListAttrs = item.price_list_attributes || {};
+    
+    // Priority: product attributes (specific values) over price_list attributes (ranges)
+    const sphere = productAttrs.sphere || (priceListAttrs.sphFR && priceListAttrs.sphTo ? `${priceListAttrs.sphFR} to ${priceListAttrs.sphTo}` : '');
+    const cylinder = productAttrs.cylinder || (priceListAttrs.cylFr && priceListAttrs.cylTo ? `${priceListAttrs.cylFr} to ${priceListAttrs.cylTo}` : '');
+    const diameter = productAttrs.diameter || priceListAttrs.diameter || '';
+    const index = productAttrs.index || priceListAttrs.index || '';
+    const tp = productAttrs.tp || priceListAttrs.tp || '';
+    const add = priceListAttrs.addFr && priceListAttrs.addTo ? `${priceListAttrs.addFr} to ${priceListAttrs.addTo}` : '';
+    const bc = priceListAttrs.bc || '';
+    const modality = priceListAttrs.modality || '';
+    
+    if (sphere) specs.push(`Sphere: ${sphere}`);
+    if (cylinder) specs.push(`Cylinder: ${cylinder}`);
+    if (diameter) specs.push(`Diameter: ${diameter}`);
+    if (index) specs.push(`Index: ${index}`);
+    if (tp) specs.push(`TP: ${tp}`);
+    if (add) specs.push(`Add: ${add}`);
+    if (bc) specs.push(`BC: ${bc}`);
+    if (modality) specs.push(`Modality: ${modality}`);
+    
+    return specs.length > 0 ? specs.join(' • ') : null;
+  }, [item.product_attributes, item.price_list_attributes]);
+  
   const { basePrice, itemDiscount, itemTotal, isFulfilled } = itemCalculations;
   
   return (
@@ -278,6 +306,12 @@ const TransactionItemDetail = memo(({ item, userRole, onFulfill, onRefund }) => 
           <div className="text-gray-400 text-xs mb-1">
             Product Code: {item.product_code || 'N/A'}
           </div>
+          {renderLensSpecs && (
+            <div className="text-gray-300 text-xs mb-2">
+              <span className="text-gray-400">Specifications:</span>
+              <div className="text-gray-300 mt-1">{renderLensSpecs}</div>
+            </div>
+          )}
           <div className="text-gray-300 text-sm">
             Quantity: {item.quantity || 0} × ₱{Number(item.unit_price || 0).toLocaleString()} each
             {item.refunded_quantity > 0 && (
@@ -645,6 +679,7 @@ function Patients() {
   useEffect(() => {
     let currentTransactionRoom = null;
     let socket = null;
+    let lastProcessedEvent = null; // Track last processed event to avoid duplicates
 
     const setupTransactionSocketIO = async () => {
       try {
@@ -657,15 +692,30 @@ function Patients() {
         // Leave all patient-specific rooms first to avoid conflicts
         socketService.leaveAllPatientRooms();
         
+        // Join general transaction room for all transaction updates
+        socketService.joinRoom('transaction-updated');
+        
         // Join patient-specific transaction room if a patient is selected
         if (selectedPatient) {
           const roomName = `patient-${selectedPatient.id}-transactions`;
           currentTransactionRoom = roomName;
+          console.log(`🔌 Joining patient transaction room: ${roomName}`);
           socketService.joinRoom(roomName);
         }
         
         // Listen for transaction updates
         const handleTransactionUpdate = (data) => {
+          console.log('🔌 Received transaction update:', data);
+          
+          // Create a unique event identifier to prevent duplicate processing
+          const eventId = `${data.type}-${data.transaction_id}-${data.item_id || 'no-item'}-${data.timestamp}`;
+          
+          // Skip if we've already processed this exact event
+          if (lastProcessedEvent === eventId) {
+            console.log(`🔌 Skipping duplicate event: ${eventId}`);
+            return;
+          }
+          lastProcessedEvent = eventId;
           
           // For deletion events, we don't have transaction data, so we process them directly
           if (data.type === 'deleted') {
@@ -699,19 +749,26 @@ function Patients() {
               );
             } else if (data.type === 'item_fulfilled' || data.type === 'item_refunded') {
               // Refresh transactions for the currently selected patient
-              if (selectedPatient) {
+              console.log(`🔌 Handling ${data.type} event for transaction ${data.transaction_id}`);
+              if (selectedPatient && activeTab === 'transactions') {
                 const refreshTransactions = async () => {
                   try {
-                    const data = await getTransactions();
-                    const patientTransactions = (data || []).filter(transaction => 
+                    console.log(`🔌 Refreshing transactions for patient ${selectedPatient.id} on transactions tab`);
+                    const apiData = await getTransactions();
+                    console.log(`🔌 All transactions from API:`, apiData);
+                    const patientTransactions = (apiData || []).filter(transaction => 
                       transaction.patient_id === selectedPatient.id
                     );
+                    console.log(`🔌 Filtered transactions for patient ${selectedPatient.id}:`, patientTransactions);
+                    console.log(`🔌 Transaction ${data.transaction_id} has patient_id:`, apiData.find(t => t.id === data.transaction_id)?.patient_id);
                     setTransactions(patientTransactions);
                   } catch (err) {
                     console.error('Failed to refresh transactions:', err);
                   }
                 };
                 refreshTransactions();
+              } else {
+                console.log(`🔌 Skipping transaction refresh - patient: ${!!selectedPatient}, activeTab: ${activeTab}`);
               }
             }
           }
@@ -728,6 +785,8 @@ function Patients() {
           if (currentTransactionRoom) {
             socketService.leaveRoom(currentTransactionRoom);
           }
+          // Always leave the general transaction room
+          socketService.leaveRoom('transaction-updated');
         };
       } catch (error) {
         console.error('Failed to setup transaction Socket.IO:', error);
@@ -735,7 +794,7 @@ function Patients() {
     };
 
     setupTransactionSocketIO();
-  }, [selectedPatient]);
+  }, [selectedPatient, activeTab]);
 
   const normalizedQuery = (searchQuery || '').trim().toLowerCase();
   const filteredPatients = normalizedQuery
@@ -905,6 +964,7 @@ function Patients() {
           const patientTransactions = (data || []).filter(transaction => 
             transaction.patient_id === selectedPatient.id
           );
+          console.log(`🔌 Loaded ${patientTransactions.length} transactions for patient ${selectedPatient.id}:`, patientTransactions);
           setTransactions(patientTransactions);
         } catch (err) {
           setTransactionsError(err.message || 'Failed to load transactions');

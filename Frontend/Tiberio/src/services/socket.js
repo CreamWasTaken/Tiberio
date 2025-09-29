@@ -54,8 +54,10 @@ class SocketService {
   async joinRoom(room) {
     try {
       const socket = await this.waitForConnection();
+      console.log(`🔌 Joining room: ${room}`);
       socket.emit('join-room', room);
       this.joinedRooms.add(room);
+      console.log(`🔌 Successfully joined room: ${room}. Total rooms: ${this.joinedRooms.size}`);
     } catch (error) {
       console.error(`🔌 Failed to join room ${room}:`, error);
     }

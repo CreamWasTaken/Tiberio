@@ -54,13 +54,13 @@ io.on("connection", (socket) => {
   // Join room for specific updates
   socket.on("join-room", (room) => {
     socket.join(room);
-
+    console.log(`🔌 Client joined room: ${room}`);
   });
 
   // Leave room
   socket.on("leave-room", (room) => {
     socket.leave(room);
-    
+    console.log(`🔌 Client left room: ${room}`);
   });
 
   socket.on("disconnect", () => {
