@@ -62,6 +62,10 @@ function Inventory() {
   const [groupBySubcategory, setGroupBySubcategory] = useState(true);
   const [collapsedGroups, setCollapsedGroups] = useState(new Set());
   
+  // Group pagination state - track pages per subcategory
+  const [subcategoryPages, setSubcategoryPages] = useState({});
+  const [groupItemsPerPage] = useState(10); // Items per group page
+  
   const abortRef = useRef(null);
   
   const fetchInventory = async () => {
@@ -366,6 +370,37 @@ function Inventory() {
     return sortedGroups;
   }, [filteredItems, groupBySubcategory]);
 
+  // Paginated grouped items
+  const paginatedGroupedItems = useMemo(() => {
+    if (!groupBySubcategory) {
+      return {};
+    }
+    
+    const paginatedGroups = {};
+    Object.entries(groupedItems).forEach(([groupName, groupItems]) => {
+      const currentPage = subcategoryPages[groupName] || 1;
+      const startIndex = (currentPage - 1) * groupItemsPerPage;
+      const endIndex = startIndex + groupItemsPerPage;
+      paginatedGroups[groupName] = groupItems.slice(startIndex, endIndex);
+    });
+    
+    return paginatedGroups;
+  }, [groupedItems, subcategoryPages, groupItemsPerPage, groupBySubcategory]);
+
+  // Calculate total pages per subcategory
+  const subcategoryTotalPages = useMemo(() => {
+    if (!groupBySubcategory) {
+      return {};
+    }
+    
+    const pagesPerSubcategory = {};
+    Object.entries(groupedItems).forEach(([groupName, groupItems]) => {
+      pagesPerSubcategory[groupName] = Math.ceil(groupItems.length / groupItemsPerPage);
+    });
+    
+    return pagesPerSubcategory;
+  }, [groupedItems, groupItemsPerPage, groupBySubcategory]);
+
   // Paginated items (when not grouping)
   const paginatedItems = useMemo(() => {
     if (groupBySubcategory) {
@@ -381,6 +416,7 @@ function Inventory() {
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({ ...prev, [field]: value }));
     setCurrentPage(1); // Reset to first page when filtering
+    setSubcategoryPages({}); // Reset all subcategory pages when filtering
   };
 
   // Clear all filters
@@ -406,6 +442,7 @@ function Inventory() {
       status: ''
     });
     setCurrentPage(1);
+    setSubcategoryPages({});
   };
 
   // Toggle group collapse
@@ -429,6 +466,14 @@ function Inventory() {
   // Collapse all groups
   const collapseAllGroups = () => {
     setCollapsedGroups(new Set(Object.keys(groupedItems)));
+  };
+
+  // Handle subcategory page change
+  const handleSubcategoryPageChange = (subcategoryName, newPage) => {
+    setSubcategoryPages(prev => ({
+      ...prev,
+      [subcategoryName]: newPage
+    }));
   };
 
   return (
@@ -535,7 +580,10 @@ function Inventory() {
             <div className="p-6">
               {isLoading ? (
                 <div className="flex justify-center items-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p className="text-gray-300 text-sm">Loading inventory...</p>
+                  </div>
                 </div>
               ) : (
                 <div>
@@ -687,31 +735,40 @@ function Inventory() {
                         {groupBySubcategory ? (
                           // Grouped view
                           <div>
-                            {Object.entries(groupedItems).map(([groupName, groupItems]) => (
-                              <div key={groupName} className="mb-6">
-                                {/* Group Header */}
-                                <div 
-                                  className="bg-gray-700/50 border border-gray-600 rounded-t-lg px-4 py-3 cursor-pointer hover:bg-gray-700/70 transition-colors duration-200"
-                                  onClick={() => toggleGroup(groupName)}
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-3">
-                                      <svg 
-                                        className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${collapsedGroups.has(groupName) ? 'rotate-0' : 'rotate-90'}`}
-                                        fill="none" 
-                                        stroke="currentColor" 
-                                        viewBox="0 0 24 24"
-                                      >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                      </svg>
-                                      <h3 className="text-lg font-semibold text-white">{groupName}</h3>
-                                      <span className="text-sm text-gray-400">({groupItems.length} items)</span>
-                                    </div>
-                                    <div className="text-sm text-gray-400">
-                                      {collapsedGroups.has(groupName) ? 'Click to expand' : 'Click to collapse'}
+                            {Object.entries(paginatedGroupedItems).map(([groupName, groupItems]) => {
+                              const totalItemsInGroup = groupedItems[groupName]?.length || 0;
+                              const currentPage = subcategoryPages[groupName] || 1;
+                              const totalPages = subcategoryTotalPages[groupName] || 1;
+                              const startIndex = (currentPage - 1) * groupItemsPerPage + 1;
+                              const endIndex = Math.min(currentPage * groupItemsPerPage, totalItemsInGroup);
+                              
+                              return (
+                                <div key={groupName} className="mb-6">
+                                  {/* Group Header */}
+                                  <div 
+                                    className="bg-gray-700/50 border border-gray-600 rounded-t-lg px-4 py-3 cursor-pointer hover:bg-gray-700/70 transition-colors duration-200"
+                                    onClick={() => toggleGroup(groupName)}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center space-x-3">
+                                        <svg 
+                                          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${collapsedGroups.has(groupName) ? 'rotate-0' : 'rotate-90'}`}
+                                          fill="none" 
+                                          stroke="currentColor" 
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                        <h3 className="text-lg font-semibold text-white">{groupName}</h3>
+                                        <span className="text-sm text-gray-400">
+                                          ({groupItems.length > 0 ? `${startIndex}-${endIndex} of ${totalItemsInGroup}` : '0'} items)
+                                        </span>
+                                      </div>
+                                      <div className="text-sm text-gray-400">
+                                        {collapsedGroups.has(groupName) ? 'Click to expand' : 'Click to collapse'}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
                                 
                                 {/* Group Items Table */}
                                 {!collapsedGroups.has(groupName) && (
@@ -815,8 +872,67 @@ function Inventory() {
                                     </table>
                                   </div>
                                 )}
-                              </div>
-                            ))}
+                                
+                                {/* Subcategory Pagination Controls */}
+                                {totalPages > 1 && (
+                                  <div className="mt-3 px-4 py-2 bg-gray-600/30 border-t border-gray-600">
+                                    <div className="flex items-center justify-between">
+                                      <div className="text-xs text-gray-400">
+                                        {groupName}: Page {currentPage} of {totalPages}
+                                      </div>
+                                      <div className="flex items-center space-x-1">
+                                        <button
+                                          onClick={() => handleSubcategoryPageChange(groupName, Math.max(currentPage - 1, 1))}
+                                          disabled={currentPage === 1}
+                                          className="px-2 py-1 text-xs bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded transition-colors duration-200"
+                                        >
+                                          Prev
+                                        </button>
+                                        
+                                        {/* Page numbers */}
+                                        <div className="flex items-center space-x-1">
+                                          {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+                                            let pageNum;
+                                            if (totalPages <= 3) {
+                                              pageNum = i + 1;
+                                            } else if (currentPage <= 2) {
+                                              pageNum = i + 1;
+                                            } else if (currentPage >= totalPages - 1) {
+                                              pageNum = totalPages - 2 + i;
+                                            } else {
+                                              pageNum = currentPage - 1 + i;
+                                            }
+                                            
+                                            return (
+                                              <button
+                                                key={pageNum}
+                                                onClick={() => handleSubcategoryPageChange(groupName, pageNum)}
+                                                className={`px-2 py-1 text-xs rounded transition-colors duration-200 ${
+                                                  currentPage === pageNum
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'bg-gray-600 hover:bg-gray-700 text-gray-300'
+                                                }`}
+                                              >
+                                                {pageNum}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                        
+                                        <button
+                                          onClick={() => handleSubcategoryPageChange(groupName, Math.min(currentPage + 1, totalPages))}
+                                          disabled={currentPage === totalPages}
+                                          className="px-2 py-1 text-xs bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded transition-colors duration-200"
+                                        >
+                                          Next
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                                </div>
+                              );
+                            })}
                           </div>
                         ) : (
                           // Ungrouped view (original table)
@@ -977,6 +1093,7 @@ function Inventory() {
                           </div>
                         </div>
                       )}
+
                     </div>
                   )}
                 </div>
