@@ -33,22 +33,32 @@ const BulkAddProductsModal = ({
 
   // Initialize form data when pricelist item changes
   useEffect(() => {
-    if (pricelistItem && isOpen) {
+    if (pricelistItem && (isOpen || isInline)) {
+      
+      // Helper function to clean numeric values for input fields
+      const cleanNumericValue = (value) => {
+        if (!value) return '';
+        // Keep the original value with + or - signs for lens prescriptions
+        return String(value);
+      };
+
       setFormData({
         stock: '',
         lowStockThreshold: '5',
         sphereStep: 0.25,
         cylinderStep: 0.25,
-        sphereStart: pricelistItem.attributes?.sphFR || '',
-        sphereEnd: pricelistItem.attributes?.sphTo || '',
-        cylinderStart: pricelistItem.attributes?.cylFr || '',
-        cylinderEnd: pricelistItem.attributes?.cylTo || '',
-        diameter: pricelistItem.attributes?.diameter || '',
+        // Auto-populate from pricelist item data - check both attributes and top-level
+        sphereStart: cleanNumericValue(pricelistItem.attributes?.sphFR || pricelistItem.sphFR),
+        sphereEnd: cleanNumericValue(pricelistItem.attributes?.sphTo || pricelistItem.sphTo),
+        cylinderStart: cleanNumericValue(pricelistItem.attributes?.cylFr || pricelistItem.cylFr),
+        cylinderEnd: cleanNumericValue(pricelistItem.attributes?.cylTo || pricelistItem.cylTo),
+        diameter: pricelistItem.attributes?.diameter || pricelistItem.diameter || '',
         generateAllCombinations: true,
         customCombinations: []
       });
+      
     }
-  }, [pricelistItem, isOpen]);
+  }, [pricelistItem, isOpen, isInline]);
 
   // Generate product combinations based on grade ranges
   const generateProductCombinations = () => {
@@ -64,8 +74,8 @@ const BulkAddProductsModal = ({
     setIsGenerating(true);
     
     try {
-      const sphereValues = generateGradeRange(parseFloat(sphereStart), parseFloat(sphereEnd), parseFloat(sphereStep));
-      const cylinderValues = generateGradeRange(parseFloat(cylinderStart), parseFloat(cylinderEnd), parseFloat(cylinderStep));
+      const sphereValues = generateGradeRangeWithSigns(sphereStart, sphereEnd, parseFloat(sphereStep));
+      const cylinderValues = generateGradeRangeWithSigns(cylinderStart, cylinderEnd, parseFloat(cylinderStep));
       
       const combinations = [];
       
@@ -73,8 +83,8 @@ const BulkAddProductsModal = ({
       sphereValues.forEach(sphere => {
         cylinderValues.forEach(cylinder => {
           combinations.push({
-            sphere: sphere.toFixed(2),
-            cylinder: cylinder.toFixed(2),
+            sphere: sphere, // Already formatted with signs
+            cylinder: cylinder, // Already formatted with signs
             stock: formData.stock,
             lowStockThreshold: formData.lowStockThreshold,
             diameter: formData.diameter,
@@ -93,18 +103,35 @@ const BulkAddProductsModal = ({
     }
   };
 
-  // Helper function to generate grade range
-  const generateGradeRange = (start, end, step) => {
+  // Helper function to generate grade range with preserved signs
+  const generateGradeRangeWithSigns = (startStr, endStr, step) => {
     const values = [];
+    const start = parseFloat(startStr);
+    const end = parseFloat(endStr);
     const direction = start <= end ? 1 : -1;
     const absStep = Math.abs(step);
     
+    // Determine if we should use + sign based on the original values
+    const usePlusSign = startStr.startsWith('+') || endStr.startsWith('+');
+    
     for (let value = start; direction * value <= direction * end; value += direction * absStep) {
-      values.push(Math.round(value * 100) / 100); // Round to 2 decimal places
+      const roundedValue = Math.round(value * 100) / 100;
+      let formattedValue;
+      
+      if (roundedValue === 0) {
+        formattedValue = '0.00';
+      } else if (roundedValue > 0) {
+        formattedValue = usePlusSign ? `+${roundedValue.toFixed(2)}` : roundedValue.toFixed(2);
+      } else {
+        formattedValue = roundedValue.toFixed(2);
+      }
+      
+      values.push(formattedValue);
     }
     
     return values;
   };
+
 
   // Add custom combination
   const addCustomCombination = () => {
@@ -297,8 +324,7 @@ const BulkAddProductsModal = ({
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Sphere Start</label>
                 <input
-                  type="number"
-                  step="0.25"
+                  type="text"
                   value={formData.sphereStart}
                   onChange={(e) => setFormData({...formData, sphereStart: e.target.value})}
                   placeholder="e.g., -3.00, +1.50"
@@ -309,8 +335,7 @@ const BulkAddProductsModal = ({
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Sphere End</label>
                 <input
-                  type="number"
-                  step="0.25"
+                  type="text"
                   value={formData.sphereEnd}
                   onChange={(e) => setFormData({...formData, sphereEnd: e.target.value})}
                   placeholder="e.g., +2.00, -1.25"
@@ -332,8 +357,7 @@ const BulkAddProductsModal = ({
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Cylinder Start</label>
                 <input
-                  type="number"
-                  step="0.25"
+                  type="text"
                   value={formData.cylinderStart}
                   onChange={(e) => setFormData({...formData, cylinderStart: e.target.value})}
                   placeholder="e.g., -2.00, +0.50"
@@ -344,8 +368,7 @@ const BulkAddProductsModal = ({
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Cylinder End</label>
                 <input
-                  type="number"
-                  step="0.25"
+                  type="text"
                   value={formData.cylinderEnd}
                   onChange={(e) => setFormData({...formData, cylinderEnd: e.target.value})}
                   placeholder="e.g., +1.50, -0.75"
@@ -736,8 +759,7 @@ const BulkAddProductsModal = ({
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Sphere Start</label>
                 <input
-                  type="number"
-                  step="0.25"
+                  type="text"
                   value={formData.sphereStart}
                   onChange={(e) => setFormData({...formData, sphereStart: e.target.value})}
                   placeholder="e.g., -3.00, +1.50"
@@ -748,8 +770,7 @@ const BulkAddProductsModal = ({
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Sphere End</label>
                 <input
-                  type="number"
-                  step="0.25"
+                  type="text"
                   value={formData.sphereEnd}
                   onChange={(e) => setFormData({...formData, sphereEnd: e.target.value})}
                   placeholder="e.g., +2.00, -1.25"
@@ -771,8 +792,7 @@ const BulkAddProductsModal = ({
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Cylinder Start</label>
                 <input
-                  type="number"
-                  step="0.25"
+                  type="text"
                   value={formData.cylinderStart}
                   onChange={(e) => setFormData({...formData, cylinderStart: e.target.value})}
                   placeholder="e.g., -2.00, +0.50"
@@ -783,8 +803,7 @@ const BulkAddProductsModal = ({
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Cylinder End</label>
                 <input
-                  type="number"
-                  step="0.25"
+                  type="text"
                   value={formData.cylinderEnd}
                   onChange={(e) => setFormData({...formData, cylinderEnd: e.target.value})}
                   placeholder="e.g., +1.50, -0.75"
