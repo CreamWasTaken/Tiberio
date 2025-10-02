@@ -102,10 +102,7 @@ const PORT = process.env.PORT;
 
 //to do
 
-
-//fix daily sales due to new database design
-
-//fix doesnt hide cmd on tiberio
+//fix pricelist edit socket
 
 
 
