@@ -85,6 +85,12 @@ const BulkAddProductsModal = ({
   const generateProductCombinations = () => {
     if (!formData.generateAllCombinations) return;
 
+    // Check if stock field is filled first
+    if (!formData.stock || formData.stock === '') {
+      alert('Please provide a stock value before generating items');
+      return;
+    }
+
     const { sphereStart, sphereEnd, sphereStep, cylinderStart, cylinderEnd, cylinderStep } = formData;
     
     if (!sphereStart || !sphereEnd || !cylinderStart || !cylinderEnd) {
@@ -479,7 +485,7 @@ const BulkAddProductsModal = ({
               <button
                 type="button"
                 onClick={generateProductCombinations}
-                disabled={isGenerating}
+                disabled={isGenerating || !formData.stock || formData.stock === ''}
                 className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
               >
                 {isGenerating ? (
@@ -496,6 +502,9 @@ const BulkAddProductsModal = ({
                   </>
                 )}
               </button>
+              {(!formData.stock || formData.stock === '') && (
+                <p className="text-xs text-yellow-400 mt-2">Please enter a stock value before generating combinations</p>
+              )}
             </div>
           </div>
 
@@ -914,7 +923,7 @@ const BulkAddProductsModal = ({
               <button
                 type="button"
                 onClick={generateProductCombinations}
-                disabled={isGenerating}
+                disabled={isGenerating || !formData.stock || formData.stock === ''}
                 className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
               >
                 {isGenerating ? (
@@ -931,6 +940,9 @@ const BulkAddProductsModal = ({
                   </>
                 )}
               </button>
+              {(!formData.stock || formData.stock === '') && (
+                <p className="text-xs text-yellow-400 mt-2">Please enter a stock value before generating combinations</p>
+              )}
             </div>
           </div>
 

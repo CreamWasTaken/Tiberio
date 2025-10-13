@@ -208,8 +208,8 @@ exports.addItem = async (req, res) => {
             };
             
             const [productResult] = await conn.query(
-                "INSERT INTO products (price_list_id, stock, low_stock_threshold, attributes) VALUES (?, ?, ?, ?)",
-                [priceListId, stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes)]
+                "INSERT INTO products (price_list_id, stock, low_stock_threshold, attributes, supplier_id) VALUES (?, ?, ?, ?, ?)",
+                [priceListId, stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes), supplier_id]
             );
             
             // Inventory update will be emitted after we fetch the complete item data
@@ -219,15 +219,18 @@ exports.addItem = async (req, res) => {
         
         // Fetch the newly created item data for socket emission (same structure as getInventoryItems)
         const [newItemResult] = await conn.query(`
-            SELECT pl.*, s.name as supplier_name, pc.name as category_name, ps.name as subcategory_name,
-                   p.stock, p.low_stock_threshold, p.attributes as product_attributes,
-                   JSON_UNQUOTE(pl.attributes) as attributes_json
-            FROM price_list pl
-            LEFT JOIN suppliers s ON pl.supplier_id = s.id
-            LEFT JOIN price_subcategories ps ON pl.subcategory_id = ps.id
-            LEFT JOIN price_categories pc ON ps.category_id = pc.id
-            LEFT JOIN products p ON pl.id = p.price_list_id AND p.is_deleted = 0
-            WHERE pl.id = ? AND pl.is_deleted = 0
+            SELECT p.id as product_id, p.stock, p.low_stock_threshold, p.attributes as product_attributes, p.supplier_id as product_supplier_id,
+                   pl.id as price_list_id, pl.supplier_id as price_list_supplier_id, pl.subcategory_id, pl.attributes, 
+                   pl.description, pl.pc_price, pl.pc_cost, pl.is_deleted as price_list_deleted, 
+                   pl.created_at as price_list_created_at, pl.updated_at as price_list_updated_at, pl.code,
+                   COALESCE(ps.name, pls.name) AS supplier_name, pc.name AS category_name, psc.name AS subcategory_name
+            FROM products p
+            INNER JOIN price_list pl ON p.price_list_id = pl.id AND pl.is_deleted = 0
+            LEFT JOIN suppliers ps ON p.supplier_id = ps.id  -- Product-specific supplier
+            LEFT JOIN suppliers pls ON pl.supplier_id = pls.id  -- Price list supplier (fallback)
+            LEFT JOIN price_subcategories psc ON pl.subcategory_id = psc.id
+            LEFT JOIN price_categories pc ON psc.category_id = pc.id
+            WHERE pl.id = ? AND p.is_deleted = 0
         `, [priceListId]);
         
         if (newItemResult.length > 0) {
@@ -241,7 +244,7 @@ exports.addItem = async (req, res) => {
                 price_list_id: item.price_list_id, // This is the price_list ID that should be used for updates
                 stock: item.stock,
                 low_stock_threshold: item.low_stock_threshold,
-                supplier_id: item.supplier_id,
+                supplier_id: item.product_supplier_id || item.price_list_supplier_id, // Use product supplier if available, otherwise price list supplier
                 subcategory_id: item.subcategory_id,
                 description: item.description,
                 pc_price: item.pc_price,
@@ -348,26 +351,30 @@ exports.bulkAddProducts = async (req, res) => {
             
             // Insert into products table (inventory) - reference the existing price_list
             const [productResult] = await conn.query(
-                "INSERT INTO products (price_list_id, stock, low_stock_threshold, attributes) VALUES (?, ?, ?, ?)",
+                "INSERT INTO products (price_list_id, stock, low_stock_threshold, attributes, supplier_id) VALUES (?, ?, ?, ?, ?)",
                 [
                     pricelistId, // Use the existing price_list ID
                     parseInt(stock),
                     parseInt(lowStockThreshold),
-                    JSON.stringify(productAttributes)
+                    JSON.stringify(productAttributes),
+                    pricelistTemplate.supplier_id // Use the supplier from the price list template
                 ]
             );
             
             // Get the complete item data for response
             const [newItemResult] = await conn.query(`
-                SELECT pl.*, s.name as supplier_name, pc.name as category_name, ps.name as subcategory_name,
-                       p.stock, p.low_stock_threshold, p.attributes as product_attributes,
-                       JSON_UNQUOTE(pl.attributes) as attributes_json
-                FROM price_list pl
-                LEFT JOIN suppliers s ON pl.supplier_id = s.id
-                LEFT JOIN price_subcategories ps ON pl.subcategory_id = ps.id
-                LEFT JOIN price_categories pc ON ps.category_id = pc.id
-                LEFT JOIN products p ON pl.id = p.price_list_id AND p.is_deleted = 0
-                WHERE pl.id = ? AND p.id = ? AND pl.is_deleted = 0
+                SELECT p.id as product_id, p.stock, p.low_stock_threshold, p.attributes as product_attributes, p.supplier_id as product_supplier_id,
+                       pl.id as price_list_id, pl.supplier_id as price_list_supplier_id, pl.subcategory_id, pl.attributes, 
+                       pl.description, pl.pc_price, pl.pc_cost, pl.is_deleted as price_list_deleted, 
+                       pl.created_at as price_list_created_at, pl.updated_at as price_list_updated_at, pl.code,
+                       COALESCE(ps.name, pls.name) AS supplier_name, pc.name AS category_name, psc.name AS subcategory_name
+                FROM products p
+                INNER JOIN price_list pl ON p.price_list_id = pl.id AND pl.is_deleted = 0
+                LEFT JOIN suppliers ps ON p.supplier_id = ps.id  -- Product-specific supplier
+                LEFT JOIN suppliers pls ON pl.supplier_id = pls.id  -- Price list supplier (fallback)
+                LEFT JOIN price_subcategories psc ON pl.subcategory_id = psc.id
+                LEFT JOIN price_categories pc ON psc.category_id = pc.id
+                WHERE pl.id = ? AND p.id = ? AND p.is_deleted = 0
             `, [pricelistId, productResult.insertId]);
             
             if (newItemResult.length > 0) {
@@ -376,11 +383,11 @@ exports.bulkAddProducts = async (req, res) => {
                 const productAttrs = item.product_attributes ? JSON.parse(item.product_attributes) : {};
                 
                 const newItem = {
-                    id: item.id, // This is the product ID from the INSERT result
+                    id: item.product_id, // This is the product ID from the INSERT result
                     price_list_id: pricelistId, // This is the price_list ID that should be used for updates
                     stock: item.stock,
                     low_stock_threshold: item.low_stock_threshold,
-                    supplier_id: item.supplier_id,
+                    supplier_id: item.product_supplier_id || item.price_list_supplier_id, // Use product supplier if available, otherwise price list supplier
                     subcategory_id: item.subcategory_id,
                     description: item.description,
                     pc_price: item.pc_price,
@@ -479,17 +486,18 @@ exports.getInventoryItems = async (req, res) => {
     try {
         conn = await db.getConnection();
         const [result] = await conn.query(
-            `SELECT p.id as product_id, p.stock, p.low_stock_threshold, p.attributes as product_attributes,
-                    pl.id as price_list_id, pl.supplier_id, pl.subcategory_id, pl.attributes, 
+            `SELECT p.id as product_id, p.stock, p.low_stock_threshold, p.attributes as product_attributes, p.supplier_id as product_supplier_id,
+                    pl.id as price_list_id, pl.supplier_id as price_list_supplier_id, pl.subcategory_id, pl.attributes, 
                     pl.description, pl.pc_price, pl.pc_cost, pl.is_deleted as price_list_deleted, 
                     pl.created_at as price_list_created_at, pl.updated_at as price_list_updated_at, pl.code,
-                    s.name AS supplier_name, pc.name AS category_name, ps.name AS subcategory_name
+                    COALESCE(ps.name, pls.name) AS supplier_name, pc.name AS category_name, psc.name AS subcategory_name
              FROM products p
              INNER JOIN price_list pl ON p.price_list_id = pl.id AND pl.is_deleted = 0
-             LEFT JOIN suppliers s ON pl.supplier_id = s.id
-             LEFT JOIN price_subcategories ps ON pl.subcategory_id = ps.id
-             LEFT JOIN price_categories pc ON ps.category_id = pc.id
-             WHERE p.is_deleted = 0 AND pl.supplier_id IS NOT NULL`
+             LEFT JOIN suppliers ps ON p.supplier_id = ps.id  -- Product-specific supplier
+             LEFT JOIN suppliers pls ON pl.supplier_id = pls.id  -- Price list supplier (fallback)
+             LEFT JOIN price_subcategories psc ON pl.subcategory_id = psc.id
+             LEFT JOIN price_categories pc ON psc.category_id = pc.id
+             WHERE p.is_deleted = 0 AND (p.supplier_id IS NOT NULL OR pl.supplier_id IS NOT NULL)`
         );
 
         const items = result.map(item => {
@@ -501,7 +509,7 @@ exports.getInventoryItems = async (req, res) => {
                 price_list_id: item.price_list_id, // This is the price_list ID that should be used for updates
                 stock: item.stock,
                 low_stock_threshold: item.low_stock_threshold,
-                supplier_id: item.supplier_id,
+                supplier_id: item.product_supplier_id || item.price_list_supplier_id, // Use product supplier if available, otherwise price list supplier
                 subcategory_id: item.subcategory_id,
                 description: item.description,
                 pc_price: item.pc_price,
@@ -599,21 +607,15 @@ exports.updateItem = async (req, res) => {
     try {
         await conn.beginTransaction();
         
-        // If this is an inventory-only update, only update supplier_id in price_list table
+        // If this is an inventory-only update, do NOT update price_list table at all
         if (inventoryOnlyUpdate) {
             console.log('🔧 Performing inventory-only update for item:', id);
-            console.log('🔧 Price list attributes will NOT be modified');
+            console.log('🔧 Price list table will NOT be modified (including supplier_id)');
+            console.log('🔧 Only the specific product in products table will be updated');
             
-            // For inventory-only updates, we still need to update supplier_id in price_list table
-            // This is the ONLY field we update in price_list table for inventory-only updates
-            if (supplier_id !== undefined) {
-                await conn.query(
-                    "UPDATE price_list SET supplier_id = ? WHERE id = ?", 
-                    [supplier_id, id]
-                );
-                console.log('🔧 Updated ONLY supplier_id in price_list table:', supplier_id);
-                console.log('🔧 All other price_list fields (description, attributes, etc.) remain unchanged');
-            }
+            // For inventory-only updates, we do NOT update the price_list table
+            // This prevents affecting other products that share the same price_list_id
+            // The supplier_id change will only affect the specific product being updated
         } else {
             // Check if this is a frame category (frames can have duplicate descriptions)
             const [categoryResult] = await conn.query(
@@ -671,10 +673,10 @@ exports.updateItem = async (req, res) => {
             if (productId) {
                 // Update specific product by its unique ID
                 await conn.query(
-                    "UPDATE products SET stock = ?, low_stock_threshold = ?, attributes = ? WHERE id = ? AND is_deleted = 0",
-                    [stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes), productId]
+                    "UPDATE products SET stock = ?, low_stock_threshold = ?, attributes = ?, supplier_id = ? WHERE id = ? AND is_deleted = 0",
+                    [stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes), supplier_id, productId]
                 );
-                console.log('🔧 Updated specific product with ID:', productId);
+                console.log('🔧 Updated specific product with ID:', productId, 'including supplier_id:', supplier_id);
             } else {
                 // Fallback: Check if product already exists for this price_list_id
                 const [existingProduct] = await conn.query(
@@ -685,17 +687,17 @@ exports.updateItem = async (req, res) => {
                 if (existingProduct.length > 0) {
                     // Update the first existing product (this is the old behavior, kept as fallback)
                     await conn.query(
-                        "UPDATE products SET stock = ?, low_stock_threshold = ?, attributes = ? WHERE price_list_id = ? AND is_deleted = 0 LIMIT 1",
-                        [stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes), id]
+                        "UPDATE products SET stock = ?, low_stock_threshold = ?, attributes = ?, supplier_id = ? WHERE price_list_id = ? AND is_deleted = 0 LIMIT 1",
+                        [stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes), supplier_id, id]
                     );
-                    console.log('🔧 Updated first product for price_list_id:', id, '(fallback behavior)');
+                    console.log('🔧 Updated first product for price_list_id:', id, 'including supplier_id:', supplier_id, '(fallback behavior)');
                 } else {
                     // Create new product entry
                     await conn.query(
-                        "INSERT INTO products (price_list_id, stock, low_stock_threshold, attributes) VALUES (?, ?, ?, ?)",
-                        [id, stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes)]
+                        "INSERT INTO products (price_list_id, stock, low_stock_threshold, attributes, supplier_id) VALUES (?, ?, ?, ?, ?)",
+                        [id, stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes), supplier_id]
                     );
-                    console.log('🔧 Created new product for price_list_id:', id);
+                    console.log('🔧 Created new product for price_list_id:', id, 'with supplier_id:', supplier_id);
                 }
             }
             
@@ -708,16 +710,17 @@ exports.updateItem = async (req, res) => {
         
         // Fetch the updated item data for socket emission (same structure as getInventoryItems)
         const [updatedItemResult] = await conn.query(`
-            SELECT p.id as product_id, p.stock, p.low_stock_threshold, p.attributes as product_attributes,
-                   pl.id as price_list_id, pl.supplier_id, pl.subcategory_id, pl.attributes, 
+            SELECT p.id as product_id, p.stock, p.low_stock_threshold, p.attributes as product_attributes, p.supplier_id as product_supplier_id,
+                   pl.id as price_list_id, pl.supplier_id as price_list_supplier_id, pl.subcategory_id, pl.attributes, 
                    pl.description, pl.pc_price, pl.pc_cost, pl.is_deleted as price_list_deleted, 
                    pl.created_at as price_list_created_at, pl.updated_at as price_list_updated_at, pl.code,
-                   s.name AS supplier_name, pc.name AS category_name, ps.name AS subcategory_name
+                   COALESCE(ps.name, pls.name) AS supplier_name, pc.name AS category_name, psc.name AS subcategory_name
             FROM products p
             INNER JOIN price_list pl ON p.price_list_id = pl.id AND pl.is_deleted = 0
-            LEFT JOIN suppliers s ON pl.supplier_id = s.id
-            LEFT JOIN price_subcategories ps ON pl.subcategory_id = ps.id
-            LEFT JOIN price_categories pc ON ps.category_id = pc.id
+            LEFT JOIN suppliers ps ON p.supplier_id = ps.id  -- Product-specific supplier
+            LEFT JOIN suppliers pls ON pl.supplier_id = pls.id  -- Price list supplier (fallback)
+            LEFT JOIN price_subcategories psc ON pl.subcategory_id = psc.id
+            LEFT JOIN price_categories pc ON psc.category_id = pc.id
             WHERE pl.id = ? AND p.is_deleted = 0
         `, [id]);
         
@@ -732,7 +735,7 @@ exports.updateItem = async (req, res) => {
                 price_list_id: item.price_list_id, // This is the price_list ID that should be used for updates
                 stock: item.stock,
                 low_stock_threshold: item.low_stock_threshold,
-                supplier_id: item.supplier_id,
+                supplier_id: item.product_supplier_id || item.price_list_supplier_id, // Use product supplier if available, otherwise price list supplier
                 subcategory_id: item.subcategory_id,
                 description: item.description,
                 pc_price: item.pc_price,
