@@ -83,13 +83,16 @@ function Pricelist() {
     cylFr: '',
     cylTo: '',
     tp: '',
+    // Double Vision specific fields
+    axisFR: '',
+    axisTo: '',
+    addFr: '',
+    addTo: '',
     // Single Vision specific fields
     sphere: '',
     cylinder: '',
     // Contact Lens fields
     steps: '',
-    addFr: '',
-    addTo: '',
     modality: '',
     set: '',
     bc: '',
@@ -351,11 +354,13 @@ function Pricelist() {
       cylFr: '',
       cylTo: '',
       tp: '',
+      axisFR: '',
+      axisTo: '',
+      addFr: '',
+      addTo: '',
       sphere: '',
       cylinder: '',
       steps: '',
-      addFr: '',
-      addTo: '',
       modality: '',
       set: '',
       bc: '',
@@ -544,6 +549,16 @@ function Pricelist() {
     }
     
     return 'default';
+  };
+
+  // Function to check if current category is Double vision
+  const isDoubleVisionCategory = () => {
+    if (!activeTab) return false;
+    
+    const category = categories.find(cat => cat.id.toString() === activeTab);
+    if (!category) return false;
+    
+    return category.name.toLowerCase().includes('double vision');
   };
 
 
@@ -860,6 +875,14 @@ function Pricelist() {
                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">SphTo</th>
                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">CylFr</th>
                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">CylTo</th>
+                               {isDoubleVisionCategory() && (
+                                 <>
+                                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">AxisFR</th>
+                                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">AxisTo</th>
+                                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">AddFr</th>
+                                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">AddTo</th>
+                                 </>
+                               )}
                              </>
                            )}
                            {getFormType() === 'contact' && (
@@ -906,6 +929,14 @@ function Pricelist() {
                                  <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.sphTo || '-'}</td>
                                  <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.cylFr || '-'}</td>
                                  <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.cylTo || '-'}</td>
+                                 {isDoubleVisionCategory() && (
+                                   <>
+                                     <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.axisFR || '-'}</td>
+                                     <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.axisTo || '-'}</td>
+                                     <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.addFr || '-'}</td>
+                                     <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">{item.attributes?.addTo || '-'}</td>
+                                   </>
+                                 )}
                                </>
                              )}
                              
@@ -1160,6 +1191,60 @@ function Pricelist() {
                       />
                       <p className="text-xs text-gray-400 mt-1">Cylinder range end (can be + or -)</p>
                     </div>
+                    
+                    {/* Double Vision specific fields */}
+                    {isDoubleVisionCategory() && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">AxisFR</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="180"
+                            placeholder="e.g., 1, 90, 180"
+                            value={itemFormData.axisFR}
+                            onChange={(e) => setItemFormData({...itemFormData, axisFR: e.target.value})}
+                            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <p className="text-xs text-gray-400 mt-1">Axis range start (1-180)</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">AxisTo</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="180"
+                            placeholder="e.g., 90, 120, 180"
+                            value={itemFormData.axisTo}
+                            onChange={(e) => setItemFormData({...itemFormData, axisTo: e.target.value})}
+                            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <p className="text-xs text-gray-400 mt-1">Axis range end (1-180)</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">AddFr</label>
+                          <input
+                            type="text"
+                            placeholder="e.g., +0.50, +1.00, +2.25"
+                            value={itemFormData.addFr}
+                            onChange={(e) => setItemFormData({...itemFormData, addFr: e.target.value})}
+                            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <p className="text-xs text-gray-400 mt-1">Add range start (can be + or -)</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">AddTo</label>
+                          <input
+                            type="text"
+                            placeholder="e.g., +1.50, +2.00, +3.00"
+                            value={itemFormData.addTo}
+                            onChange={(e) => setItemFormData({...itemFormData, addTo: e.target.value})}
+                            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <p className="text-xs text-gray-400 mt-1">Add range end (can be + or -)</p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -1385,11 +1470,13 @@ function Pricelist() {
                       cylFr: '',
                       cylTo: '',
                       tp: '',
+                      axisFR: '',
+                      axisTo: '',
+                      addFr: '',
+                      addTo: '',
                       sphere: '',
                       cylinder: '',
                       steps: '',
-                      addFr: '',
-                      addTo: '',
                       modality: '',
                       set: '',
                       bc: '',

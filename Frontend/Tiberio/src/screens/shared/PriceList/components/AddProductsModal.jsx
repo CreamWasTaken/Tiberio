@@ -17,7 +17,9 @@ const AddProductsModal = ({
     lowStockThreshold: '5',
     diameter: '',
     index: '',
-    tp: ''
+    tp: '',
+    axis: '',
+    add: ''
   });
 
   // Initialize single product data when pricelist item changes
@@ -30,10 +32,22 @@ const AddProductsModal = ({
         lowStockThreshold: '5',
         diameter: pricelistItem.attributes?.diameter || '',
         index: pricelistItem.attributes?.index || '',
-        tp: pricelistItem.attributes?.tp || ''
+        tp: pricelistItem.attributes?.tp || '',
+        axis: '',
+        add: ''
       });
     }
   }, [pricelistItem, isOpen]);
+
+  // Check if current pricelist item is for Double vision category
+  const isDoubleVisionCategory = () => {
+    if (!pricelistItem) return false;
+    // Check if the pricelist item has Double vision specific attributes or if we can determine from context
+    return pricelistItem.attributes?.axisFR !== undefined || 
+           pricelistItem.attributes?.axisTo !== undefined ||
+           pricelistItem.attributes?.addFr !== undefined ||
+           pricelistItem.attributes?.addTo !== undefined;
+  };
 
   // Handle single product submission
   const handleSingleSubmit = (e) => {
@@ -59,6 +73,16 @@ const AddProductsModal = ({
       index: singleProductData.index,
       tp: singleProductData.tp
     };
+
+    // Add Double vision specific fields if applicable
+    if (isDoubleVisionCategory()) {
+      if (singleProductData.axis) {
+        productData.axis = singleProductData.axis;
+      }
+      if (singleProductData.add) {
+        productData.add = singleProductData.add;
+      }
+    }
     
     onSingleAdd(productData);
   };
@@ -200,6 +224,36 @@ const AddProductsModal = ({
                       className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
+                  
+                  {/* Double Vision specific fields */}
+                  {isDoubleVisionCategory() && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Axis</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="180"
+                          value={singleProductData.axis}
+                          onChange={(e) => setSingleProductData({...singleProductData, axis: e.target.value})}
+                          placeholder="e.g., 90, 120, 180"
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Axis value (1-180)</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Add</label>
+                        <input
+                          type="text"
+                          value={singleProductData.add}
+                          onChange={(e) => setSingleProductData({...singleProductData, add: e.target.value})}
+                          placeholder="e.g., +1.00, +2.25, +3.00"
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Add value (can be + or -)</p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 

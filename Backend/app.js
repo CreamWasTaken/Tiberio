@@ -104,6 +104,10 @@ const PORT = process.env.PORT;
 
 //fix pricelist edit socket
 
+//bulk add on double vision 
+
+
+
 
 
 

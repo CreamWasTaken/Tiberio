@@ -19,6 +19,13 @@ const BulkAddProductsModal = ({
     cylinderStart: '',
     cylinderEnd: '',
     diameter: '',
+    // Double Vision specific settings
+    axisStep: 10,
+    axisStart: '',
+    axisEnd: '',
+    addStep: 0.25,
+    addStart: '',
+    addEnd: '',
     // Generation settings
     generateAllCombinations: true,
     customCombinations: []
@@ -30,6 +37,16 @@ const BulkAddProductsModal = ({
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [productsPerPage] = useState(20);
+
+  // Check if current pricelist item is for Double vision category
+  const isDoubleVisionCategory = () => {
+    if (!pricelistItem) return false;
+    // Check if the pricelist item has Double vision specific attributes
+    return pricelistItem.attributes?.axisFR !== undefined || 
+           pricelistItem.attributes?.axisTo !== undefined ||
+           pricelistItem.attributes?.addFr !== undefined ||
+           pricelistItem.attributes?.addTo !== undefined;
+  };
 
   // Initialize form data when pricelist item changes
   useEffect(() => {
@@ -53,6 +70,13 @@ const BulkAddProductsModal = ({
         cylinderStart: cleanNumericValue(pricelistItem.attributes?.cylFr || pricelistItem.cylFr),
         cylinderEnd: cleanNumericValue(pricelistItem.attributes?.cylTo || pricelistItem.cylTo),
         diameter: pricelistItem.attributes?.diameter || pricelistItem.diameter || '',
+        // Double Vision specific fields
+        axisStep: 10,
+        axisStart: cleanNumericValue(pricelistItem.attributes?.axisFR || pricelistItem.axisFR),
+        axisEnd: cleanNumericValue(pricelistItem.attributes?.axisTo || pricelistItem.axisTo),
+        addStep: 0.25,
+        addStart: cleanNumericValue(pricelistItem.attributes?.addFr || pricelistItem.addFr),
+        addEnd: cleanNumericValue(pricelistItem.attributes?.addTo || pricelistItem.addTo),
         generateAllCombinations: true,
         customCombinations: []
       });
@@ -71,28 +95,70 @@ const BulkAddProductsModal = ({
       return;
     }
 
+    // For Double vision, also check axis and add ranges
+    if (isDoubleVisionCategory()) {
+      const { axisStart, axisEnd, addStart, addEnd } = formData;
+      if (!axisStart || !axisEnd || !addStart || !addEnd) {
+        alert('Please provide all Double vision range values (Axis Start/End, Add Start/End)');
+        return;
+      }
+    }
+
     setIsGenerating(true);
     
     try {
       const sphereValues = generateGradeRangeWithSigns(sphereStart, sphereEnd, parseFloat(sphereStep));
       const cylinderValues = generateGradeRangeWithSigns(cylinderStart, cylinderEnd, parseFloat(cylinderStep));
       
+      let axisValues = [];
+      let addValues = [];
+      
+      // Generate axis and add values for Double vision
+      if (isDoubleVisionCategory()) {
+        const { axisStart, axisEnd, axisStep, addStart, addEnd, addStep } = formData;
+        axisValues = generateAxisRange(parseInt(axisStart), parseInt(axisEnd), parseInt(axisStep));
+        addValues = generateGradeRangeWithSigns(addStart, addEnd, parseFloat(addStep));
+      }
+      
       const combinations = [];
       
-      // Generate all combinations of sphere and cylinder values
-      sphereValues.forEach(sphere => {
-        cylinderValues.forEach(cylinder => {
-          combinations.push({
-            sphere: sphere, // Already formatted with signs
-            cylinder: cylinder, // Already formatted with signs
-            stock: formData.stock,
-            lowStockThreshold: formData.lowStockThreshold,
-            diameter: formData.diameter,
-            index: pricelistItem.attributes?.index || '',
-            tp: pricelistItem.attributes?.tp || ''
+      if (isDoubleVisionCategory()) {
+        // Generate all combinations for Double vision (sphere, cylinder, axis, add)
+        sphereValues.forEach(sphere => {
+          cylinderValues.forEach(cylinder => {
+            axisValues.forEach(axis => {
+              addValues.forEach(add => {
+                combinations.push({
+                  sphere: sphere,
+                  cylinder: cylinder,
+                  axis: axis,
+                  add: add,
+                  stock: formData.stock,
+                  lowStockThreshold: formData.lowStockThreshold,
+                  diameter: formData.diameter,
+                  index: pricelistItem.attributes?.index || '',
+                  tp: pricelistItem.attributes?.tp || ''
+                });
+              });
+            });
           });
         });
-      });
+      } else {
+        // Generate combinations for regular lens (sphere, cylinder only)
+        sphereValues.forEach(sphere => {
+          cylinderValues.forEach(cylinder => {
+            combinations.push({
+              sphere: sphere,
+              cylinder: cylinder,
+              stock: formData.stock,
+              lowStockThreshold: formData.lowStockThreshold,
+              diameter: formData.diameter,
+              index: pricelistItem.attributes?.index || '',
+              tp: pricelistItem.attributes?.tp || ''
+            });
+          });
+        });
+      }
       
       setGeneratedProducts(combinations);
     } catch (error) {
@@ -132,6 +198,24 @@ const BulkAddProductsModal = ({
     return values;
   };
 
+  // Helper function to generate axis range (1-180)
+  const generateAxisRange = (start, end, step) => {
+    const values = [];
+    const direction = start <= end ? 1 : -1;
+    const absStep = Math.abs(step);
+    
+    for (let value = start; direction * value <= direction * end; value += direction * absStep) {
+      // Ensure axis values are within 1-180 range
+      let axisValue = value;
+      if (axisValue < 1) axisValue = 1;
+      if (axisValue > 180) axisValue = 180;
+      
+      values.push(axisValue.toString());
+    }
+    
+    return values;
+  };
+
 
   // Add custom combination
   const addCustomCombination = () => {
@@ -144,6 +228,12 @@ const BulkAddProductsModal = ({
       index: pricelistItem.attributes?.index || '',
       tp: pricelistItem.attributes?.tp || ''
     };
+
+    // Add Double vision specific fields if applicable
+    if (isDoubleVisionCategory()) {
+      newCombination.axis = '';
+      newCombination.add = '';
+    }
     
     setFormData({
       ...formData,
