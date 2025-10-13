@@ -152,10 +152,11 @@ exports.addItem = async (req, res) => {
     const {
         description, code, service, price, pc_price, pc_cost, cost, subcategory_id, supplier_id,
         index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
-        steps, addFr, addTo, modality, set, bc,
+        steps, addFr, addTo, axisFR, axisTo, modality, set, bc,
         volume, set_cost,
         stock, low_stock_threshold,
         sphere, cylinder, // Single Vision specific fields
+        axis, add, // Double Vision specific fields
         addToInventory // Check if adding to inventory
     } = req.body;
     
@@ -166,7 +167,7 @@ exports.addItem = async (req, res) => {
         // Create attributes object for price_list (without inventory-specific fields)
         const priceListAttributes = {
             index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
-            steps, addFr, addTo, modality, set, bc,
+            steps, addFr, addTo, axisFR, axisTo, modality, set, bc,
             volume, set_cost, service
         };
         
@@ -204,7 +205,8 @@ exports.addItem = async (req, res) => {
         if (addToInventory) {
             // Create attributes object for products table (inventory-specific fields)
             const productAttributes = {
-                sphere, cylinder, diameter // Single Vision specific fields for products
+                sphere, cylinder, diameter, // Single Vision specific fields for products
+                axis, add // Double Vision specific fields for products
             };
             
             const [productResult] = await conn.query(
@@ -328,7 +330,7 @@ exports.bulkAddProducts = async (req, res) => {
         // Process each product - only create products table entries
         for (const productData of products) {
             const {
-                stock, lowStockThreshold, sphere, cylinder, diameter, index, tp
+                stock, lowStockThreshold, sphere, cylinder, diameter, index, tp, axis, add
             } = productData;
             
             // Validate required fields
@@ -346,7 +348,9 @@ exports.bulkAddProducts = async (req, res) => {
                 cylinder: cylinder || '',
                 diameter: diameter || '',
                 index: index || '',
-                tp: tp || ''
+                tp: tp || '',
+                axis: axis || '',
+                add: add || ''
             };
             
             // Insert into products table (inventory) - reference the existing price_list
@@ -595,10 +599,11 @@ exports.updateItem = async (req, res) => {
     const {
         description, code, service, price, pc_price, pc_cost, cost, subcategory_id, supplier_id,
         index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
-        steps, addFr, addTo, modality, set, bc,
+        steps, addFr, addTo, axisFR, axisTo, modality, set, bc,
         volume, set_cost,
         stock, low_stock_threshold,
         sphere, cylinder, // Single Vision specific fields
+        axis, add, // Double Vision specific fields
         addToInventory, // Check if adding to inventory
         inventoryOnlyUpdate // Flag to indicate this is an inventory-only update
     } = req.body;
@@ -648,7 +653,7 @@ exports.updateItem = async (req, res) => {
             // Create attributes object for price_list (without inventory-specific fields)
             const priceListAttributes = {
                 index, diameter, sphFR, sphTo, cylFr, cylTo, tp,
-                steps, addFr, addTo, modality, set, bc,
+                steps, addFr, addTo, axisFR, axisTo, modality, set, bc,
                 volume, set_cost, service
             };
             
@@ -667,7 +672,8 @@ exports.updateItem = async (req, res) => {
             
             // Create attributes object for products table (inventory-specific fields)
             const productAttributes = {
-                sphere, cylinder, diameter // Single Vision specific fields for products
+                sphere, cylinder, diameter, // Single Vision specific fields for products
+                axis, add // Double Vision specific fields for products
             };
             
             if (productId) {

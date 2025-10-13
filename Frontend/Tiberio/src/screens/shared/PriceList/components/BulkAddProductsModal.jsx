@@ -481,6 +481,85 @@ const BulkAddProductsModal = ({
                 />
               </div>
             </div>
+
+            {/* Double Vision specific fields */}
+            {isDoubleVisionCategory() && (
+              <div className="mt-6 pt-4 border-t border-gray-700">
+                <h5 className="text-md font-medium text-white mb-4">Double Vision Settings</h5>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Axis Start</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="180"
+                      value={formData.axisStart}
+                      onChange={(e) => setFormData({...formData, axisStart: e.target.value})}
+                      placeholder="e.g., 10, 90"
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Starting axis value (1-180)</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Axis End</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="180"
+                      value={formData.axisEnd}
+                      onChange={(e) => setFormData({...formData, axisEnd: e.target.value})}
+                      placeholder="e.g., 180, 90"
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Ending axis value (1-180)</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Axis Step</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.axisStep}
+                      onChange={(e) => setFormData({...formData, axisStep: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Add Start</label>
+                    <input
+                      type="text"
+                      value={formData.addStart}
+                      onChange={(e) => setFormData({...formData, addStart: e.target.value})}
+                      placeholder="e.g., +1.00, +2.50"
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Starting add value (can be + or -)</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Add End</label>
+                    <input
+                      type="text"
+                      value={formData.addEnd}
+                      onChange={(e) => setFormData({...formData, addEnd: e.target.value})}
+                      placeholder="e.g., +3.00, +2.75"
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Ending add value (can be + or -)</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Add Step</label>
+                    <input
+                      type="number"
+                      step="0.25"
+                      min="0.25"
+                      value={formData.addStep}
+                      onChange={(e) => setFormData({...formData, addStep: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="mt-4">
               <button
                 type="button"
@@ -554,7 +633,7 @@ const BulkAddProductsModal = ({
             </div>
             
             {formData.customCombinations.map((combo, index) => (
-              <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-3 bg-gray-800 rounded-lg">
+              <div key={index} className={`grid gap-4 mb-4 p-3 bg-gray-800 rounded-lg ${isDoubleVisionCategory() ? 'grid-cols-1 md:grid-cols-5' : 'grid-cols-1 md:grid-cols-3'}`}>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">Sphere</label>
                   <input
@@ -577,6 +656,32 @@ const BulkAddProductsModal = ({
                     className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
+                {isDoubleVisionCategory() && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Axis</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="180"
+                        value={combo.axis || ''}
+                        onChange={(e) => updateCustomCombination(index, 'axis', e.target.value)}
+                        placeholder="e.g., 90, 180"
+                        className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Add</label>
+                      <input
+                        type="text"
+                        value={combo.add || ''}
+                        onChange={(e) => updateCustomCombination(index, 'add', e.target.value)}
+                        placeholder="e.g., +1.00, +2.50"
+                        className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </>
+                )}
                 <div className="flex items-end">
                   <button
                     type="button"
@@ -643,7 +748,7 @@ const BulkAddProductsModal = ({
                     <div key={actualIndex} className="bg-gray-800 p-3 rounded-lg">
                       {editingProductIndex === actualIndex ? (
                         // Edit mode
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div className={`grid gap-2 ${isDoubleVisionCategory() ? 'grid-cols-1 md:grid-cols-5' : 'grid-cols-1 md:grid-cols-3'}`}>
                           <div>
                             <label className="block text-xs text-gray-300 mb-1">Sphere</label>
                             <input
@@ -666,6 +771,32 @@ const BulkAddProductsModal = ({
                               className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                           </div>
+                          {isDoubleVisionCategory() && (
+                            <>
+                              <div>
+                                <label className="block text-xs text-gray-300 mb-1">Axis</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="180"
+                                  value={product.axis || ''}
+                                  onChange={(e) => updateGeneratedProduct(actualIndex, 'axis', e.target.value)}
+                                  placeholder="e.g., 90, 180"
+                                  className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-300 mb-1">Add</label>
+                                <input
+                                  type="text"
+                                  value={product.add || ''}
+                                  onChange={(e) => updateGeneratedProduct(actualIndex, 'add', e.target.value)}
+                                  placeholder="e.g., +1.00, +2.50"
+                                  className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                              </div>
+                            </>
+                          )}
                           <div className="flex items-end gap-1">
                             <button
                               type="button"
@@ -694,7 +825,13 @@ const BulkAddProductsModal = ({
                               className="h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
                             />
                             <div className="flex-1">
-                              <div className="text-white font-medium text-sm">S{product.sphere} C{product.cylinder}</div>
+                              <div className="text-white font-medium text-sm">
+                                {isDoubleVisionCategory() ? (
+                                  <>S{product.sphere} C{product.cylinder} A{product.axis} Add{product.add}</>
+                                ) : (
+                                  <>S{product.sphere} C{product.cylinder}</>
+                                )}
+                              </div>
                               <div className="text-gray-400 text-xs">Stock: {product.stock} | Threshold: {product.lowStockThreshold}</div>
                             </div>
                           </div>
@@ -919,6 +1056,85 @@ const BulkAddProductsModal = ({
                 />
               </div>
             </div>
+
+            {/* Double Vision specific fields */}
+            {isDoubleVisionCategory() && (
+              <div className="mt-6 pt-4 border-t border-gray-700">
+                <h5 className="text-md font-medium text-white mb-4">Double Vision Settings</h5>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Axis Start</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="180"
+                      value={formData.axisStart}
+                      onChange={(e) => setFormData({...formData, axisStart: e.target.value})}
+                      placeholder="e.g., 10, 90"
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Starting axis value (1-180)</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Axis End</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="180"
+                      value={formData.axisEnd}
+                      onChange={(e) => setFormData({...formData, axisEnd: e.target.value})}
+                      placeholder="e.g., 180, 90"
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Ending axis value (1-180)</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Axis Step</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.axisStep}
+                      onChange={(e) => setFormData({...formData, axisStep: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Add Start</label>
+                    <input
+                      type="text"
+                      value={formData.addStart}
+                      onChange={(e) => setFormData({...formData, addStart: e.target.value})}
+                      placeholder="e.g., +1.00, +2.50"
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Starting add value (can be + or -)</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Add End</label>
+                    <input
+                      type="text"
+                      value={formData.addEnd}
+                      onChange={(e) => setFormData({...formData, addEnd: e.target.value})}
+                      placeholder="e.g., +3.00, +2.75"
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Ending add value (can be + or -)</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Add Step</label>
+                    <input
+                      type="number"
+                      step="0.25"
+                      min="0.25"
+                      value={formData.addStep}
+                      onChange={(e) => setFormData({...formData, addStep: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="mt-4">
               <button
                 type="button"
@@ -992,7 +1208,7 @@ const BulkAddProductsModal = ({
             </div>
             
             {formData.customCombinations.map((combo, index) => (
-              <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-3 bg-gray-800 rounded-lg">
+              <div key={index} className={`grid gap-4 mb-4 p-3 bg-gray-800 rounded-lg ${isDoubleVisionCategory() ? 'grid-cols-1 md:grid-cols-5' : 'grid-cols-1 md:grid-cols-3'}`}>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">Sphere</label>
                   <input
@@ -1015,6 +1231,32 @@ const BulkAddProductsModal = ({
                     className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
+                {isDoubleVisionCategory() && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Axis</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="180"
+                        value={combo.axis || ''}
+                        onChange={(e) => updateCustomCombination(index, 'axis', e.target.value)}
+                        placeholder="e.g., 90, 180"
+                        className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Add</label>
+                      <input
+                        type="text"
+                        value={combo.add || ''}
+                        onChange={(e) => updateCustomCombination(index, 'add', e.target.value)}
+                        placeholder="e.g., +1.00, +2.50"
+                        className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </>
+                )}
                 <div className="flex items-end">
                   <button
                     type="button"
@@ -1081,7 +1323,7 @@ const BulkAddProductsModal = ({
                     <div key={actualIndex} className="bg-gray-800 p-3 rounded-lg">
                       {editingProductIndex === actualIndex ? (
                         // Edit mode
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div className={`grid gap-2 ${isDoubleVisionCategory() ? 'grid-cols-1 md:grid-cols-5' : 'grid-cols-1 md:grid-cols-3'}`}>
                           <div>
                             <label className="block text-xs text-gray-300 mb-1">Sphere</label>
                             <input
@@ -1104,6 +1346,32 @@ const BulkAddProductsModal = ({
                               className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                           </div>
+                          {isDoubleVisionCategory() && (
+                            <>
+                              <div>
+                                <label className="block text-xs text-gray-300 mb-1">Axis</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="180"
+                                  value={product.axis || ''}
+                                  onChange={(e) => updateGeneratedProduct(actualIndex, 'axis', e.target.value)}
+                                  placeholder="e.g., 90, 180"
+                                  className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-300 mb-1">Add</label>
+                                <input
+                                  type="text"
+                                  value={product.add || ''}
+                                  onChange={(e) => updateGeneratedProduct(actualIndex, 'add', e.target.value)}
+                                  placeholder="e.g., +1.00, +2.50"
+                                  className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                              </div>
+                            </>
+                          )}
                           <div className="flex items-end gap-1">
                             <button
                               type="button"
@@ -1132,7 +1400,13 @@ const BulkAddProductsModal = ({
                               className="h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
                             />
                             <div className="flex-1">
-                              <div className="text-white font-medium text-sm">S{product.sphere} C{product.cylinder}</div>
+                              <div className="text-white font-medium text-sm">
+                                {isDoubleVisionCategory() ? (
+                                  <>S{product.sphere} C{product.cylinder} A{product.axis} Add{product.add}</>
+                                ) : (
+                                  <>S{product.sphere} C{product.cylinder}</>
+                                )}
+                              </div>
                               <div className="text-gray-400 text-xs">Stock: {product.stock} | Threshold: {product.lowStockThreshold}</div>
                             </div>
                           </div>
