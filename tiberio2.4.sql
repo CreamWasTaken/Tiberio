@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 29, 2025 at 07:31 AM
+-- Generation Time: Oct 13, 2025 at 07:36 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -176,6 +176,14 @@ CREATE TABLE `logs` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `logs`
+--
+
+INSERT INTO `logs` (`id`, `user_id`, `type`, `data`, `created_at`) VALUES
+(14, 1, '', NULL, '2025-10-02 04:19:55'),
+(15, 1, '', NULL, '2025-10-10 01:51:35');
+
 -- --------------------------------------------------------
 
 --
@@ -314,6 +322,14 @@ CREATE TABLE `price_list` (
   `code` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `price_list`
+--
+
+INSERT INTO `price_list` (`id`, `supplier_id`, `subcategory_id`, `attributes`, `description`, `pc_price`, `pc_cost`, `is_deleted`, `created_at`, `updated_at`, `code`) VALUES
+(34, 5, 13, '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"+3.00\",\"sphTo\":\"+1.00\",\"cylFr\":\"+3.00\",\"cylTo\":\"+1.00\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"\",\"addTo\":\"\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 'SV UC 1', 20.00, 10.00, 0, '2025-10-02 04:20:26', '2025-10-13 05:22:58', '1'),
+(35, 4, 14, '{\"index\":\"1\",\"diameter\":\"1\",\"sphFR\":\"+1.00\",\"sphTo\":\"-1.00\",\"cylFr\":\"-1.00\",\"cylTo\":\"-1.00\",\"tp\":\"1\",\"steps\":\"\",\"addFr\":\"+0.50\",\"addTo\":\"+3.00\",\"modality\":\"\",\"set\":\"\",\"bc\":\"\",\"volume\":\"\",\"set_cost\":\"\",\"service\":0}', 'dv 1', 10.00, 5.00, 0, '2025-10-10 02:04:44', '2025-10-10 02:04:44', '1');
+
 -- --------------------------------------------------------
 
 --
@@ -354,8 +370,97 @@ CREATE TABLE `products` (
   `stock_status` varchar(20) NOT NULL DEFAULT 'normal' COMMENT 'normal, low, out-of-stock',
   `attributes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`attributes`)),
   `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
-  `price_list_id` int(11) DEFAULT NULL
+  `price_list_id` int(11) DEFAULT NULL,
+  `supplier_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `products`
+--
+
+INSERT INTO `products` (`id`, `stock`, `low_stock_threshold`, `stock_status`, `attributes`, `is_deleted`, `price_list_id`, `supplier_id`) VALUES
+(1420, 10, 5, 'normal', '{\"sphere\":\"1.00\",\"cylinder\":\"1.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 35, 4),
+(1664, 5, 5, 'low', '{\"sphere\":\"+3.00\",\"cylinder\":\"+3.00\",\"diameter\":\"1\"}', 0, 34, 5),
+(1665, 0, 5, 'out-of-stock', '{\"sphere\":\"+3.00\",\"cylinder\":\"+2.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1666, 0, 5, 'out-of-stock', '{\"sphere\":\"+3.00\",\"cylinder\":\"+2.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1667, 0, 5, 'out-of-stock', '{\"sphere\":\"+3.00\",\"cylinder\":\"+2.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1668, 0, 5, 'out-of-stock', '{\"sphere\":\"+3.00\",\"cylinder\":\"+2.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1669, 0, 5, 'out-of-stock', '{\"sphere\":\"+3.00\",\"cylinder\":\"+1.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1670, 0, 5, 'out-of-stock', '{\"sphere\":\"+3.00\",\"cylinder\":\"+1.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1671, 0, 5, 'out-of-stock', '{\"sphere\":\"+3.00\",\"cylinder\":\"+1.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1672, 0, 5, 'out-of-stock', '{\"sphere\":\"+3.00\",\"cylinder\":\"+1.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1673, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.75\",\"cylinder\":\"+3.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1674, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.75\",\"cylinder\":\"+2.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1675, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.75\",\"cylinder\":\"+2.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1676, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.75\",\"cylinder\":\"+2.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1677, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.75\",\"cylinder\":\"+2.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1678, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.75\",\"cylinder\":\"+1.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1679, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.75\",\"cylinder\":\"+1.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1680, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.75\",\"cylinder\":\"+1.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1681, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.75\",\"cylinder\":\"+1.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1682, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.50\",\"cylinder\":\"+3.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1683, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.50\",\"cylinder\":\"+2.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1684, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.50\",\"cylinder\":\"+2.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1685, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.50\",\"cylinder\":\"+2.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1686, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.50\",\"cylinder\":\"+2.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1687, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.50\",\"cylinder\":\"+1.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1688, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.50\",\"cylinder\":\"+1.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1689, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.50\",\"cylinder\":\"+1.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1690, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.50\",\"cylinder\":\"+1.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1691, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.25\",\"cylinder\":\"+3.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1692, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.25\",\"cylinder\":\"+2.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1693, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.25\",\"cylinder\":\"+2.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1694, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.25\",\"cylinder\":\"+2.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1695, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.25\",\"cylinder\":\"+2.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1696, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.25\",\"cylinder\":\"+1.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1697, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.25\",\"cylinder\":\"+1.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1698, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.25\",\"cylinder\":\"+1.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1699, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.25\",\"cylinder\":\"+1.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1700, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.00\",\"cylinder\":\"+3.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1701, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.00\",\"cylinder\":\"+2.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1702, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.00\",\"cylinder\":\"+2.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1703, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.00\",\"cylinder\":\"+2.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1704, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.00\",\"cylinder\":\"+2.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1705, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.00\",\"cylinder\":\"+1.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1706, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.00\",\"cylinder\":\"+1.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1707, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.00\",\"cylinder\":\"+1.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1708, 0, 5, 'out-of-stock', '{\"sphere\":\"+2.00\",\"cylinder\":\"+1.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1709, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.75\",\"cylinder\":\"+3.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1710, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.75\",\"cylinder\":\"+2.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1711, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.75\",\"cylinder\":\"+2.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1712, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.75\",\"cylinder\":\"+2.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1713, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.75\",\"cylinder\":\"+2.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1714, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.75\",\"cylinder\":\"+1.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1715, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.75\",\"cylinder\":\"+1.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1716, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.75\",\"cylinder\":\"+1.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1717, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.75\",\"cylinder\":\"+1.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1718, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.50\",\"cylinder\":\"+3.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1719, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.50\",\"cylinder\":\"+2.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1720, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.50\",\"cylinder\":\"+2.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1721, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.50\",\"cylinder\":\"+2.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1722, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.50\",\"cylinder\":\"+2.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1723, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.50\",\"cylinder\":\"+1.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1724, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.50\",\"cylinder\":\"+1.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1725, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.50\",\"cylinder\":\"+1.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1726, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.50\",\"cylinder\":\"+1.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1727, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.25\",\"cylinder\":\"+3.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1728, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.25\",\"cylinder\":\"+2.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1729, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.25\",\"cylinder\":\"+2.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1730, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.25\",\"cylinder\":\"+2.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1731, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.25\",\"cylinder\":\"+2.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1732, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.25\",\"cylinder\":\"+1.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1733, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.25\",\"cylinder\":\"+1.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1734, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.25\",\"cylinder\":\"+1.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1735, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.25\",\"cylinder\":\"+1.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1736, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.00\",\"cylinder\":\"+3.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1737, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.00\",\"cylinder\":\"+2.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1738, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.00\",\"cylinder\":\"+2.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1739, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.00\",\"cylinder\":\"+2.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1740, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.00\",\"cylinder\":\"+2.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1741, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.00\",\"cylinder\":\"+1.75\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1742, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.00\",\"cylinder\":\"+1.50\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1743, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.00\",\"cylinder\":\"+1.25\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5),
+(1744, 0, 5, 'out-of-stock', '{\"sphere\":\"+1.00\",\"cylinder\":\"+1.00\",\"diameter\":\"1\",\"index\":\"1\",\"tp\":\"1\"}', 0, 34, 5);
 
 --
 -- Triggers `products`
@@ -595,7 +700,8 @@ ALTER TABLE `price_subcategories`
 --
 ALTER TABLE `products`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `fk_products_price_list` (`price_list_id`);
+  ADD KEY `fk_products_price_list` (`price_list_id`),
+  ADD KEY `idx_products_supplier_id` (`supplier_id`);
 
 --
 -- Indexes for table `spectacle_prescriptions`
@@ -656,7 +762,7 @@ ALTER TABLE `contact_lens_prescriptions`
 -- AUTO_INCREMENT for table `logs`
 --
 ALTER TABLE `logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `orders`
@@ -686,7 +792,7 @@ ALTER TABLE `price_categories`
 -- AUTO_INCREMENT for table `price_list`
 --
 ALTER TABLE `price_list`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `price_subcategories`
@@ -698,7 +804,7 @@ ALTER TABLE `price_subcategories`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1258;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1745;
 
 --
 -- AUTO_INCREMENT for table `spectacle_prescriptions`
@@ -716,13 +822,13 @@ ALTER TABLE `suppliers`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
 
 --
 -- AUTO_INCREMENT for table `transaction_items`
 --
 ALTER TABLE `transaction_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -789,7 +895,8 @@ ALTER TABLE `price_subcategories`
 -- Constraints for table `products`
 --
 ALTER TABLE `products`
-  ADD CONSTRAINT `fk_products_price_list` FOREIGN KEY (`price_list_id`) REFERENCES `price_list` (`id`);
+  ADD CONSTRAINT `fk_products_price_list` FOREIGN KEY (`price_list_id`) REFERENCES `price_list` (`id`),
+  ADD CONSTRAINT `fk_products_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `spectacle_prescriptions`
