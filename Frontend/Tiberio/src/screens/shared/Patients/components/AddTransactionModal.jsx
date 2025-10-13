@@ -86,9 +86,14 @@ function AddTransactionModal({
     }
   };
 
-  // Filter inventory based on search, category, and spec filters
+  // Filter inventory based on search, category, spec filters, and stock
   const filteredInventory = inventory.filter(item => {
     const searchLower = searchQuery.toLowerCase();
+    
+    // Filter out items with 0 stock
+    if (item.stock <= 0) {
+      return false;
+    }
     
     // Search in basic fields
     const basicMatch = item.name.toLowerCase().includes(searchLower) ||

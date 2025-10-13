@@ -659,29 +659,44 @@ exports.updateItem = async (req, res) => {
         
         // Handle products table update if adding to inventory
         if (addToInventory) {
-            // Check if product already exists
-            const [existingProduct] = await conn.query(
-                "SELECT id FROM products WHERE price_list_id = ? AND is_deleted = 0",
-                [id]
-            );
+            // For inventory updates, we need to identify which specific product to update
+            // The frontend should send the product_id (not price_list_id) for inventory updates
+            const productId = req.body.product_id; // Get the specific product ID from request body
             
             // Create attributes object for products table (inventory-specific fields)
             const productAttributes = {
                 sphere, cylinder, diameter // Single Vision specific fields for products
             };
             
-            if (existingProduct.length > 0) {
-                // Update existing product
+            if (productId) {
+                // Update specific product by its unique ID
                 await conn.query(
-                    "UPDATE products SET stock = ?, low_stock_threshold = ?, attributes = ? WHERE price_list_id = ? AND is_deleted = 0",
-                    [stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes), id]
+                    "UPDATE products SET stock = ?, low_stock_threshold = ?, attributes = ? WHERE id = ? AND is_deleted = 0",
+                    [stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes), productId]
                 );
+                console.log('🔧 Updated specific product with ID:', productId);
             } else {
-                // Create new product entry
-                await conn.query(
-                    "INSERT INTO products (price_list_id, stock, low_stock_threshold, attributes) VALUES (?, ?, ?, ?)",
-                    [id, stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes)]
+                // Fallback: Check if product already exists for this price_list_id
+                const [existingProduct] = await conn.query(
+                    "SELECT id FROM products WHERE price_list_id = ? AND is_deleted = 0",
+                    [id]
                 );
+                
+                if (existingProduct.length > 0) {
+                    // Update the first existing product (this is the old behavior, kept as fallback)
+                    await conn.query(
+                        "UPDATE products SET stock = ?, low_stock_threshold = ?, attributes = ? WHERE price_list_id = ? AND is_deleted = 0 LIMIT 1",
+                        [stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes), id]
+                    );
+                    console.log('🔧 Updated first product for price_list_id:', id, '(fallback behavior)');
+                } else {
+                    // Create new product entry
+                    await conn.query(
+                        "INSERT INTO products (price_list_id, stock, low_stock_threshold, attributes) VALUES (?, ?, ?, ?)",
+                        [id, stock || 0, low_stock_threshold || 5, JSON.stringify(productAttributes)]
+                    );
+                    console.log('🔧 Created new product for price_list_id:', id);
+                }
             }
             
             // Inventory update will be emitted after we fetch the complete item data

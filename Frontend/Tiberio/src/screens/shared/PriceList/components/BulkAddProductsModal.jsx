@@ -6,7 +6,8 @@ const BulkAddProductsModal = ({
   pricelistItem, 
   onBulkAdd,
   isInline = false,
-  isLoading = false
+  isLoading = false,
+  categoryName = ''
 }) => {
   const [formData, setFormData] = useState({
     stock: '',
@@ -40,12 +41,8 @@ const BulkAddProductsModal = ({
 
   // Check if current pricelist item is for Double vision category
   const isDoubleVisionCategory = () => {
-    if (!pricelistItem) return false;
-    // Check if the pricelist item has Double vision specific attributes
-    return pricelistItem.attributes?.axisFR !== undefined || 
-           pricelistItem.attributes?.axisTo !== undefined ||
-           pricelistItem.attributes?.addFr !== undefined ||
-           pricelistItem.attributes?.addTo !== undefined;
+    if (!categoryName) return false;
+    return categoryName.toLowerCase().includes('double vision');
   };
 
   // Initialize form data when pricelist item changes

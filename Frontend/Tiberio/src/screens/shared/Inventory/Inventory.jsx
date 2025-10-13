@@ -1329,6 +1329,10 @@ function Inventory() {
                         addToInventory: true, // Ensure it stays in inventory
                         inventoryOnlyUpdate: isInventoryOnlyUpdate,
                         
+                        // CRITICAL: Include the specific product ID for inventory updates
+                        // This ensures we update only the specific product, not all products with the same price_list_id
+                        product_id: originalItem.id, // This is the unique product ID
+                        
                         // Include lens specifications (for products.attributes)
                         sphere: editForm.sphere,
                         cylinder: editForm.cylinder,

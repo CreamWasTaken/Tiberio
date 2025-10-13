@@ -1508,6 +1508,7 @@ function Pricelist() {
         onBulkAdd={handleBulkAddSubmit}
         onSingleAdd={handleAddSingleProduct}
         isBulkAdding={isBulkAdding}
+        categoryName={getCurrentCategoryName}
       />
     </div>
   );
