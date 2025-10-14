@@ -190,25 +190,52 @@ function Pricelist() {
         // Wait for Socket.IO connection to be established
         const socket = await socketService.waitForConnection();
         
-        // Join item update room
+        // Join item and subcategory update rooms
         socketService.joinRoom('item-updated');
+        socketService.joinRoom('subcategory-updated');
         
         // Listen for item updates
         const handleItemUpdate = (data) => {
+          console.log('🔌 Received item-updated event:', data);
           
           if (data.type === 'added' || data.type === 'updated' || data.type === 'deleted') {
-            // Refresh items for the currently selected subcategory
-            if (selectedSubcategory) {
+            // Check if the updated item belongs to the currently selected subcategory
+            if (selectedSubcategory && data.item && data.item.subcategory_id === selectedSubcategory.id) {
+              console.log('🔌 Item belongs to current subcategory, refreshing items...');
+              // Refresh items for the currently selected subcategory
               getItems(selectedSubcategory.id).then(setItems).catch(console.error);
+            } else if (data.type === 'added' && data.item) {
+              // For new items, we might want to refresh even if not in current subcategory
+              // to update the total counts in the UI
+              console.log('🔌 New item added, refreshing current subcategory items...');
+              if (selectedSubcategory) {
+                getItems(selectedSubcategory.id).then(setItems).catch(console.error);
+              }
+            }
+          }
+        };
+
+        // Listen for subcategory updates
+        const handleSubcategoryUpdate = (data) => {
+          console.log('🔌 Received subcategory-updated event:', data);
+          
+          if (data.type === 'added' || data.type === 'updated' || data.type === 'deleted') {
+            // Refresh subcategories for the currently selected category
+            if (activeTab) {
+              console.log('🔌 Refreshing subcategories for current category...');
+              fetchSubcategories(activeTab);
             }
           }
         };
 
         socket.on('item-updated', handleItemUpdate);
+        socket.on('subcategory-updated', handleSubcategoryUpdate);
 
         return () => {
           socket.off('item-updated', handleItemUpdate);
+          socket.off('subcategory-updated', handleSubcategoryUpdate);
           socketService.leaveRoom('item-updated');
+          socketService.leaveRoom('subcategory-updated');
         };
       } catch (error) {
         console.error('Failed to setup Socket.IO:', error);

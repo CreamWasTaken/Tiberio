@@ -124,6 +124,93 @@ const testSocketEvent = (req, res) => {
     }
   };
 
+  // Test 4.1: Event Emission Test - Pricelist Item Events
+  const pricelistItemEventTest = () => {
+    try {
+      const testData = {
+        type: 'added',
+        item: {
+          id: 123,
+          price_list_id: 123,
+          supplier_id: 1,
+          subcategory_id: 5,
+          description: 'Test Pricelist Item',
+          pc_price: 150.00,
+          pc_cost: 100.00,
+          code: 'TEST-001',
+          supplier_name: 'Test Supplier',
+          category_name: 'Test Category',
+          subcategory_name: 'Test Subcategory',
+          attributes: {
+            index: '1.5',
+            diameter: '65',
+            product_count: 0,
+            total_stock: 0
+          }
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      io.to('item-updated').emit('item-updated', testData);
+      
+      testResults.tests.push({
+        name: 'Pricelist Item Event Test',
+        description: 'Test pricelist item-updated event emission',
+        passed: true,
+        details: `Test pricelist item data emitted: ${JSON.stringify(testData)}`,
+        timestamp: new Date().toISOString()
+      });
+      
+      return true;
+    } catch (error) {
+      testResults.tests.push({
+        name: 'Pricelist Item Event Test',
+        description: 'Test pricelist item-updated event emission',
+        passed: false,
+        details: `Error: ${error.message}`,
+        timestamp: new Date().toISOString()
+      });
+      return false;
+    }
+  };
+
+  // Test 4.2: Event Emission Test - Subcategory Events
+  const subcategoryEventTest = () => {
+    try {
+      const testData = {
+        type: 'added',
+        subcategory: {
+          id: 5,
+          name: 'Test Subcategory',
+          description: 'Test subcategory for socket testing',
+          category_id: 1
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      io.to('subcategory-updated').emit('subcategory-updated', testData);
+      
+      testResults.tests.push({
+        name: 'Subcategory Event Test',
+        description: 'Test subcategory-updated event emission',
+        passed: true,
+        details: `Test subcategory data emitted: ${JSON.stringify(testData)}`,
+        timestamp: new Date().toISOString()
+      });
+      
+      return true;
+    } catch (error) {
+      testResults.tests.push({
+        name: 'Subcategory Event Test',
+        description: 'Test subcategory-updated event emission',
+        passed: false,
+        details: `Error: ${error.message}`,
+        timestamp: new Date().toISOString()
+      });
+      return false;
+    }
+  };
+
   // Test 5: Event Emission Test - Patient Events
   const patientEventTest = () => {
     try {
@@ -362,6 +449,8 @@ const testSocketEvent = (req, res) => {
     roomManagementTest,
     inventoryEventTest,
     itemEventTest,
+    pricelistItemEventTest,
+    subcategoryEventTest,
     patientEventTest,
     checkupEventTest,
     transactionEventTest,
