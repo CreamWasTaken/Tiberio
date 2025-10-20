@@ -162,7 +162,7 @@ const AddProductsModal = ({
                       required
                       value={singleProductData.sphere}
                       onChange={(e) => setSingleProductData({...singleProductData, sphere: e.target.value})}
-                      placeholder="e.g., -1.50, +2.25, -3.75"
+                      placeholder="-1.50, +2.25, -3.75"
                       className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <p className="text-xs text-gray-400 mt-1">Enter positive (+) or negative (-) values</p>
@@ -175,7 +175,7 @@ const AddProductsModal = ({
                       required
                       value={singleProductData.cylinder}
                       onChange={(e) => setSingleProductData({...singleProductData, cylinder: e.target.value})}
-                      placeholder="e.g., -0.75, +1.25, -2.50"
+                      placeholder="-0.75, +1.25, +2.50"
                       className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <p className="text-xs text-gray-400 mt-1">Enter positive (+) or negative (-) values</p>
@@ -192,7 +192,7 @@ const AddProductsModal = ({
                           max="180"
                           value={singleProductData.axis}
                           onChange={(e) => setSingleProductData({...singleProductData, axis: e.target.value})}
-                          placeholder="e.g., 90, 120, 180"
+                          placeholder="90, 120, 180"
                           className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <p className="text-xs text-gray-400 mt-1">Axis value (1-180)</p>
@@ -203,7 +203,7 @@ const AddProductsModal = ({
                           type="text"
                           value={singleProductData.add}
                           onChange={(e) => setSingleProductData({...singleProductData, add: e.target.value})}
-                          placeholder="e.g., +1.00, +2.25, +3.00"
+                          placeholder="+1.00, +2.25, +3.00"
                           className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <p className="text-xs text-gray-400 mt-1">Add value (can be + or -)</p>
@@ -238,7 +238,7 @@ const AddProductsModal = ({
                       type="text"
                       value={singleProductData.diameter}
                       onChange={(e) => setSingleProductData({...singleProductData, diameter: e.target.value})}
-                      placeholder="e.g., 65, 70"
+                      placeholder="65, 70"
                       className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -248,7 +248,7 @@ const AddProductsModal = ({
                       type="text"
                       value={singleProductData.index}
                       onChange={(e) => setSingleProductData({...singleProductData, index: e.target.value})}
-                      placeholder="e.g., 1.56, 1.67"
+                      placeholder="1.56, 1.67"
                       className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>

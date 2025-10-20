@@ -759,54 +759,134 @@ exports.updateItem = async (req, res) => {
         await conn.commit();
         
         // Fetch the updated item data for socket emission
-        // For pricelist items, we need to get the price_list data directly
-        const [updatedItemResult] = await conn.query(`
-            SELECT pl.id as price_list_id, pl.supplier_id, pl.subcategory_id, pl.attributes, 
-                   pl.description, pl.pc_price, pl.pc_cost, pl.code,
-                   s.name AS supplier_name, pc.name AS category_name, psc.name AS subcategory_name,
-                   COUNT(p.id) as product_count,
-                   COALESCE(SUM(p.stock), 0) as total_stock
-            FROM price_list pl
-            LEFT JOIN suppliers s ON pl.supplier_id = s.id
-            LEFT JOIN price_subcategories psc ON pl.subcategory_id = psc.id
-            LEFT JOIN price_categories pc ON psc.category_id = pc.id
-            LEFT JOIN products p ON pl.id = p.price_list_id AND p.is_deleted = 0
-            WHERE pl.id = ? AND pl.is_deleted = 0
-            GROUP BY pl.id
-        `, [id]);
-        
-        if (updatedItemResult.length > 0) {
-            const item = updatedItemResult[0];
-            // Parse attributes JSON
-            const attributes = item.attributes ? JSON.parse(item.attributes) : {};
+        if (addToInventory) {
+            // For inventory updates, fetch the complete inventory item data (from products table)
+            const productId = req.body.product_id;
+            let inventoryItemQuery;
+            let queryParams;
             
-            const updatedItem = {
-                id: item.price_list_id, // Use price_list_id for pricelist items
-                price_list_id: item.price_list_id,
-                supplier_id: item.supplier_id,
-                subcategory_id: item.subcategory_id,
-                description: item.description,
-                pc_price: item.pc_price,
-                pc_cost: item.pc_cost,
-                code: item.code,
-                supplier_name: item.supplier_name,
-                category_name: item.category_name,
-                subcategory_name: item.subcategory_name,
-                attributes: {
-                    ...attributes,
-                    product_count: item.product_count || 0,
-                    total_stock: item.total_stock || 0
-                }
-            };
+            if (productId) {
+                // Fetch specific product data
+                inventoryItemQuery = `
+                    SELECT p.id as product_id, p.stock, p.low_stock_threshold, p.attributes as product_attributes, p.supplier_id as product_supplier_id,
+                           pl.id as price_list_id, pl.supplier_id as price_list_supplier_id, pl.subcategory_id, pl.attributes, 
+                           pl.description, pl.pc_price, pl.pc_cost, pl.is_deleted as price_list_deleted, 
+                           pl.created_at as price_list_created_at, pl.updated_at as price_list_updated_at, pl.code,
+                           COALESCE(ps.name, pls.name) AS supplier_name, pc.name AS category_name, psc.name AS subcategory_name
+                    FROM products p
+                    INNER JOIN price_list pl ON p.price_list_id = pl.id AND pl.is_deleted = 0
+                    LEFT JOIN suppliers ps ON p.supplier_id = ps.id  -- Product-specific supplier
+                    LEFT JOIN suppliers pls ON pl.supplier_id = pls.id  -- Price list supplier (fallback)
+                    LEFT JOIN price_subcategories psc ON pl.subcategory_id = psc.id
+                    LEFT JOIN price_categories pc ON psc.category_id = pc.id
+                    WHERE p.id = ? AND p.is_deleted = 0
+                `;
+                queryParams = [productId];
+            } else {
+                // Fallback: fetch first product for this price_list_id
+                inventoryItemQuery = `
+                    SELECT p.id as product_id, p.stock, p.low_stock_threshold, p.attributes as product_attributes, p.supplier_id as product_supplier_id,
+                           pl.id as price_list_id, pl.supplier_id as price_list_supplier_id, pl.subcategory_id, pl.attributes, 
+                           pl.description, pl.pc_price, pl.pc_cost, pl.is_deleted as price_list_deleted, 
+                           pl.created_at as price_list_created_at, pl.updated_at as price_list_updated_at, pl.code,
+                           COALESCE(ps.name, pls.name) AS supplier_name, pc.name AS category_name, psc.name AS subcategory_name
+                    FROM products p
+                    INNER JOIN price_list pl ON p.price_list_id = pl.id AND pl.is_deleted = 0
+                    LEFT JOIN suppliers ps ON p.supplier_id = ps.id  -- Product-specific supplier
+                    LEFT JOIN suppliers pls ON pl.supplier_id = pls.id  -- Price list supplier (fallback)
+                    LEFT JOIN price_subcategories psc ON pl.subcategory_id = psc.id
+                    LEFT JOIN price_categories pc ON psc.category_id = pc.id
+                    WHERE pl.id = ? AND p.is_deleted = 0
+                    LIMIT 1
+                `;
+                queryParams = [id];
+            }
             
-            // Emit Socket.IO events for pricelist item updates
-            console.log('🔌 Emitting item-updated event for pricelist item:', updatedItem.id);
-            emitSocketEvent(req, 'item-updated', { type: 'updated', item: updatedItem });
+            const [inventoryItemResult] = await conn.query(inventoryItemQuery, queryParams);
             
-            // Also emit inventory update if this item is in inventory
-            if (addToInventory) {
-                console.log('🔌 Emitting inventory-updated event for item:', updatedItem.id);
-                emitSocketEvent(req, 'inventory-updated', { type: 'updated', item: updatedItem });
+            if (inventoryItemResult.length > 0) {
+                const item = inventoryItemResult[0];
+                const attributes = item.attributes ? JSON.parse(item.attributes) : {};
+                const productAttributes = item.product_attributes ? JSON.parse(item.product_attributes) : {};
+                
+                const inventoryItem = {
+                    id: item.product_id, // This is the product ID that should be used in transactions
+                    price_list_id: item.price_list_id, // This is the price_list ID that should be used for updates
+                    stock: item.stock,
+                    low_stock_threshold: item.low_stock_threshold,
+                    supplier_id: item.product_supplier_id || item.price_list_supplier_id, // Use product supplier if available, otherwise price list supplier
+                    subcategory_id: item.subcategory_id,
+                    description: item.description,
+                    pc_price: item.pc_price,
+                    pc_cost: item.pc_cost,
+                    code: item.code,
+                    supplier_name: item.supplier_name,
+                    category_name: item.category_name,
+                    subcategory_name: item.subcategory_name,
+                    attributes: {
+                        // For inventory items, prioritize product attributes over price_list attributes
+                        ...productAttributes,
+                        // Include non-conflicting price_list attributes
+                        ...Object.fromEntries(
+                            Object.entries(attributes).filter(([key]) => !productAttributes.hasOwnProperty(key))
+                        ),
+                        stock: item.stock || 0,
+                        low_stock_threshold: item.low_stock_threshold || 5
+                    }
+                };
+                
+                // Emit Socket.IO events for inventory item updates
+                console.log('🔌 Emitting inventory-updated event for inventory item:', inventoryItem.id);
+                emitSocketEvent(req, 'inventory-updated', { type: 'updated', item: inventoryItem });
+                
+                // Also emit item-updated event for price list updates
+                console.log('🔌 Emitting item-updated event for inventory item:', inventoryItem.id);
+                emitSocketEvent(req, 'item-updated', { type: 'updated', item: inventoryItem });
+            }
+        } else {
+            // For pricelist-only updates (not in inventory), fetch price_list data
+            const [updatedItemResult] = await conn.query(`
+                SELECT pl.id as price_list_id, pl.supplier_id, pl.subcategory_id, pl.attributes, 
+                       pl.description, pl.pc_price, pl.pc_cost, pl.code,
+                       s.name AS supplier_name, pc.name AS category_name, psc.name AS subcategory_name,
+                       COUNT(p.id) as product_count,
+                       COALESCE(SUM(p.stock), 0) as total_stock
+                FROM price_list pl
+                LEFT JOIN suppliers s ON pl.supplier_id = s.id
+                LEFT JOIN price_subcategories psc ON pl.subcategory_id = psc.id
+                LEFT JOIN price_categories pc ON psc.category_id = pc.id
+                LEFT JOIN products p ON pl.id = p.price_list_id AND p.is_deleted = 0
+                WHERE pl.id = ? AND pl.is_deleted = 0
+                GROUP BY pl.id
+            `, [id]);
+            
+            if (updatedItemResult.length > 0) {
+                const item = updatedItemResult[0];
+                // Parse attributes JSON
+                const attributes = item.attributes ? JSON.parse(item.attributes) : {};
+                
+                const updatedItem = {
+                    id: item.price_list_id, // Use price_list_id for pricelist items
+                    price_list_id: item.price_list_id,
+                    supplier_id: item.supplier_id,
+                    subcategory_id: item.subcategory_id,
+                    description: item.description,
+                    pc_price: item.pc_price,
+                    pc_cost: item.pc_cost,
+                    code: item.code,
+                    supplier_name: item.supplier_name,
+                    category_name: item.category_name,
+                    subcategory_name: item.subcategory_name,
+                    attributes: {
+                        ...attributes,
+                        product_count: item.product_count || 0,
+                        total_stock: item.total_stock || 0
+                    }
+                };
+                
+                // Emit Socket.IO events for pricelist item updates
+                console.log('🔌 Emitting item-updated event for pricelist item:', updatedItem.id);
+                emitSocketEvent(req, 'item-updated', { type: 'updated', item: updatedItem });
             }
         }
         

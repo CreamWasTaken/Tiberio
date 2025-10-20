@@ -105,11 +105,12 @@ function Inventory() {
   useEffect(() => {
     const setupSocketIO = async () => {
       try {
-     
+        console.log('🔌 Setting up Socket.IO for Inventory component...');
         
         // Wait for Socket.IO connection to be established
         const socket = await socketService.waitForConnection();
         console.log('🔌 Socket connection established:', socket.connected);
+        console.log('🔌 Socket ID:', socket.id);
    
         
         // Join inventory room
@@ -144,7 +145,16 @@ function Inventory() {
               const updated = prevItems.map(item => {
                 if (item.id === data.item.id) {
                   console.log('🔌 Found item to update:', item.id);
-                  return data.item;
+                  // Ensure the updated item has all required fields
+                  return {
+                    ...item,
+                    ...data.item,
+                    // Preserve any fields that might be missing from the update
+                    attributes: {
+                      ...item.attributes,
+                      ...data.item.attributes
+                    }
+                  };
                 }
                 return item;
               });
@@ -162,7 +172,19 @@ function Inventory() {
           } else if (data.type === 'stock_updated' && data.item) {
             console.log('🔌 Stock updated for item:', data.item.id);
             setItems(prevItems => {
-              const updated = prevItems.map(item => item.id === data.item.id ? data.item : item);
+              const updated = prevItems.map(item => {
+                if (item.id === data.item.id) {
+                  return {
+                    ...item,
+                    ...data.item,
+                    attributes: {
+                      ...item.attributes,
+                      ...data.item.attributes
+                    }
+                  };
+                }
+                return item;
+              });
               console.log('🔌 Stock updated in inventory list');
               return updated;
             });
@@ -181,7 +203,16 @@ function Inventory() {
               const updated = prevItems.map(item => {
                 if (item.id === data.item.id) {
                   console.log('🔌 Updating item with new data:', data.item);
-                  return data.item;
+                  // Ensure the updated item has all required fields
+                  return {
+                    ...item,
+                    ...data.item,
+                    // Preserve any fields that might be missing from the update
+                    attributes: {
+                      ...item.attributes,
+                      ...data.item.attributes
+                    }
+                  };
                 }
                 return item;
               });
@@ -195,10 +226,19 @@ function Inventory() {
         socket.on('item-updated', handleItemUpdate);
         console.log('🔌 Inventory update listeners registered');
         console.log('🔌 Socket event listeners:', socket.eventNames());
+        console.log('🔌 Socket connection status:', socket.connected);
+        console.log('🔌 Socket transport:', socket.io.engine.transport.name);
         
         // Add test event listener for debugging
         socket.on('test-connection', (data) => {
           console.log('🔌 Test event received in Inventory:', data);
+        });
+        
+        // Test the connection by emitting a test event
+        socket.emit('test-connection', {
+          message: 'Inventory component connected',
+          timestamp: new Date().toISOString(),
+          component: 'Inventory'
         });
 
         return () => {

@@ -115,7 +115,9 @@ const PORT = process.env.PORT;
 //to do
 
 
- 
+ //fix update socket when updating stock it doesnt automatic 
+
+ //placeholder make it more good on bulk add and transaction
 
 
 
